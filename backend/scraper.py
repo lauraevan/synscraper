@@ -52,6 +52,65 @@ def _stream_type(url: str) -> str:
     return "hls"
 
 
+
+def _normalize_captions(items, default_source: str) -> list:
+    if not items:
+        return []
+    if isinstance(items, dict):
+        items = list(items.values())
+    if not isinstance(items, list):
+        items = [items]
+
+    out = []
+    for idx, item in enumerate(items):
+        if isinstance(item, str):
+            item = {"url": item}
+        if not isinstance(item, dict):
+            continue
+
+        url = item.get("url") or item.get("file") or item.get("src")
+        if not isinstance(url, str) or not url.startswith("http"):
+            continue
+
+        kind = str(item.get("type") or item.get("format") or "").lower().lstrip(".")
+        path = url.split("?", 1)[0].lower()
+        is_vtt = kind in ("vtt", "webvtt") or path.endswith(".vtt")
+        if not is_vtt:
+            continue
+
+        headers = item.get("headers", {}) or {}
+        source = str(item.get("source") or item.get("provider") or default_source or "vtt").lower()
+        out.append({
+            "id": str(item.get("id") or f"{source}-vtt-{idx}"),
+            "url": url,
+            "name": item.get("name") or item.get("label") or item.get("display") or item.get("language") or "WebVTT",
+            "lang": item.get("lang") or item.get("language") or "und",
+            "source": source,
+            "type": "vtt",
+            "referer": headers.get("Referer") or item.get("referer") or "",
+            "origin": headers.get("Origin") or item.get("origin") or "",
+        })
+    return out
+
+
+def _caption_items(obj, default_source: str) -> list:
+    if not isinstance(obj, dict):
+        return []
+    gathered = []
+    for key in ("captions", "subtitles", "tracks"):
+        value = obj.get(key)
+        if value:
+            gathered.extend(_normalize_captions(value, default_source))
+    seen = set()
+    result = []
+    for caption in gathered:
+        key = caption["url"]
+        if key in seen:
+            continue
+        seen.add(key)
+        result.append(caption)
+    return result
+
 def _run_one(cls, media_type, tmdb_id, season, episode):
     try:
         r = cls()
@@ -59,12 +118,23 @@ def _run_one(cls, media_type, tmdb_id, season, episode):
         data = json.loads(out) if isinstance(out, str) else out
         if data.get("status") != "success":
             return []
+        default_caption_source = cls.__name__.replace("Resolver", "").lower()
+        root_captions = _caption_items(data, default_caption_source)
         streams = []
         for pu in data.get("playable_urls", []):
             url = pu.get("url")
             if not url or not url.startswith("http"):
                 continue
             headers = pu.get("headers", {}) or {}
+            captions = list(root_captions)
+            captions.extend(_caption_items(pu, default_caption_source))
+            deduped_captions = []
+            seen_caption_urls = set()
+            for caption in captions:
+                if caption["url"] in seen_caption_urls:
+                    continue
+                seen_caption_urls.add(caption["url"])
+                deduped_captions.append(caption)
             streams.append({
                 "url": url,
                 "type": pu.get("type") or _stream_type(url),
@@ -72,6 +142,7 @@ def _run_one(cls, media_type, tmdb_id, season, episode):
                 "referer": headers.get("Referer", ""),
                 "origin": headers.get("Origin", ""),
                 "user_agent": headers.get("User-Agent", USER_AGENT),
+                "captions": deduped_captions,
             })
         return streams
     except Exception:

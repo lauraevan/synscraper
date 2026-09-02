@@ -121,10 +121,21 @@ async def streams(type: str = "movie", id: str = Query(...),
     servers = await scraper.scrape_streams(type, id, season, episode)
     out = []
     for s in servers:
+        captions = []
+        for c in s.get("captions", []):
+            captions.append({
+                "id": c.get("id"),
+                "name": c.get("name") or "WebVTT",
+                "lang": c.get("lang") or "und",
+                "source": c.get("source") or "vtt",
+                "type": "vtt",
+                "play_url": _play_url(c["url"], c.get("referer", ""), c.get("origin", "")),
+            })
         out.append({
             "id": s["id"], "name": s["name"], "provider": s["provider"],
             "primary": s["primary"], "type": s["type"], "quality": s["quality"],
             "play_url": _play_url(s["url"], s["referer"], s["origin"]),
+            "captions": captions,
         })
     return {"type": type, "id": id, "season": season, "episode": episode,
             "count": len(out), "servers": out}

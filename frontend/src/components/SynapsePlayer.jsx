@@ -78,6 +78,36 @@ const autoCorrectCaptionText = (value, accuracy = 85) => {
     return text;
 };
 
+
+const parseVttTime = (value) => {
+    const parts = String(value || "").trim().replace(",", ".").split(":");
+    let seconds = 0;
+    for (const part of parts) {
+        const n = Number(part);
+        if (!Number.isFinite(n)) return NaN;
+        seconds = (seconds * 60) + n;
+    }
+    return seconds;
+};
+
+const parseWebVtt = (value) => {
+    const blocks = String(value || "").replace(/\r/g, "").split(/\n{2,}/);
+    const cues = [];
+    for (const block of blocks) {
+        const lines = block.split("\n");
+        const timingIndex = lines.findIndex((line) => line.includes("-->"));
+        if (timingIndex < 0) continue;
+        const [rawStart, rawEndAndSettings] = lines[timingIndex].split("-->");
+        const rawEnd = String(rawEndAndSettings || "").trim().split(/\s+/)[0];
+        const start = parseVttTime(rawStart);
+        const end = parseVttTime(rawEnd);
+        if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) continue;
+        const text = normalizeCaptionText(lines.slice(timingIndex + 1).join("\n"));
+        if (text) cues.push({ start, end, text });
+    }
+    return cues;
+};
+
 const CaptionSlider = ({ label, value, min, max, step = 1, suffix = "", onChange }) => (
     <label className="block px-3 py-2.5">
         <div className="mb-2 flex items-center justify-between gap-4 text-xs">
@@ -150,6 +180,10 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
     const [ripple, setRipple] = useState(null);
     const [scrubPct, setScrubPct] = useState(null);
     const [captionText, setCaptionText] = useState("");
+    const [externalCaptionId, setExternalCaptionId] = useState(null);
+    const [externalCues, setExternalCues] = useState([]);
+    const [externalCaptionLoading, setExternalCaptionLoading] = useState(false);
+    const [externalCaptionError, setExternalCaptionError] = useState("");
     const [captionStyle, setCaptionStyle] = useState(() => {
         if (typeof window === "undefined") return DEFAULT_CAPTION_STYLE;
         try {
@@ -224,6 +258,7 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
     useEffect(() => {
         let alive = true;
         setMode("loading"); setStepIdx(0); setError(null);
+        setExternalCaptionId(null); setExternalCues([]); setExternalCaptionError("");
         const tick = setInterval(() => setStepIdx((i) => Math.min(i + 1, STEPS.length - 1)), 900);
         getStreams(mediaType, id, season, episode)
             .then((d) => {
@@ -259,6 +294,36 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
         setSub(-1);
         setMenu(null);
         setServerId(s.id);
+    };
+
+    const selectExternalCaption = async (caption) => {
+        if (!caption?.play_url) return;
+        if (hlsRef.current) hlsRef.current.subtitleTrack = -1;
+        setSub(-1);
+        setExternalCaptionId(caption.id);
+        setExternalCues([]);
+        setExternalCaptionError("");
+        setExternalCaptionLoading(true);
+        try {
+            const response = await fetch(hlsProxyUrl(caption.play_url));
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            const cues = parseWebVtt(await response.text());
+            if (!cues.length) throw new Error("No WebVTT cues found");
+            setExternalCues(cues);
+        } catch (err) {
+            setExternalCaptionId(null);
+            setExternalCaptionError(err?.message || "Could not load this VTT track");
+        } finally {
+            setExternalCaptionLoading(false);
+        }
+    };
+
+    const turnOffCaptions = () => {
+        if (hlsRef.current) hlsRef.current.subtitleTrack = -1;
+        setSub(-1);
+        setExternalCaptionId(null);
+        setExternalCues([]);
+        setCaptionText("");
     };
 
     // video wiring
@@ -354,6 +419,16 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
     }, [mode, sub, subs, serverId, captionStyle.delay, captionStyle.accuracy, captionStyle.autoCorrect]);
 
     const togglePlay = () => { const v = videoRef.current; if (!v) return; if (v.paused) v.play(); else v.pause(); };
+    useEffect(() => {
+        if (!externalCaptionId || !externalCues.length) return;
+        const adjustedTime = current - Number(captionStyle.delay || 0);
+        const raw = externalCues
+            .filter((cue) => adjustedTime >= cue.start && adjustedTime <= cue.end)
+            .map((cue) => cue.text)
+            .join("\n");
+        setCaptionText(captionStyle.autoCorrect ? autoCorrectCaptionText(raw, captionStyle.accuracy) : normalizeCaptionText(raw));
+    }, [externalCaptionId, externalCues, current, captionStyle.delay, captionStyle.autoCorrect, captionStyle.accuracy]);
+
     const fastSeekTo = (seconds, precise = false) => {
         const v = videoRef.current;
         if (!v || !Number.isFinite(seconds)) return;
@@ -452,6 +527,9 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
     const seekPct = scrubPct == null ? pct : scrubPct;
     const bufPct = duration ? (buffered / duration) * 100 : 0;
     const captionSources = Array.from(new Map(servers.map((s) => [s.provider, s])).values()).slice(0, 6);
+    const externalCaptions = Array.from(new Map(
+        servers.flatMap((s) => (s.captions || []).map((c) => [c.play_url || c.id, { ...c, serverName: s.name }]))
+    ).values());
     const activeQualityHeight = level >= 0 ? Number(levels[level]?.height || 0) : (levels.length ? 0 : qualityHeight(activeServer?.quality));
     const autoServer = servers.find((s) => s.provider === activeServer?.provider && /^auto$/i.test(String(s.quality || "")))
         || servers.find((s) => /^auto$/i.test(String(s.quality || "")));
@@ -488,7 +566,7 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
             />
             <style>{`.synapse-video::cue { color: transparent !important; background: transparent !important; text-shadow: none !important; }`}</style>
 
-            {mode === "ready" && sub >= 0 && captionText && (
+            {mode === "ready" && (sub >= 0 || externalCaptionId) && captionText && (
                 <div
                     data-testid="synapse-custom-captions"
                     className="absolute left-1/2 z-[19] max-w-[88%] -translate-x-1/2 whitespace-pre-line text-center leading-[1.24] pointer-events-none transition-[bottom,font-size] duration-150"
@@ -726,7 +804,7 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
                                     <button
                                         data-testid="synapse-subtitles-menu"
                                         onClick={() => setMenu(menu === "subs" ? null : "subs")}
-                                        className={`grid h-10 w-10 md:h-11 md:w-11 place-items-center rounded-full border transition active:scale-95 ${sub >= 0 ? "bg-white text-black border-white" : "bg-white/[0.04] text-white/90 border-white/10 hover:bg-white/10 hover:text-white"}`}
+                                        className={`grid h-10 w-10 md:h-11 md:w-11 place-items-center rounded-full border transition active:scale-95 ${sub >= 0 || externalCaptionId ? "bg-white text-black border-white" : "bg-white/[0.04] text-white/90 border-white/10 hover:bg-white/10 hover:text-white"}`}
                                         title="Captions (C)"
                                         aria-label="Captions"
                                     >
@@ -748,15 +826,31 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
                                         </div>
 
                                         <div className="h-px bg-white/10 my-2" />
+                                        {externalCaptions.length > 0 && (
+                                            <>
+                                                <p className="px-3 py-2 text-[10px] uppercase tracking-[0.18em] text-white/45">VTT / Granite</p>
+                                                {externalCaptions.map((track) => (
+                                                    <MenuItem key={`vtt-${track.play_url || track.id}`} active={externalCaptionId === track.id} onClick={() => selectExternalCaption(track)}>
+                                                        <span className="min-w-0 truncate">{track.name || track.lang || "WebVTT"}</span>
+                                                        <span className={`ml-3 text-[9px] font-semibold uppercase tracking-[0.12em] ${String(track.source || "").toLowerCase() === "granite" ? "text-emerald-300" : "opacity-45"}`}>
+                                                            {String(track.source || "vtt").toLowerCase() === "granite" ? "GRANITE · VTT" : `${String(track.source || "VTT").toUpperCase()} · VTT`}
+                                                        </span>
+                                                    </MenuItem>
+                                                ))}
+                                                {externalCaptionLoading && <p className="px-3 py-2 text-[11px] text-white/40">Loading WebVTT…</p>}
+                                                {externalCaptionError && <p className="px-3 py-2 text-[11px] text-red-300/75">{externalCaptionError}</p>}
+                                                <div className="h-px bg-white/10 my-2" />
+                                            </>
+                                        )}
                                         <p className="px-3 py-2 text-[10px] uppercase tracking-[0.18em] text-white/45">All tracks · {activeServer?.name || "Current source"}</p>
-                                        <MenuItem active={sub === -1} onClick={() => changeSub(-1)} testId="sub-off">Off</MenuItem>
+                                        <MenuItem active={sub === -1 && !externalCaptionId} onClick={turnOffCaptions} testId="sub-off">Off</MenuItem>
                                         {subs.map((track, i) => (
-                                            <MenuItem key={i} active={sub === i} onClick={() => changeSub(i)}>
+                                            <MenuItem key={i} active={sub === i && !externalCaptionId} onClick={() => { setExternalCaptionId(null); setExternalCues([]); changeSub(i); }}>
                                                 <span>{track.name || track.lang || `Track ${i + 1}`}</span>
                                                 <span className="text-[10px] uppercase opacity-40">{track.lang || track.language || "CC"}</span>
                                             </MenuItem>
                                         ))}
-                                        {!subs.length && <p className="px-3 py-3 text-xs leading-relaxed text-white/45">This source exposes no caption track. Pick another source above; Synapse keeps your movie position while it switches.</p>}
+                                        {!subs.length && !externalCaptions.length && <p className="px-3 py-3 text-xs leading-relaxed text-white/45">This source exposes no caption track. Pick another source above; Synapse keeps your movie position while it switches.</p>}
 
                                         <div className="h-px bg-white/10 my-3" />
                                         <div className="flex items-center justify-between px-3 py-2">
