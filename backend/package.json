@@ -1,0 +1,7 @@
+{
+  "name": "synscraper-vercel-backend-root",
+  "private": true,
+  "scripts": {
+    "build": "bash build_frontend.sh"
+  }
+}
