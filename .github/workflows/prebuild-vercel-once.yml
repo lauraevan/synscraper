@@ -1,0 +1,50 @@
+name: One-time Vercel prebuild
+
+on:
+  push:
+    paths:
+      - '.github/vercel-prebuild-trigger'
+
+permissions:
+  contents: write
+
+jobs:
+  prebuild:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install frontend
+        run: yarn --cwd frontend install
+      - name: Build frontend
+        env:
+          CI: 'false'
+          GENERATE_SOURCEMAP: 'false'
+        run: yarn --cwd frontend build
+      - name: Commit prebuilt Vercel output
+        run: |
+          rm -rf public backend/public
+          cp -R frontend/build public
+          cp -R frontend/build backend/public
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          package = Path('package.json')
+          data = json.loads(package.read_text())
+          data.setdefault('scripts', {})['build'] = 'test -f public/index.html'
+          package.write_text(json.dumps(data, indent=2) + '\n')
+
+          vercel = Path('vercel.json')
+          cfg = json.loads(vercel.read_text())
+          cfg['buildCommand'] = 'npm run build'
+          cfg['outputDirectory'] = 'public'
+          vercel.write_text(json.dumps(cfg, indent=2) + '\n')
+          PY
+          git config user.name "Polaris"
+          git config user.email "264532369+lauraevan@users.noreply.github.com"
+          git add public backend/public package.json vercel.json
+          git commit -m "Prebuild SynPlayer for reliable Vercel deployment"
+          git push
