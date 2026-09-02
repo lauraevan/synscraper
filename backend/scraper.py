@@ -16,6 +16,7 @@ from providers.vidnest import VidNestResolver
 from providers.castle import CastleResolver
 from providers.vidrock import VidrockResolver
 from providers.vidzee import VidzeeResolver
+from providers.vixsrc import VixSrcResolver
 
 VIDUP_ORIGIN = os.environ.get("VIDUP_ORIGIN", "https://vidup.to")
 USER_AGENT = os.environ.get(
@@ -31,6 +32,7 @@ PROVIDERS = [
     ("Nest", "vidnest", VidNestResolver),
     ("Zen", "vidzee", VidzeeResolver),
     ("Rock", "vidrock", VidrockResolver),
+    ("Vix", "vixsrc", VixSrcResolver),
 ]
 
 _cache: dict[str, tuple[float, list]] = {}

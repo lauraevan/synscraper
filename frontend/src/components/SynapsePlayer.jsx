@@ -10,6 +10,18 @@ import { fmtTime } from "@/lib/format";
 import { saveProgress, getProgress } from "@/lib/storage";
 
 const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2];
+const QUALITY_LADDER = [
+    { label: "4K", height: 2160 }, { label: "1440p", height: 1440 },
+    { label: "1080p", height: 1080 }, { label: "720p", height: 720 },
+    { label: "480p", height: 480 }, { label: "360p", height: 360 },
+    { label: "240p", height: 240 }, { label: "144p", height: 144 },
+];
+const qualityHeight = (value) => {
+    const q = String(value || "").toLowerCase();
+    if (q.includes("4k") || q.includes("2160")) return 2160;
+    const m = q.match(/(1440|1080|720|480|360|240|144)/);
+    return m ? Number(m[1]) : 0;
+};
 const SHORTCUTS = [
     ["Space / K", "Play / Pause"], ["F", "Fullscreen"], ["M", "Mute"],
     ["← / →", "Seek ∓5s"], ["J / L", "Seek ∓10s"], ["↑ / ↓", "Volume"],
@@ -29,12 +41,13 @@ const Popover = ({ open, children }) =>
         </div>
     ) : null;
 
-const MenuItem = ({ active, onClick, children, testId }) => (
+const MenuItem = ({ active, onClick, children, testId, disabled = false }) => (
     <button
         data-testid={testId}
         onClick={onClick}
+        disabled={disabled}
         className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors flex items-center justify-between ${
-            active ? "bg-white text-black" : "hover:bg-white/10 text-zinc-200"
+            disabled ? "cursor-not-allowed text-white/20" : active ? "bg-white text-black" : "hover:bg-white/10 text-zinc-200"
         }`}
     >
         {children}
@@ -46,6 +59,8 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
     const videoRef = useRef(null);
     const hlsRef = useRef(null);
     const hideTimer = useRef(null);
+    const pendingSeekRef = useRef(null);
+    const autoCaptionRef = useRef(false);
 
     const [servers, setServers] = useState([]);
     const [serverId, setServerId] = useState(null);
@@ -70,6 +85,7 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
     const [menu, setMenu] = useState(null);
     const [help, setHelp] = useState(false);
     const [ripple, setRipple] = useState(null);
+    const [scrubPct, setScrubPct] = useState(null);
 
     const activeServer = servers.find((s) => s.id === serverId);
 
@@ -85,11 +101,35 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
             hlsRef.current = hls;
             hls.loadSource(url);
             hls.attachMedia(video);
-            hls.on(Hls.Events.MANIFEST_PARSED, () => { setLevels(hls.levels || []); video.play().catch(() => {}); });
-            hls.on(Hls.Events.SUBTITLE_TRACKS_UPDATED, (_e, d) => setSubs(d.subtitleTracks || []));
+            hls.on(Hls.Events.MANIFEST_PARSED, () => {
+                setLevels(hls.levels || []);
+                const resumeAt = pendingSeekRef.current;
+                if (resumeAt != null && resumeAt > 0) {
+                    if (typeof video.fastSeek === "function") video.fastSeek(resumeAt);
+                    else video.currentTime = resumeAt;
+                    pendingSeekRef.current = null;
+                }
+                video.play().catch(() => {});
+            });
+            hls.on(Hls.Events.SUBTITLE_TRACKS_UPDATED, (_e, d) => {
+                const tracks = d.subtitleTracks || [];
+                setSubs(tracks);
+                if (autoCaptionRef.current && tracks.length) {
+                    hls.subtitleTrack = 0;
+                    setSub(0);
+                    autoCaptionRef.current = false;
+                }
+            });
             hls.on(Hls.Events.LEVEL_SWITCHED, (_e, d) => setLevel(hls.autoLevelEnabled ? -1 : d.level));
             hls.on(Hls.Events.ERROR, (_e, data) => { if (data.fatal) tryNext(server.id); });
         } else {
+            const resumeAt = pendingSeekRef.current;
+            const restore = () => {
+                if (resumeAt != null && resumeAt > 0) video.currentTime = resumeAt;
+                pendingSeekRef.current = null;
+                video.removeEventListener("loadedmetadata", restore);
+            };
+            if (resumeAt != null) video.addEventListener("loadedmetadata", restore);
             video.src = url;
             video.play().catch(() => {});
         }
@@ -131,7 +171,18 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
         // eslint-disable-next-line
     }, [mode, serverId, servers.length]);
 
-    const selectServer = (s) => { setMenu(null); setServerId(s.id); playServer(s); };
+    const selectServer = (s) => {
+        pendingSeekRef.current = videoRef.current?.currentTime || current || 0;
+        setMenu(null); setServerId(s.id); playServer(s);
+    };
+    const selectCaptionSource = (s) => {
+        pendingSeekRef.current = videoRef.current?.currentTime || current || 0;
+        autoCaptionRef.current = true;
+        setSub(-1);
+        setMenu(null);
+        setServerId(s.id);
+        playServer(s);
+    };
 
     // video wiring
     useEffect(() => {
@@ -182,11 +233,48 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
     useEffect(() => () => { if (hlsRef.current) hlsRef.current.destroy(); }, []);
 
     const togglePlay = () => { const v = videoRef.current; if (!v) return; if (v.paused) v.play(); else v.pause(); };
-    const seekBy = (d) => { const v = videoRef.current; if (v) v.currentTime = Math.max(0, Math.min(v.duration || 0, v.currentTime + d)); showRipple(d > 0 ? "fwd" : "back"); };
-    const seekTo = (val) => { const v = videoRef.current; if (v && duration) v.currentTime = (val / 100) * duration; };
+    const fastSeekTo = (seconds, precise = false) => {
+        const v = videoRef.current;
+        if (!v || !Number.isFinite(seconds)) return;
+        const target = Math.max(0, Math.min(v.duration || duration || 0, seconds));
+        setCurrent(target);
+        if (!precise && typeof v.fastSeek === "function") v.fastSeek(target);
+        else v.currentTime = target;
+    };
+    const seekBy = (d) => {
+        const v = videoRef.current;
+        if (v) fastSeekTo(v.currentTime + d);
+        showRipple(d > 0 ? "fwd" : "back");
+    };
+    const previewSeek = (val) => {
+        if (!duration) return;
+        const next = Number(val);
+        setScrubPct(next);
+        fastSeekTo((next / 100) * duration);
+    };
+    const commitSeek = (val) => {
+        if (!duration) return;
+        const next = Number(val);
+        fastSeekTo((next / 100) * duration, true);
+        setScrubPct(null);
+    };
     const setVol = (val) => { const v = videoRef.current; if (v) { v.volume = val; v.muted = val === 0; } };
     const toggleMute = () => { const v = videoRef.current; if (v) v.muted = !v.muted; };
     const changeLevel = (i) => { if (hlsRef.current) { hlsRef.current.currentLevel = i; } setLevel(i); setMenu(null); };
+    const chooseQuality = (choice) => {
+        if (!choice) return;
+        if (choice.levelIndex >= 0 && hlsRef.current) {
+            changeLevel(choice.levelIndex);
+            return;
+        }
+        if (choice.server) {
+            pendingSeekRef.current = videoRef.current?.currentTime || current || 0;
+            setLevel(-1);
+            setMenu(null);
+            setServerId(choice.server.id);
+            playServer(choice.server);
+        }
+    };
     const changeSub = (i) => { if (hlsRef.current) hlsRef.current.subtitleTrack = i; setSub(i); setMenu(null); };
     const changeRate = (r) => { const v = videoRef.current; if (v) v.playbackRate = r; setRate(r); setMenu(null); };
     const togglePip = async () => { const v = videoRef.current; if (!v) return; try { if (document.pictureInPictureElement) await document.exitPictureInPicture(); else await v.requestPictureInPicture(); } catch { /* noop */ } };
@@ -221,7 +309,16 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
     }, [mode, sub, subs, hasNext, wake]); // eslint-disable-line
 
     const pct = duration ? (current / duration) * 100 : 0;
+    const seekPct = scrubPct == null ? pct : scrubPct;
     const bufPct = duration ? (buffered / duration) * 100 : 0;
+    const captionSources = Array.from(new Map(servers.map((s) => [s.provider, s])).values()).slice(0, 6);
+    const activeQualityHeight = level >= 0 ? Number(levels[level]?.height || 0) : qualityHeight(activeServer?.quality);
+    const qualityChoices = QUALITY_LADDER.map((target) => {
+        const levelIndex = levels.findIndex((l) => Number(l.height || 0) === target.height);
+        const sameProvider = servers.find((s) => s.provider === activeServer?.provider && qualityHeight(s.quality) === target.height);
+        const server = sameProvider || servers.find((s) => qualityHeight(s.quality) === target.height);
+        return { ...target, levelIndex, server, available: levelIndex >= 0 || !!server };
+    });
     const releaseDate = meta.release_date || meta.first_air_date || "";
     const year = releaseDate ? String(releaseDate).slice(0, 4) : "";
     const displayTitle = `${meta.title || "Untitled"}${year ? ` (${year})` : ""}`;
@@ -368,12 +465,21 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
                             </div>
                             <input
                                 data-testid="synapse-seek-bar"
-                                type="range" min="0" max="100" step="0.1" value={pct}
-                                onChange={(e) => seekTo(parseFloat(e.target.value))}
-                                className="absolute inset-0 w-full h-full cursor-pointer opacity-0"
+                                type="range" min="0" max="100" step="0.01" value={seekPct}
+                                onPointerDown={(e) => setScrubPct(Number(e.currentTarget.value))}
+                                onInput={(e) => previewSeek(e.currentTarget.value)}
+                                onChange={(e) => commitSeek(e.currentTarget.value)}
+                                onPointerUp={(e) => commitSeek(e.currentTarget.value)}
+                                onTouchEnd={(e) => commitSeek(e.currentTarget.value)}
+                                className="absolute -inset-y-2 inset-x-0 w-full h-8 cursor-pointer opacity-0 touch-none"
                                 aria-label="Seek"
                             />
-                            <div className="absolute w-4 h-4 rounded-full bg-white -translate-x-1/2 pointer-events-none shadow-[0_1px_8px_rgba(0,0,0,0.4)]" style={{ left: `${pct}%` }} />
+                            {scrubPct != null && (
+                                <div className="absolute -top-9 -translate-x-1/2 rounded-lg border border-white/10 bg-black/80 px-2 py-1 text-[11px] font-medium tabular-nums text-white/85 backdrop-blur-xl pointer-events-none" style={{ left: `${seekPct}%` }}>
+                                    {fmtTime((seekPct / 100) * duration)}
+                                </div>
+                            )}
+                            <div className="absolute w-4 h-4 rounded-full bg-white -translate-x-1/2 pointer-events-none shadow-[0_1px_8px_rgba(0,0,0,0.4)]" style={{ left: `${seekPct}%` }} />
                         </div>
 
                         <div className="flex items-center gap-3 md:gap-4">
@@ -412,12 +518,21 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
                                         <Subtitles className="w-6 h-6 md:w-7 md:h-7 stroke-[2.2]" />
                                     </button>
                                     <Popover open={menu === "subs"}>
-                                        <p className="px-3 py-2 text-[10px] uppercase tracking-[0.18em] text-white/45">Captions</p>
+                                        <p className="px-3 py-2 text-[10px] uppercase tracking-[0.18em] text-white/45">Caption source</p>
+                                        <div className="max-h-36 overflow-y-auto scrollbar-none">
+                                            {captionSources.map((s) => (
+                                                <MenuItem key={s.provider} active={serverId === s.id} onClick={() => selectCaptionSource(s)}>
+                                                    <span>{s.name}</span><span className="text-[10px] opacity-45">{s.provider}</span>
+                                                </MenuItem>
+                                            ))}
+                                        </div>
+                                        <div className="h-px bg-white/10 my-2" />
+                                        <p className="px-3 py-2 text-[10px] uppercase tracking-[0.18em] text-white/45">Tracks · {activeServer?.name || "Current source"}</p>
                                         <MenuItem active={sub === -1} onClick={() => changeSub(-1)} testId="sub-off">Off</MenuItem>
-                                        {subs.map((t, i) => (
-                                            <MenuItem key={i} active={sub === i} onClick={() => changeSub(i)}>{t.name || t.lang || `Track ${i + 1}`}</MenuItem>
+                                        {subs.map((track, i) => (
+                                            <MenuItem key={i} active={sub === i} onClick={() => changeSub(i)}>{track.name || track.lang || `Track ${i + 1}`}</MenuItem>
                                         ))}
-                                        {!subs.length && <p className="px-3 py-3 text-xs text-white/45">No caption tracks in this stream</p>}
+                                        {!subs.length && <p className="px-3 py-3 text-xs text-white/45">This source has no exposed caption tracks. Try another source above.</p>}
                                     </Popover>
                                 </div>
 
@@ -434,10 +549,18 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
                                     <Popover open={menu === "settings"}>
                                         <div className="px-3 py-2 flex items-center gap-2 text-[10px] uppercase tracking-[0.18em] text-white/45"><Settings className="w-3.5 h-3.5" /> Quality</div>
                                         <MenuItem active={level === -1} onClick={() => changeLevel(-1)} testId="quality-auto">Auto <span className="text-xs opacity-60">Adaptive</span></MenuItem>
-                                        {levels.map((l, i) => (
-                                            <MenuItem key={i} active={level === i} onClick={() => changeLevel(i)}>{l.height ? `${l.height}p` : `${Math.round(l.bitrate / 1000)}k`}</MenuItem>
-                                        ))}
-                                        {!levels.length && <p className="px-3 py-2 text-xs text-white/40">Single quality stream</p>}
+                                        {qualityChoices.map((choice) => (
+                                            <MenuItem
+                                                key={choice.height}
+                                                active={activeQualityHeight === choice.height}
+                                                disabled={!choice.available}
+                                                onClick={() => chooseQuality(choice)}
+                                                testId={`quality-${choice.height}`}
+                                            >
+                                                <span>{choice.label}</span>
+                                                <span className="text-[10px] opacity-45">{choice.available ? (choice.levelIndex >= 0 ? "HLS" : choice.server?.name) : "Unavailable"}</span>
+                                            </MenuItem>
+                                        ))}}
 
                                         <div className="h-px bg-white/10 my-2" />
                                         <div className="px-3 py-2 flex items-center gap-2 text-[10px] uppercase tracking-[0.18em] text-white/45"><Gauge className="w-3.5 h-3.5" /> Playback speed</div>
