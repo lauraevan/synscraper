@@ -630,11 +630,19 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
     const pct = duration ? (current / duration) * 100 : 0;
     const seekPct = scrubPct == null ? pct : scrubPct;
     const bufPct = duration ? (buffered / duration) * 100 : 0;
-    const sourceSlots = SOURCE_CATALOG.map((source) => {
-        const server = servers.find((s) => s.provider === source.provider);
+    const sourceSlots = SOURCE_CATALOG.flatMap((source) => {
+        const matches = servers.filter((s) => s.provider === source.provider);
+        if (source.provider === "vidzee" && matches.length) {
+            return matches.map((server) => ({
+                ...server,
+                displayName: server.name || source.name,
+                available: true,
+            }));
+        }
+        const server = matches[0];
         return server
-            ? { ...server, displayName: source.name, available: true }
-            : { id: `unavailable-${source.provider}`, provider: source.provider, name: source.name, displayName: source.name, available: false };
+            ? [{ ...server, displayName: source.name, available: true }]
+            : [{ id: `unavailable-${source.provider}`, provider: source.provider, name: source.name, displayName: source.name, available: false }];
     });
     const captionSources = sourceSlots.filter((s) => s.available);
     const externalCaptions = Array.from(new Map(
@@ -935,7 +943,7 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
                                         <p className="px-3 py-2 text-[10px] uppercase tracking-[0.18em] text-white/45">Caption source</p>
                                         <div className="max-h-36 overflow-y-auto scrollbar-none">
                                             {captionSources.map((s) => (
-                                                <MenuItem key={s.provider} active={serverId === s.id} onClick={() => selectCaptionSource(s)}>
+                                                <MenuItem key={s.id} active={serverId === s.id} onClick={() => selectCaptionSource(s)}>
                                                     <span>{s.name}</span><span className="text-[10px] opacity-45">{s.provider}</span>
                                                 </MenuItem>
                                             ))}

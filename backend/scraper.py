@@ -143,6 +143,8 @@ def _run_one(cls, media_type, tmdb_id, season, episode):
                 "origin": headers.get("Origin", ""),
                 "user_agent": headers.get("User-Agent", USER_AGENT),
                 "captions": deduped_captions,
+                "subserver": pu.get("server") or pu.get("label") or "",
+                "lang": pu.get("lang") or pu.get("language") or "",
             })
         return streams
     except Exception:
@@ -170,9 +172,20 @@ async def scrape_streams(media_type: str, tmdb_id, season=None, episode=None) ->
             continue
         name, pid, streams = res
         for idx, s in enumerate(streams):
+            subserver = str(s.get("subserver") or "").strip()
+            if pid == "vidzee" and subserver:
+                pretty = {
+                    "dcloud": "DCloud",
+                    "tik": "Tik",
+                    "ipcloud": "IPCloud",
+                    "v6:hindi": "V6 Hindi",
+                }.get(subserver.lower(), subserver)
+                display_name = f"{name} · {pretty}"
+            else:
+                display_name = name if idx == 0 else f"{name} {idx + 1}"
             servers.append({
                 "id": f"{pid}-{idx}",
-                "name": name if idx == 0 else f"{name} {idx + 1}",
+                "name": display_name,
                 "provider": pid,
                 "primary": pid == "castle",
                 **s,
