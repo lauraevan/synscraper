@@ -1,0 +1,31 @@
+name: Backend deployment check
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - backend/**
+      - vercel.json
+      - .github/workflows/backend-check.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r backend/requirements.txt
+      - run: python -m py_compile backend/server.py backend/scraper.py backend/providers/*.py
+      - run: |
+          python - <<'PY'
+          import sys
+          sys.path.insert(0, "backend")
+          import server
+          print(server.app.title)
+          PY
