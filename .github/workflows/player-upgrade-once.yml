@@ -1,0 +1,155 @@
+name: One-time player upgrade
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/player-upgrade-trigger"
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Patch player and provider stack
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          def replace_once(text, old, new, label):
+              if old not in text:
+                  raise SystemExit(f"missing patch target: {label}")
+              return text.replace(old, new, 1)
+
+          # Enable the sixth real provider already shipped in the repository.
+          scraper_path = Path("backend/scraper.py")
+          s = scraper_path.read_text()
+          s = replace_once(
+              s,
+              "from providers.vidzee import VidzeeResolver\n",
+              "from providers.vidzee import VidzeeResolver\nfrom providers.vixsrc import VixSrcResolver\n",
+              "vix import",
+          )
+          s = replace_once(
+              s,
+              '    ("Rock", "vidrock", VidrockResolver),\n]',
+              '    ("Rock", "vidrock", VidrockResolver),\n    ("Vix", "vixsrc", VixSrcResolver),\n]',
+              "vix provider",
+          )
+          scraper_path.write_text(s)
+
+          p = Path("frontend/src/components/SynapsePlayer.jsx")
+          t = p.read_text()
+
+          t = replace_once(
+              t,
+              'const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2];\n',
+              'const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2];\nconst QUALITY_LADDER = [\n    { label: "4K", height: 2160 }, { label: "1440p", height: 1440 },\n    { label: "1080p", height: 1080 }, { label: "720p", height: 720 },\n    { label: "480p", height: 480 }, { label: "360p", height: 360 },\n    { label: "240p", height: 240 }, { label: "144p", height: 144 },\n];\nconst qualityHeight = (value) => {\n    const q = String(value || "").toLowerCase();\n    if (q.includes("4k") || q.includes("2160")) return 2160;\n    const m = q.match(/(1440|1080|720|480|360|240|144)/);\n    return m ? Number(m[1]) : 0;\n};\n',
+              "quality constants",
+          )
+
+          t = replace_once(
+              t,
+              'const MenuItem = ({ active, onClick, children, testId }) => (\n    <button\n        data-testid={testId}\n        onClick={onClick}\n        className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors flex items-center justify-between ${\n            active ? "bg-white text-black" : "hover:bg-white/10 text-zinc-200"\n        }`}\n    >\n        {children}\n    </button>\n);',
+              'const MenuItem = ({ active, onClick, children, testId, disabled = false }) => (\n    <button\n        data-testid={testId}\n        onClick={onClick}\n        disabled={disabled}\n        className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors flex items-center justify-between ${\n            disabled ? "cursor-not-allowed text-white/20" : active ? "bg-white text-black" : "hover:bg-white/10 text-zinc-200"\n        }`}\n    >\n        {children}\n    </button>\n);',
+              "menu disabled",
+          )
+
+          t = replace_once(
+              t,
+              '    const hlsRef = useRef(null);\n    const hideTimer = useRef(null);\n',
+              '    const hlsRef = useRef(null);\n    const hideTimer = useRef(null);\n    const pendingSeekRef = useRef(null);\n    const autoCaptionRef = useRef(false);\n',
+              "refs",
+          )
+
+          t = replace_once(
+              t,
+              '    const [ripple, setRipple] = useState(null);\n',
+              '    const [ripple, setRipple] = useState(null);\n    const [scrubPct, setScrubPct] = useState(null);\n',
+              "scrub state",
+          )
+
+          t = replace_once(
+              t,
+              '            hls.on(Hls.Events.MANIFEST_PARSED, () => { setLevels(hls.levels || []); video.play().catch(() => {}); });\n            hls.on(Hls.Events.SUBTITLE_TRACKS_UPDATED, (_e, d) => setSubs(d.subtitleTracks || []));',
+              '            hls.on(Hls.Events.MANIFEST_PARSED, () => {\n                setLevels(hls.levels || []);\n                const resumeAt = pendingSeekRef.current;\n                if (resumeAt != null && resumeAt > 0) {\n                    if (typeof video.fastSeek === "function") video.fastSeek(resumeAt);\n                    else video.currentTime = resumeAt;\n                    pendingSeekRef.current = null;\n                }\n                video.play().catch(() => {});\n            });\n            hls.on(Hls.Events.SUBTITLE_TRACKS_UPDATED, (_e, d) => {\n                const tracks = d.subtitleTracks || [];\n                setSubs(tracks);\n                if (autoCaptionRef.current && tracks.length) {\n                    hls.subtitleTrack = 0;\n                    setSub(0);\n                    autoCaptionRef.current = false;\n                }\n            });',
+              "hls resume captions",
+          )
+
+          t = replace_once(
+              t,
+              '        } else {\n            video.src = url;\n            video.play().catch(() => {});\n        }\n',
+              '        } else {\n            const resumeAt = pendingSeekRef.current;\n            const restore = () => {\n                if (resumeAt != null && resumeAt > 0) video.currentTime = resumeAt;\n                pendingSeekRef.current = null;\n                video.removeEventListener("loadedmetadata", restore);\n            };\n            if (resumeAt != null) video.addEventListener("loadedmetadata", restore);\n            video.src = url;\n            video.play().catch(() => {});\n        }\n',
+              "direct resume",
+          )
+
+          t = replace_once(
+              t,
+              '    const selectServer = (s) => { setMenu(null); setServerId(s.id); playServer(s); };\n',
+              '    const selectServer = (s) => {\n        pendingSeekRef.current = videoRef.current?.currentTime || current || 0;\n        setMenu(null); setServerId(s.id); playServer(s);\n    };\n    const selectCaptionSource = (s) => {\n        pendingSeekRef.current = videoRef.current?.currentTime || current || 0;\n        autoCaptionRef.current = true;\n        setSub(-1);\n        setMenu(null);\n        setServerId(s.id);\n        playServer(s);\n    };\n',
+              "source switching",
+          )
+
+          t = replace_once(
+              t,
+              '    const togglePlay = () => { const v = videoRef.current; if (!v) return; if (v.paused) v.play(); else v.pause(); };\n    const seekBy = (d) => { const v = videoRef.current; if (v) v.currentTime = Math.max(0, Math.min(v.duration || 0, v.currentTime + d)); showRipple(d > 0 ? "fwd" : "back"); };\n    const seekTo = (val) => { const v = videoRef.current; if (v && duration) v.currentTime = (val / 100) * duration; };',
+              '    const togglePlay = () => { const v = videoRef.current; if (!v) return; if (v.paused) v.play(); else v.pause(); };\n    const fastSeekTo = (seconds, precise = false) => {\n        const v = videoRef.current;\n        if (!v || !Number.isFinite(seconds)) return;\n        const target = Math.max(0, Math.min(v.duration || duration || 0, seconds));\n        setCurrent(target);\n        if (!precise && typeof v.fastSeek === "function") v.fastSeek(target);\n        else v.currentTime = target;\n    };\n    const seekBy = (d) => {\n        const v = videoRef.current;\n        if (v) fastSeekTo(v.currentTime + d);\n        showRipple(d > 0 ? "fwd" : "back");\n    };\n    const previewSeek = (val) => {\n        if (!duration) return;\n        const next = Number(val);\n        setScrubPct(next);\n        fastSeekTo((next / 100) * duration);\n    };\n    const commitSeek = (val) => {\n        if (!duration) return;\n        const next = Number(val);\n        fastSeekTo((next / 100) * duration, true);\n        setScrubPct(null);\n    };',
+              "fast seek",
+          )
+
+          t = replace_once(
+              t,
+              '    const changeLevel = (i) => { if (hlsRef.current) { hlsRef.current.currentLevel = i; } setLevel(i); setMenu(null); };\n',
+              '    const changeLevel = (i) => { if (hlsRef.current) { hlsRef.current.currentLevel = i; } setLevel(i); setMenu(null); };\n    const chooseQuality = (choice) => {\n        if (!choice) return;\n        if (choice.levelIndex >= 0 && hlsRef.current) {\n            changeLevel(choice.levelIndex);\n            return;\n        }\n        if (choice.server) {\n            pendingSeekRef.current = videoRef.current?.currentTime || current || 0;\n            setLevel(-1);\n            setMenu(null);\n            setServerId(choice.server.id);\n            playServer(choice.server);\n        }\n    };\n',
+              "quality choose",
+          )
+
+          t = replace_once(
+              t,
+              '    const pct = duration ? (current / duration) * 100 : 0;\n    const bufPct = duration ? (buffered / duration) * 100 : 0;\n',
+              '    const pct = duration ? (current / duration) * 100 : 0;\n    const seekPct = scrubPct == null ? pct : scrubPct;\n    const bufPct = duration ? (buffered / duration) * 100 : 0;\n    const captionSources = Array.from(new Map(servers.map((s) => [s.provider, s])).values()).slice(0, 6);\n    const activeQualityHeight = level >= 0 ? Number(levels[level]?.height || 0) : qualityHeight(activeServer?.quality);\n    const qualityChoices = QUALITY_LADDER.map((target) => {\n        const levelIndex = levels.findIndex((l) => Number(l.height || 0) === target.height);\n        const sameProvider = servers.find((s) => s.provider === activeServer?.provider && qualityHeight(s.quality) === target.height);\n        const server = sameProvider || servers.find((s) => qualityHeight(s.quality) === target.height);\n        return { ...target, levelIndex, server, available: levelIndex >= 0 || !!server };\n    });\n',
+              "derived quality caption",
+          )
+
+          t = replace_once(
+              t,
+              '                            <input\n                                data-testid="synapse-seek-bar"\n                                type="range" min="0" max="100" step="0.1" value={pct}\n                                onChange={(e) => seekTo(parseFloat(e.target.value))}\n                                className="absolute inset-0 w-full h-full cursor-pointer opacity-0"\n                                aria-label="Seek"\n                            />\n                            <div className="absolute w-4 h-4 rounded-full bg-white -translate-x-1/2 pointer-events-none shadow-[0_1px_8px_rgba(0,0,0,0.4)]" style={{ left: `${pct}%` }} />',
+              '                            <input\n                                data-testid="synapse-seek-bar"\n                                type="range" min="0" max="100" step="0.01" value={seekPct}\n                                onPointerDown={(e) => setScrubPct(Number(e.currentTarget.value))}\n                                onInput={(e) => previewSeek(e.currentTarget.value)}\n                                onChange={(e) => commitSeek(e.currentTarget.value)}\n                                onPointerUp={(e) => commitSeek(e.currentTarget.value)}\n                                onTouchEnd={(e) => commitSeek(e.currentTarget.value)}\n                                className="absolute -inset-y-2 inset-x-0 w-full h-8 cursor-pointer opacity-0 touch-none"\n                                aria-label="Seek"\n                            />\n                            {scrubPct != null && (\n                                <div className="absolute -top-9 -translate-x-1/2 rounded-lg border border-white/10 bg-black/80 px-2 py-1 text-[11px] font-medium tabular-nums text-white/85 backdrop-blur-xl pointer-events-none" style={{ left: `${seekPct}%` }}>\n                                    {fmtTime((seekPct / 100) * duration)}\n                                </div>\n                            )}\n                            <div className="absolute w-4 h-4 rounded-full bg-white -translate-x-1/2 pointer-events-none shadow-[0_1px_8px_rgba(0,0,0,0.4)]" style={{ left: `${seekPct}%` }} />',
+              "seek ui",
+          )
+
+          t = replace_once(
+              t,
+              '                                    <Popover open={menu === "subs"}>\n                                        <p className="px-3 py-2 text-[10px] uppercase tracking-[0.18em] text-white/45">Captions</p>\n                                        <MenuItem active={sub === -1} onClick={() => changeSub(-1)} testId="sub-off">Off</MenuItem>\n                                        {subs.map((t, i) => (\n                                            <MenuItem key={i} active={sub === i} onClick={() => changeSub(i)}>{t.name || t.lang || `Track ${i + 1}`}</MenuItem>\n                                        ))}\n                                        {!subs.length && <p className="px-3 py-3 text-xs text-white/45">No caption tracks in this stream</p>}\n                                    </Popover>',
+              '                                    <Popover open={menu === "subs"}>\n                                        <p className="px-3 py-2 text-[10px] uppercase tracking-[0.18em] text-white/45">Caption source</p>\n                                        <div className="max-h-36 overflow-y-auto scrollbar-none">\n                                            {captionSources.map((s) => (\n                                                <MenuItem key={s.provider} active={serverId === s.id} onClick={() => selectCaptionSource(s)}>\n                                                    <span>{s.name}</span><span className="text-[10px] opacity-45">{s.provider}</span>\n                                                </MenuItem>\n                                            ))}\n                                        </div>\n                                        <div className="h-px bg-white/10 my-2" />\n                                        <p className="px-3 py-2 text-[10px] uppercase tracking-[0.18em] text-white/45">Tracks · {activeServer?.name || "Current source"}</p>\n                                        <MenuItem active={sub === -1} onClick={() => changeSub(-1)} testId="sub-off">Off</MenuItem>\n                                        {subs.map((track, i) => (\n                                            <MenuItem key={i} active={sub === i} onClick={() => changeSub(i)}>{track.name || track.lang || `Track ${i + 1}`}</MenuItem>\n                                        ))}\n                                        {!subs.length && <p className="px-3 py-3 text-xs text-white/45">This source has no exposed caption tracks. Try another source above.</p>}\n                                    </Popover>',
+              "caption menu",
+          )
+
+          t = replace_once(
+              t,
+              '                                        <MenuItem active={level === -1} onClick={() => changeLevel(-1)} testId="quality-auto">Auto <span className="text-xs opacity-60">Adaptive</span></MenuItem>\n                                        {levels.map((l, i) => (\n                                            <MenuItem key={i} active={level === i} onClick={() => changeLevel(i)}>{l.height ? `${l.height}p` : `${Math.round(l.bitrate / 1000)}k`}</MenuItem>\n                                        ))}\n                                        {!levels.length && <p className="px-3 py-2 text-xs text-white/40">Single quality stream</p>',
+              '                                        <MenuItem active={level === -1} onClick={() => changeLevel(-1)} testId="quality-auto">Auto <span className="text-xs opacity-60">Adaptive</span></MenuItem>\n                                        {qualityChoices.map((choice) => (\n                                            <MenuItem\n                                                key={choice.height}\n                                                active={activeQualityHeight === choice.height}\n                                                disabled={!choice.available}\n                                                onClick={() => chooseQuality(choice)}\n                                                testId={`quality-${choice.height}`}\n                                            >\n                                                <span>{choice.label}</span>\n                                                <span className="text-[10px] opacity-45">{choice.available ? (choice.levelIndex >= 0 ? "HLS" : choice.server?.name) : "Unavailable"}</span>\n                                            </MenuItem>\n                                        ))}',
+              "quality menu",
+          )
+
+          p.write_text(t)
+          PY
+
+      - name: Validate frontend and backend
+        run: |
+          python -m py_compile backend/server.py backend/scraper.py backend/providers/*.py
+          cd frontend
+          yarn install --frozen-lockfile
+          yarn build
+
+      - name: Commit upgraded player
+        run: |
+          git config user.name "Synapse Bot"
+          git config user.email "264532369+lauraevan@users.noreply.github.com"
+          git add backend/scraper.py frontend/src/components/SynapsePlayer.jsx
+          git commit -m "Upgrade captions, fast seeking, and quality ladder"
+          git push
