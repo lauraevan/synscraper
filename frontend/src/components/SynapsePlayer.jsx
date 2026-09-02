@@ -17,6 +17,7 @@ const SOURCE_CATALOG = [
     { provider: "vidnest", name: "Nest" },
     { provider: "vidzee", name: "Zen" },
     { provider: "vidrock", name: "Rock" },
+    { provider: "vidy", name: "Vidy" },
     { provider: "vixsrc", name: "Vix" },
 ];
 const QUALITY_LADDER = [
