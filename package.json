@@ -2,6 +2,6 @@
   "name": "synscraper-vercel",
   "private": true,
   "scripts": {
-    "build": "test -f public/index.html"
+    "build": "node patch_selector.js && test -f public/index.html"
   }
 }
