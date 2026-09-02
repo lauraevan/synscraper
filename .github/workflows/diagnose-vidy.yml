@@ -13,92 +13,84 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Inspect live Vidy player and JS
+      - name: Capture live Vidy app
         shell: bash
         run: |
+          mkdir -p vidy-diagnostic
           python - <<'PY'
-          import html, re, urllib.request
+          import html, json, re, urllib.request
+          from pathlib import Path
           from urllib.parse import urljoin
 
+          out = Path('vidy-diagnostic')
           UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36'
-          headers = {
+          base_headers = {
               'User-Agent': UA,
-              'Accept': 'text/html,application/xhtml+xml,application/json,*/*',
+              'Accept': '*/*',
               'Accept-Language': 'en-US,en;q=0.9',
           }
 
           def get(url, referer=None):
-              h = dict(headers)
+              h = dict(base_headers)
               if referer:
                   h['Referer'] = referer
               req = urllib.request.Request(url, headers=h)
-              with urllib.request.urlopen(req, timeout=25) as r:
-                  body = r.read().decode('utf-8', 'ignore')
-                  print(f'FETCH {url} -> {r.status} {r.geturl()} {r.headers.get("content-type", "")} bytes={len(body)}')
-                  return r.geturl(), body
+              with urllib.request.urlopen(req, timeout=30) as r:
+                  raw = r.read()
+                  text = raw.decode('utf-8', 'ignore')
+                  return r.geturl(), r.status, dict(r.headers.items()), text
 
-          for base in ['https://vidy.st/', 'https://www.vidy.st/']:
-              try:
-                  get(base)
-              except Exception as e:
-                  print('BASE_FAIL', base, repr(e))
+          page = 'https://www.vidy.st/movie/550'
+          final, status, headers, body = get(page)
+          (out/'page.html').write_text(body, encoding='utf-8')
 
-          page = 'https://www.vidy.st/movie/315162'
-          try:
-              final, body = get(page)
-          except Exception as e:
-              print('PLAYER_FAIL', repr(e))
-              raise
-
-          print('\n=== HTML HEAD ===')
-          print(body[:12000])
-
-          scripts = []
-          for src in re.findall(r'<script[^>]+src=["\']([^"\']+)["\']', body, flags=re.I):
-              scripts.append(urljoin(final, html.unescape(src)))
+          scripts = [urljoin(final, html.unescape(s)) for s in re.findall(r'<script[^>]+src=["\']([^"\']+)["\']', body, re.I)]
           scripts = list(dict.fromkeys(scripts))
-          print('\n=== SCRIPTS ===')
-          for s in scripts:
-              print(s)
 
-          needles = [
-              'm3u8', '.mpd', '/api/', 'fetch(', 'axios', 'source', 'stream',
-              'manifest', 'decrypt', 'crypto', 'token', 'provider', 'server',
-              'tmdb', 'movie/', 'iframe', 'encrypted-media'
-          ]
-
-          for idx, s in enumerate(scripts[:40]):
+          # Vidy currently exposes runtime configuration separately.
+          captures = []
+          for url in ['https://www.vidy.st/config.js', *scripts]:
               try:
-                  _, js = get(s, final)
+                  u, st, hs, text = get(url, final)
               except Exception as e:
-                  print('SCRIPT_FAIL', s, repr(e))
+                  captures.append({'url': url, 'error': repr(e)})
                   continue
-              low = js.lower()
-              hits = []
+              name = 'config.js' if url.endswith('/config.js') else f'script-{len(captures)}.js'
+              (out/name).write_text(text, encoding='utf-8')
+              captures.append({'url': u, 'status': st, 'content_type': hs.get('Content-Type',''), 'file': name, 'bytes': len(text)})
+
+          summary = {'page': final, 'page_status': status, 'scripts': scripts, 'captures': captures, 'interesting': []}
+          needles = ['api', 'fetch(', 'axios', 'tmdb', 'movie', 'episode', 'source', 'stream', 'provider', 'server', 'embed', 'decrypt', 'token', 'm3u8', 'mpd']
+          for cap in captures:
+              name = cap.get('file')
+              if not name:
+                  continue
+              text = (out/name).read_text(encoding='utf-8', errors='ignore')
+              low = text.lower()
               for needle in needles:
                   start = 0
-                  n = needle.lower()
-                  while len(hits) < 30:
-                      pos = low.find(n, start)
+                  while True:
+                      pos = low.find(needle.lower(), start)
                       if pos < 0:
                           break
-                      a = max(0, pos - 700)
-                      b = min(len(js), pos + 1500)
-                      hits.append((needle, js[a:b]))
-                      start = pos + len(n)
-              if hits:
-                  print(f'\n=== SCRIPT {idx} MATCHES {s} ===')
-                  seen = set()
-                  for needle, snippet in hits:
-                      key = snippet[:300]
-                      if key in seen:
-                          continue
-                      seen.add(key)
-                      print(f'--- {needle} ---')
-                      print(snippet)
+                      summary['interesting'].append({
+                          'file': name,
+                          'needle': needle,
+                          'snippet': text[max(0,pos-500):min(len(text),pos+1200)]
+                      })
+                      start = pos + len(needle)
+                      if sum(1 for x in summary['interesting'] if x['file']==name and x['needle']==needle) >= 12:
+                          break
 
-          urls = sorted(set(re.findall(r'https?://[^"\'\\\s<>]+', body)))
-          print('\n=== ABSOLUTE URLS IN HTML ===')
-          for u in urls:
-              print(u)
+              # Pull absolute and root-relative endpoint-looking strings.
+              endpoints = sorted(set(re.findall(r'https?://[^"\'`\\\s<>]+|/[A-Za-z0-9_.~!$&()*+,;=:@%/?#\-]{3,}', text)))
+              summary.setdefault('endpoints', {})[name] = [e for e in endpoints if any(k in e.lower() for k in ('api','movie','tv','anime','source','stream','embed','server','token','provider'))][:500]
+
+          (out/'summary.json').write_text(json.dumps(summary, indent=2), encoding='utf-8')
           PY
+      - name: Upload diagnostic
+        uses: actions/upload-artifact@v4
+        with:
+          name: vidy-diagnostic
+          path: vidy-diagnostic/
+          retention-days: 1
