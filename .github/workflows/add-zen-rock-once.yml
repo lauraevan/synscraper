@@ -1,0 +1,29 @@
+name: One-time Zen Rock source patch
+
+on:
+  push:
+    paths:
+      - '.github/zen-rock-trigger'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch Zen and Rock sources
+        run: python .github/scripts/add_zen_rock_sources.py
+      - name: Validate frontend build
+        run: |
+          cd frontend
+          yarn install
+          CI=false yarn build
+      - name: Commit source picker update
+        run: |
+          git config user.name 'Polaris'
+          git config user.email '264532369+lauraevan@users.noreply.github.com'
+          git add frontend/src/components/SynapsePlayer.jsx
+          git commit -m 'Add Zen and Rock source slots'
+          git push
