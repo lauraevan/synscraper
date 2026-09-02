@@ -7,7 +7,6 @@ import httpx
 from dotenv import load_dotenv
 from fastapi import APIRouter, FastAPI, HTTPException, Query, Request, Response
 from fastapi.responses import StreamingResponse
-from motor.motor_asyncio import AsyncIOMotorClient
 from starlette.middleware.cors import CORSMiddleware
 
 import scraper
@@ -15,24 +14,29 @@ import scraper
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / ".env")
 
-mongo_url = os.environ["MONGO_URL"]
-client = AsyncIOMotorClient(mongo_url)
-db = client[os.environ["DB_NAME"]]
-
-TMDB_TOKEN = os.environ["TMDB_TOKEN"]
+TMDB_TOKEN = os.environ.get("TMDB_TOKEN", "").strip()
+TMDB_API_KEY = os.environ.get("TMDB_API_KEY", "68e094699525b18a70bab2f86b1fa706").strip()
 TMDB_BASE = "https://api.themoviedb.org/3"
 UA = scraper.USER_AGENT
 
-app = FastAPI(title="Synflix API")
+app = FastAPI(title="Synapse Player API")
 api_router = APIRouter(prefix="/api")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-logger = logging.getLogger("synflix")
+logger = logging.getLogger("synapse-player")
 
 
 async def tmdb_get(path: str, params: dict | None = None) -> dict:
     params = dict(params or {})
     params.setdefault("language", "en-US")
-    headers = {"Authorization": f"Bearer {TMDB_TOKEN}", "accept": "application/json"}
+    headers = {"accept": "application/json"}
+
+    if TMDB_TOKEN:
+        headers["Authorization"] = f"Bearer {TMDB_TOKEN}"
+    elif TMDB_API_KEY:
+        params.setdefault("api_key", TMDB_API_KEY)
+    else:
+        raise HTTPException(status_code=503, detail="TMDB credentials are not configured")
+
     async with httpx.AsyncClient(timeout=20) as c:
         r = await c.get(f"{TMDB_BASE}/{path.lstrip('/')}", params=params, headers=headers)
     if r.status_code != 200:
@@ -42,7 +46,7 @@ async def tmdb_get(path: str, params: dict | None = None) -> dict:
 
 @api_router.get("/")
 async def root():
-    return {"message": "Synflix API", "sources": [p[0] for p in scraper.PROVIDERS]}
+    return {"message": "Synapse Player API", "sources": [p[0] for p in scraper.PROVIDERS]}
 
 
 # ----------------------- TMDB -----------------------
@@ -141,7 +145,6 @@ async def hls(url: str = Query(...), ref: str | None = None,
     cors = {"Access-Control-Allow-Origin": "*"}
 
     if is_media:
-        # stream with Range passthrough (mp4/mkv)
         rng = request.headers.get("range") if request else None
         if rng:
             headers["Range"] = rng
@@ -164,7 +167,6 @@ async def hls(url: str = Query(...), ref: str | None = None,
         return StreamingResponse(gen(), status_code=r.status_code, headers=resp_headers,
                                  media_type=r.headers.get("content-type", "video/mp4"))
 
-    # m3u8 or segment/key: fetch fully
     try:
         async with httpx.AsyncClient(timeout=30, follow_redirects=True) as c:
             r = await c.get(url, headers=headers)
@@ -188,8 +190,3 @@ app.add_middleware(
     allow_origins=os.environ.get("CORS_ORIGINS", "*").split(","),
     allow_methods=["*"], allow_headers=["*"],
 )
-
-
-@app.on_event("shutdown")
-async def shutdown_db_client():
-    client.close()
