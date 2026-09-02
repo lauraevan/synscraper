@@ -1,0 +1,51 @@
+name: One-time Zen Rock resolver diagnostic
+
+on:
+  push:
+    paths:
+      - '.github/zen-rock-diagnostic-trigger'
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -r backend/requirements.txt
+      - name: Diagnose resolver paths
+        run: |
+          cd backend
+          python - <<'PY'
+          import json
+          import urllib.request
+          import urllib.error
+          from providers.vidzee import VidzeeResolver, API_KEY_URL
+          from providers.vidrock import VidrockResolver, DOMAIN
+
+          def check_url(name, url):
+              try:
+                  req = urllib.request.Request(url, headers={'User-Agent':'Mozilla/5.0','Accept':'application/json, */*'})
+                  with urllib.request.urlopen(req, timeout=15) as r:
+                      body = r.read(512).decode('utf-8', errors='ignore')
+                      print(f'{name}_HTTP={getattr(r, "status", 200)} CT={r.headers.get("Content-Type", "")} BODY_PREFIX={body[:80]!r}')
+              except Exception as e:
+                  print(f'{name}_HTTP_ERROR={type(e).__name__}:{e}')
+
+          check_url('VIDZEE_KEY', API_KEY_URL)
+          check_url('VIDROCK_HOME', DOMAIN)
+
+          for label, resolver in [('ZEN', VidzeeResolver(debug=True)), ('ROCK', VidrockResolver(debug=True))]:
+              try:
+                  raw = resolver.resolve('550', media_type='movie')
+                  data = json.loads(raw)
+                  print(f'{label}_STATUS={data.get("status")}')
+                  print(f'{label}_MESSAGE={data.get("message", "")}')
+                  print(f'{label}_COUNT={len(data.get("playable_urls") or [])}')
+              except Exception as e:
+                  print(f'{label}_EXCEPTION={type(e).__name__}:{e}')
+          PY
