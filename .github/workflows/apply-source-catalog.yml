@@ -1,0 +1,34 @@
+name: Apply source catalog patch
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Add Vidy to selector sources
+        run: node patch_selector.js
+      - name: Commit generated selector update
+        run: |
+          if git diff --quiet -- frontend/src/components/SynapsePlayer.jsx public/static/js/main.53686aec.js; then
+            echo "Selector already up to date"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add frontend/src/components/SynapsePlayer.jsx public/static/js/main.53686aec.js
+          git commit -m "Add Vidy to frontend source selector"
+          git push
