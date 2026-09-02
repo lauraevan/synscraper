@@ -145,6 +145,7 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
     const [buffering, setBuffering] = useState(true);
     const [showControls, setShowControls] = useState(true);
     const [menu, setMenu] = useState(null);
+    const [brandExpanded, setBrandExpanded] = useState(false);
     const [help, setHelp] = useState(false);
     const [ripple, setRipple] = useState(null);
     const [scrubPct, setScrubPct] = useState(null);
@@ -473,7 +474,7 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
             onMouseMove={wake}
             onTouchStart={wake}
             onClick={() => menu && setMenu(null)}
-            className="relative w-full aspect-video bg-black rounded-[22px] overflow-hidden border border-white/10 select-none text-white shadow-[0_24px_80px_rgba(0,0,0,0.45)]"
+            className="relative w-full aspect-video bg-black rounded-[20px] overflow-hidden border border-white/[0.08] select-none text-white shadow-[0_20px_65px_rgba(0,0,0,0.38)]"
         >
             <video
                 ref={videoRef}
@@ -511,7 +512,7 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
             )}
 
             {mode === "ready" && showControls && (
-                <div className="absolute inset-0 pointer-events-none bg-[linear-gradient(to_bottom,rgba(0,0,0,0.34),rgba(0,0,0,0.04)_34%,rgba(0,0,0,0.08)_58%,rgba(0,0,0,0.72)_100%)] z-10" />
+                <div className="absolute inset-0 pointer-events-none bg-[linear-gradient(to_bottom,rgba(0,0,0,0.24),rgba(0,0,0,0.02)_34%,rgba(0,0,0,0.05)_60%,rgba(0,0,0,0.64)_100%)] z-10" />
             )}
 
             {mode === "ready" && buffering && playing && (
@@ -588,18 +589,18 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
                                     e.stopPropagation();
                                     setMenu(menu === "sources" ? null : "sources");
                                 }}
-                                className={`grid h-12 w-12 md:h-14 md:w-14 place-items-center rounded-full border transition-all duration-200 active:scale-95 ${menu === "sources" ? "border-white/30 bg-white/15 text-white" : "border-white/10 bg-black/20 text-white/90 hover:bg-white/10 hover:text-white"}`}
+                                className={`grid h-11 w-11 md:h-12 md:w-12 place-items-center rounded-full border backdrop-blur-xl transition-all duration-200 active:scale-95 ${menu === "sources" ? "border-white/25 bg-white/14 text-white" : "border-white/[0.08] bg-black/18 text-white/85 hover:bg-white/[0.08] hover:text-white"}`}
                                 aria-label="Choose source"
                                 title="Sources"
                             >
-                                <Cloud className="h-9 w-9 md:h-10 md:w-10 stroke-[1.65]" />
+                                <Cloud className="h-7 w-7 md:h-8 md:w-8 stroke-[1.55]" />
                             </button>
 
                             {menu === "sources" && (
                                 <div
                                     data-testid="synapse-source-popout"
                                     onClick={(e) => e.stopPropagation()}
-                                    className="absolute left-0 top-[3.55rem] md:top-[4rem] z-40 w-[250px] max-w-[calc(100vw-2.5rem)] overflow-hidden rounded-2xl border border-white/15 bg-black/88 p-2 shadow-2xl backdrop-blur-2xl"
+                                    className="absolute left-0 top-[3.2rem] md:top-[3.45rem] z-40 w-[244px] max-w-[calc(100vw-2.5rem)] overflow-hidden rounded-2xl border border-white/10 bg-black/86 p-2 shadow-[0_18px_50px_rgba(0,0,0,0.42)] backdrop-blur-2xl"
                                 >
                                     <div className="px-3 pb-2 pt-2.5">
                                         <p className="text-sm font-semibold text-white">Sources</p>
@@ -626,10 +627,22 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
                             )}
                         </div>
 
-                        <div className="absolute left-1/2 top-6 md:top-7 -translate-x-1/2 text-center max-w-[68%] drop-shadow-[0_2px_12px_rgba(0,0,0,0.75)] pointer-events-none">
-                            <p className="text-sm md:text-lg font-medium text-white/80 leading-none">You're Watching</p>
-                            <p className="mt-2 text-base md:text-xl font-semibold text-white truncate">{displayTitle}</p>
+                        <div className="absolute left-1/2 top-5 md:top-6 -translate-x-1/2 text-center max-w-[60%] pointer-events-none">
+                            <p className="text-[10px] md:text-xs font-medium uppercase tracking-[0.18em] text-white/38 leading-none">Now playing</p>
+                            <p className="mt-1.5 text-sm md:text-lg font-medium tracking-[-0.02em] text-white/92 truncate">{displayTitle}</p>
                         </div>
+
+                        <button
+                            data-testid="synplayer-brand-pill"
+                            onClick={(e) => { e.stopPropagation(); setBrandExpanded((v) => !v); }}
+                            className={`absolute right-5 top-5 md:right-7 md:top-7 flex h-9 items-center overflow-hidden rounded-full border border-white/[0.09] bg-black/20 text-white/90 backdrop-blur-xl transition-[width,background-color,border-color] duration-300 ease-out hover:bg-white/[0.08] hover:border-white/15 ${brandExpanded ? "w-[112px] px-3" : "w-9 px-0 justify-center"}`}
+                            aria-label={brandExpanded ? "Collapse SynPlayer branding" : "Show SynPlayer branding"}
+                            aria-expanded={brandExpanded}
+                            title="SynPlayer"
+                        >
+                            <span className="shrink-0 text-sm font-semibold tracking-[-0.03em]">S</span>
+                            <span className={`overflow-hidden whitespace-nowrap text-sm font-medium tracking-[-0.03em] transition-all duration-300 ${brandExpanded ? "ml-0.5 max-w-[78px] opacity-100" : "ml-0 max-w-0 opacity-0"}`}>ynPlayer</span>
+                        </button>
                     </div>
 
                     <div
@@ -658,10 +671,10 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
 
                     <div
                         onClick={(e) => e.stopPropagation()}
-                        className={`absolute bottom-0 left-0 right-0 z-30 px-4 md:px-7 pb-4 md:pb-7 pt-12 transition-opacity duration-300 ${showControls ? "opacity-100" : "opacity-0 pointer-events-none"}`}
+                        className={`absolute bottom-0 left-0 right-0 z-30 px-4 md:px-7 pb-4 md:pb-6 pt-10 transition-opacity duration-300 ${showControls ? "opacity-100" : "opacity-0 pointer-events-none"}`}
                     >
-                        <div className="group/seek relative mb-6 md:mb-8 h-4 flex items-center">
-                            <div className="absolute left-0 right-0 h-[5px] rounded-full bg-white/28 overflow-hidden">
+                        <div className="group/seek relative mb-5 md:mb-6 h-4 flex items-center">
+                            <div className="absolute left-0 right-0 h-[4px] rounded-full bg-white/20 overflow-hidden">
                                 <div className="absolute inset-y-0 left-0 bg-white/22" style={{ width: `${bufPct}%` }} />
                                 <div className="absolute inset-y-0 left-0 bg-white" style={{ width: `${seekPct}%` }} />
                             </div>
@@ -681,7 +694,7 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
                                     {fmtTime((seekPct / 100) * duration)}
                                 </div>
                             )}
-                            <div className="absolute w-4 h-4 rounded-full bg-white -translate-x-1/2 pointer-events-none shadow-[0_1px_8px_rgba(0,0,0,0.4)]" style={{ left: `${seekPct}%` }} />
+                            <div className="absolute w-3.5 h-3.5 rounded-full bg-white -translate-x-1/2 pointer-events-none shadow-[0_1px_6px_rgba(0,0,0,0.35)]" style={{ left: `${seekPct}%` }} />
                         </div>
 
                         <div className="flex items-center gap-3 md:gap-4">
@@ -702,7 +715,7 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
                                 {fmtTime(current)} <span className="text-white/65 px-1">/</span> {fmtTime(duration)}
                             </span>
 
-                            <div className="ml-auto flex items-center gap-1.5 md:gap-2">
+                            <div className="ml-auto flex items-center gap-1 md:gap-1.5">
                                 {hasNext && (
                                     <button data-testid="synapse-next-episode-btn" onClick={onNextEpisode} className="hidden sm:grid h-10 w-10 md:h-11 md:w-11 place-items-center rounded-full border border-white/10 bg-white/[0.04] text-white/85 hover:bg-white/10 hover:text-white active:scale-95 transition" title="Next episode (N)">
                                         <SkipForward className="h-[21px] w-[21px] stroke-[1.9]" />
