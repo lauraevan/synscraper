@@ -1,0 +1,104 @@
+name: Diagnose Vidy live player
+
+on:
+  push:
+    paths:
+      - '.github/workflows/diagnose-vidy.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Inspect live Vidy player and JS
+        shell: bash
+        run: |
+          python - <<'PY'
+          import html, re, urllib.request
+          from urllib.parse import urljoin
+
+          UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36'
+          headers = {
+              'User-Agent': UA,
+              'Accept': 'text/html,application/xhtml+xml,application/json,*/*',
+              'Accept-Language': 'en-US,en;q=0.9',
+          }
+
+          def get(url, referer=None):
+              h = dict(headers)
+              if referer:
+                  h['Referer'] = referer
+              req = urllib.request.Request(url, headers=h)
+              with urllib.request.urlopen(req, timeout=25) as r:
+                  body = r.read().decode('utf-8', 'ignore')
+                  print(f'FETCH {url} -> {r.status} {r.geturl()} {r.headers.get("content-type", "")} bytes={len(body)}')
+                  return r.geturl(), body
+
+          for base in ['https://vidy.st/', 'https://www.vidy.st/']:
+              try:
+                  get(base)
+              except Exception as e:
+                  print('BASE_FAIL', base, repr(e))
+
+          page = 'https://www.vidy.st/movie/315162'
+          try:
+              final, body = get(page)
+          except Exception as e:
+              print('PLAYER_FAIL', repr(e))
+              raise
+
+          print('\n=== HTML HEAD ===')
+          print(body[:12000])
+
+          scripts = []
+          for src in re.findall(r'<script[^>]+src=["\']([^"\']+)["\']', body, flags=re.I):
+              scripts.append(urljoin(final, html.unescape(src)))
+          scripts = list(dict.fromkeys(scripts))
+          print('\n=== SCRIPTS ===')
+          for s in scripts:
+              print(s)
+
+          needles = [
+              'm3u8', '.mpd', '/api/', 'fetch(', 'axios', 'source', 'stream',
+              'manifest', 'decrypt', 'crypto', 'token', 'provider', 'server',
+              'tmdb', 'movie/', 'iframe', 'encrypted-media'
+          ]
+
+          for idx, s in enumerate(scripts[:40]):
+              try:
+                  _, js = get(s, final)
+              except Exception as e:
+                  print('SCRIPT_FAIL', s, repr(e))
+                  continue
+              low = js.lower()
+              hits = []
+              for needle in needles:
+                  start = 0
+                  n = needle.lower()
+                  while len(hits) < 30:
+                      pos = low.find(n, start)
+                      if pos < 0:
+                          break
+                      a = max(0, pos - 700)
+                      b = min(len(js), pos + 1500)
+                      hits.append((needle, js[a:b]))
+                      start = pos + len(n)
+              if hits:
+                  print(f'\n=== SCRIPT {idx} MATCHES {s} ===')
+                  seen = set()
+                  for needle, snippet in hits:
+                      key = snippet[:300]
+                      if key in seen:
+                          continue
+                      seen.add(key)
+                      print(f'--- {needle} ---')
+                      print(snippet)
+
+          urls = sorted(set(re.findall(r'https?://[^"\'\\\s<>]+', body)))
+          print('\n=== ABSOLUTE URLS IN HTML ===')
+          for u in urls:
+              print(u)
+          PY
