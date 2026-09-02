@@ -138,9 +138,12 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
     const tryNext = useCallback((failedId) => {
         const idx = servers.findIndex((s) => s.id === failedId);
         const next = servers[idx + 1];
-        if (next) { setServerId(next.id); playServer(next); }
+        if (next) {
+            pendingSeekRef.current = videoRef.current?.currentTime || 0;
+            setServerId(next.id);
+        }
         else setError("All scraped servers failed to play. Try another title.");
-    }, [servers, playServer]);
+    }, [servers]);
 
     // scrape servers
     useEffect(() => {
@@ -173,7 +176,7 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
 
     const selectServer = (s) => {
         pendingSeekRef.current = videoRef.current?.currentTime || current || 0;
-        setMenu(null); setServerId(s.id); playServer(s);
+        setMenu(null); setServerId(s.id);
     };
     const selectCaptionSource = (s) => {
         pendingSeekRef.current = videoRef.current?.currentTime || current || 0;
@@ -181,7 +184,6 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
         setSub(-1);
         setMenu(null);
         setServerId(s.id);
-        playServer(s);
     };
 
     // video wiring
@@ -261,6 +263,20 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
     const setVol = (val) => { const v = videoRef.current; if (v) { v.volume = val; v.muted = val === 0; } };
     const toggleMute = () => { const v = videoRef.current; if (v) v.muted = !v.muted; };
     const changeLevel = (i) => { if (hlsRef.current) { hlsRef.current.currentLevel = i; } setLevel(i); setMenu(null); };
+    const chooseAutoQuality = () => {
+        if (hlsRef.current && levels.length) {
+            changeLevel(-1);
+            return;
+        }
+        if (autoServer && autoServer.id !== serverId) {
+            pendingSeekRef.current = videoRef.current?.currentTime || current || 0;
+            setLevel(-1);
+            setMenu(null);
+            setServerId(autoServer.id);
+            return;
+        }
+        setMenu(null);
+    };
     const chooseQuality = (choice) => {
         if (!choice) return;
         if (choice.levelIndex >= 0 && hlsRef.current) {
@@ -272,7 +288,6 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
             setLevel(-1);
             setMenu(null);
             setServerId(choice.server.id);
-            playServer(choice.server);
         }
     };
     const changeSub = (i) => { if (hlsRef.current) hlsRef.current.subtitleTrack = i; setSub(i); setMenu(null); };
@@ -312,7 +327,10 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
     const seekPct = scrubPct == null ? pct : scrubPct;
     const bufPct = duration ? (buffered / duration) * 100 : 0;
     const captionSources = Array.from(new Map(servers.map((s) => [s.provider, s])).values()).slice(0, 6);
-    const activeQualityHeight = level >= 0 ? Number(levels[level]?.height || 0) : qualityHeight(activeServer?.quality);
+    const activeQualityHeight = level >= 0 ? Number(levels[level]?.height || 0) : (levels.length ? 0 : qualityHeight(activeServer?.quality));
+    const autoServer = servers.find((s) => s.provider === activeServer?.provider && /^auto$/i.test(String(s.quality || "")))
+        || servers.find((s) => /^auto$/i.test(String(s.quality || "")));
+    const autoQualityAvailable = levels.length > 0 || !!autoServer;
     const qualityChoices = QUALITY_LADDER.map((target) => {
         const levelIndex = levels.findIndex((l) => Number(l.height || 0) === target.height);
         const sameProvider = servers.find((s) => s.provider === activeServer?.provider && qualityHeight(s.quality) === target.height);
@@ -461,7 +479,7 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
                         <div className="group/seek relative mb-6 md:mb-8 h-4 flex items-center">
                             <div className="absolute left-0 right-0 h-[5px] rounded-full bg-white/28 overflow-hidden">
                                 <div className="absolute inset-y-0 left-0 bg-white/22" style={{ width: `${bufPct}%` }} />
-                                <div className="absolute inset-y-0 left-0 bg-white" style={{ width: `${pct}%` }} />
+                                <div className="absolute inset-y-0 left-0 bg-white" style={{ width: `${seekPct}%` }} />
                             </div>
                             <input
                                 data-testid="synapse-seek-bar"
@@ -548,7 +566,7 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
                                     </button>
                                     <Popover open={menu === "settings"}>
                                         <div className="px-3 py-2 flex items-center gap-2 text-[10px] uppercase tracking-[0.18em] text-white/45"><Settings className="w-3.5 h-3.5" /> Quality</div>
-                                        <MenuItem active={level === -1} onClick={() => changeLevel(-1)} testId="quality-auto">Auto <span className="text-xs opacity-60">Adaptive</span></MenuItem>
+                                        <MenuItem active={level === -1 && activeQualityHeight === 0} disabled={!autoQualityAvailable} onClick={chooseAutoQuality} testId="quality-auto">Auto <span className="text-xs opacity-60">Adaptive</span></MenuItem>
                                         {qualityChoices.map((choice) => (
                                             <MenuItem
                                                 key={choice.height}

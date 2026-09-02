@@ -200,7 +200,8 @@ class VixSrcResolver:
         if not best_url.startswith('http'):
             best_url = urljoin(master_url, best_url)
 
-        quality = f"{best_res}p" if best_res > 0 else "Auto"
+        quality = "Auto"
+        playback_url = master_url
 
         # Extract audio tracks
         audio_tracks = []
@@ -224,8 +225,9 @@ class VixSrcResolver:
             'tmdb_id': tmdb_id,
             'playable_urls': [
                 {
-                    'url': best_url,
+                    'url': playback_url,
                     'quality': quality,
+                    'type': 'hls',
                     'headers': headers,
                     'audio_tracks': audio_tracks,
                     'server': 'VixSrc',
@@ -235,7 +237,7 @@ class VixSrcResolver:
 
         self.log("=" * 80)
         self.log("RESOLUTION COMPLETE")
-        self.log(f"Stream URL: {best_url[:100]}...")
+        self.log(f"Stream URL: {playback_url[:100]}...")
         return json.dumps(response, indent=2)
 
 
