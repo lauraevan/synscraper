@@ -18,6 +18,7 @@ from providers.vidrock import VidrockResolver
 from providers.vidzee import VidzeeResolver
 from providers.vixsrc import VixSrcResolver
 from providers.vidy import VidyResolver
+from providers.cinejoy import CineJoyResolver
 
 VIDUP_ORIGIN = os.environ.get("VIDUP_ORIGIN", "https://vidup.to")
 USER_AGENT = os.environ.get(
@@ -34,6 +35,7 @@ PROVIDERS = [
     ("Zen", "vidzee", VidzeeResolver),
     ("Rock", "vidrock", VidrockResolver),
     ("Vidy", "vidy", VidyResolver),
+    ("CineJoy", "cinejoy", CineJoyResolver),
     ("Vix", "vixsrc", VixSrcResolver),
 ]
 
