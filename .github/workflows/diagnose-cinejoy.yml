@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Probe CineJoy scraper API
+      - name: Capture CineJoy response shapes
         shell: bash
         run: |
           mkdir -p cinejoy-diagnostic
@@ -21,116 +21,18 @@ jobs:
           import { writeFile } from 'node:fs/promises';
           import { webcrypto } from 'node:crypto';
           if (!globalThis.crypto) globalThis.crypto = webcrypto;
-
-          const API = 'https://api.shegu.st';
-          const AAD_NAME = new TextEncoder().encode('lumen-gate-v2');
-          const IV_LEN = 12;
-          const TAG_LEN = 16;
-          const KEY_LEN = 32;
-          const EPHEMERAL_LEN = 65;
-          const HEADER_LEN = KEY_LEN + 1 + EPHEMERAL_LEN;
-          let wasmExports;
-
-          const ab = (u8) => u8.buffer.slice(u8.byteOffset, u8.byteOffset + u8.byteLength);
-
-          async function wasm() {
-            if (wasmExports) return wasmExports;
-            const res = await fetch(API + '/crush.wasm', { cache: 'no-cache' });
-            if (!res.ok) throw new Error('wasm http ' + res.status);
-            const bytes = new Uint8Array(await res.arrayBuffer());
-            await writeFile('cinejoy-diagnostic/crush.wasm', bytes);
-            const inst = await WebAssembly.instantiate(bytes, {});
-            wasmExports = inst.instance.exports;
-            return wasmExports;
-          }
-
-          async function seal(path, payload) {
-            const w = await wasm();
-            const request = new TextEncoder().encode(JSON.stringify({ path, payload: payload ?? null }));
-            const random = new Uint8Array(44);
-            crypto.getRandomValues(random);
-            const cap = request.length + 512;
-            const pReq = w.alloc(request.length), pRnd = w.alloc(random.length), pOut = w.alloc(cap);
-            if (!pReq || !pRnd || !pOut) throw new Error('wasm alloc failed');
-            try {
-              let mem = new Uint8Array(w.memory.buffer);
-              mem.set(request, pReq); mem.set(random, pRnd);
-              const outLen = w.seal_request(pReq, request.length, pRnd, random.length, pOut, cap);
-              if (outLen <= HEADER_LEN || outLen > cap) throw new Error('seal_request failed ' + outLen);
-              mem = new Uint8Array(w.memory.buffer);
-              const out = mem.slice(pOut, pOut + outLen);
-              return {
-                responseKey: out.slice(0, KEY_LEN),
-                keyId: out[KEY_LEN],
-                ephemeralPublic: out.slice(KEY_LEN + 1, HEADER_LEN),
-                body: out.slice(HEADER_LEN),
-              };
-            } finally {
-              w.dealloc(pReq, request.length); w.dealloc(pRnd, random.length); w.dealloc(pOut, cap);
-            }
-          }
-
-          function aad(keyId, ephemeral) {
-            const out = new Uint8Array(AAD_NAME.length + 3 + ephemeral.length);
-            out.set(AAD_NAME, 0);
-            out.set([0, 2, keyId], AAD_NAME.length);
-            out.set(ephemeral, AAD_NAME.length + 3);
-            return out;
-          }
-
-          async function protectedCall(path, params) {
-            const sealed = await seal(path, Object.fromEntries(params.entries()));
-            const res = await fetch(API + '/g', {
-              method: 'POST',
-              headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
-              body: ab(sealed.body),
-            });
-            if (!res.ok) throw new Error('gateway http ' + res.status);
-            const bytes = new Uint8Array(await res.arrayBuffer());
-            if (bytes.length < IV_LEN + TAG_LEN) throw new Error('short response');
-            const key = await crypto.subtle.importKey('raw', ab(sealed.responseKey), 'AES-GCM', false, ['decrypt']);
-            const clear = await crypto.subtle.decrypt({
-              name: 'AES-GCM',
-              iv: ab(bytes.subarray(0, IV_LEN)),
-              additionalData: ab(aad(sealed.keyId, sealed.ephemeralPublic)),
-              tagLength: TAG_LEN * 8,
-            }, key, ab(bytes.subarray(IV_LEN)));
-            return JSON.parse(new TextDecoder().decode(clear));
-          }
-
-          const serversResponse = await fetch(API + '/servers');
-          const serversJson = await serversResponse.json();
-          const servers = serversJson.servers || [];
-          const report = {
-            server_http: serversResponse.status,
-            servers: servers.map(s => ({
-              id: s.id ?? s.server ?? s.name,
-              name: s.name ?? s.id ?? s.server,
-              status: s.status,
-              language: s.language,
-              flag: s.flag,
-            })),
-            probes: [],
-          };
-
-          for (const s of servers.filter(x => x.status === 'ok').slice(0, 8)) {
-            const id = s.id ?? s.server ?? s.name;
-            try {
-              const data = await protectedCall('/' + id + '/movie', new URLSearchParams({ tmdb: '550' }));
-              const inner = data?.data ?? data;
-              report.probes.push({
-                provider: id,
-                status: data?.status,
-                inner_type: Array.isArray(inner) ? 'array' : typeof inner,
-                keys: inner && typeof inner === 'object' && !Array.isArray(inner) ? Object.keys(inner) : [],
-                source_count: Array.isArray(inner?.stream) ? inner.stream.length : Array.isArray(inner?.sources) ? inner.sources.length : 0,
-              });
-            } catch (e) {
-              report.probes.push({ provider: id, error: String(e?.message || e) });
-            }
-          }
-          await writeFile('cinejoy-diagnostic/result.json', JSON.stringify(report, null, 2));
-          console.log(JSON.stringify(report, null, 2));
+          const API='https://api.shegu.st', enc=new TextEncoder(), dec=new TextDecoder();
+          const ab=u=>u.buffer.slice(u.byteOffset,u.byteOffset+u.byteLength);
+          let w;
+          async function wasm(){if(w)return w;const r=await fetch(API+'/crush.wasm');const b=new Uint8Array(await r.arrayBuffer());await writeFile('cinejoy-diagnostic/crush.wasm',b);w=(await WebAssembly.instantiate(b,{})).instance.exports;return w}
+          async function seal(path,payload){const x=await wasm(),req=enc.encode(JSON.stringify({path,payload:payload??null})),rnd=new Uint8Array(44);crypto.getRandomValues(rnd);const cap=req.length+512,a=x.alloc(req.length),b=x.alloc(rnd.length),c=x.alloc(cap);try{let m=new Uint8Array(x.memory.buffer);m.set(req,a);m.set(rnd,b);const n=x.seal_request(a,req.length,b,rnd.length,c,cap);m=new Uint8Array(x.memory.buffer);const o=m.slice(c,c+n);return{key:o.slice(0,32),kid:o[32],pub:o.slice(33,98),body:o.slice(98)}}finally{x.dealloc(a,req.length);x.dealloc(b,rnd.length);x.dealloc(c,cap)}}
+          function aad(k,p){const n=enc.encode('lumen-gate-v2'),o=new Uint8Array(n.length+3+p.length);o.set(n);o.set([0,2,k],n.length);o.set(p,n.length+3);return o}
+          async function call(path,params){const s=await seal(path,Object.fromEntries(params.entries())),r=await fetch(API+'/g',{method:'POST',headers:{'Content-Type':'text/plain;charset=UTF-8'},body:ab(s.body)}),bytes=new Uint8Array(await r.arrayBuffer()),key=await crypto.subtle.importKey('raw',ab(s.key),'AES-GCM',false,['decrypt']),clear=await crypto.subtle.decrypt({name:'AES-GCM',iv:ab(bytes.subarray(0,12)),additionalData:ab(aad(s.kid,s.pub)),tagLength:128},key,ab(bytes.subarray(12)));return JSON.parse(dec.decode(clear))}
+          const sj=await (await fetch(API+'/servers')).json(), servers=sj.servers||[], out={servers, movie:{}, tv:{}};
+          for(const s of servers.filter(x=>x.status==='ok')){const id=s.id??s.server??s.name;try{out.movie[id]=await call('/'+id+'/movie',new URLSearchParams({tmdb:'550'}))}catch(e){out.movie[id]={error:String(e?.message||e)}}}
+          for(const s of servers.filter(x=>x.status==='ok').slice(0,4)){const id=s.id??s.server??s.name;try{out.tv[id]=await call('/'+id+'/series',new URLSearchParams({tmdb:'1399',season:'1',episode:'1'}))}catch(e){out.tv[id]={error:String(e?.message||e)}}}
+          await writeFile('cinejoy-diagnostic/responses.json',JSON.stringify(out,null,2));
+          console.log(JSON.stringify({providers:servers.map(x=>x.id??x.server??x.name),movie_ok:Object.entries(out.movie).filter(([,v])=>v?.status===200).map(([k])=>k),tv_ok:Object.entries(out.tv).filter(([,v])=>v?.status===200).map(([k])=>k)},null,2));
           JS
           node cinejoy-diagnostic/probe.mjs
       - name: Upload diagnostic
