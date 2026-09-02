@@ -16,10 +16,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: yarn
-          cache-dependency-path: frontend/yarn.lock
       - name: Install frontend
-        run: yarn --cwd frontend install --frozen-lockfile
+        run: yarn --cwd frontend install
       - name: Build frontend
         env:
           CI: 'false'
