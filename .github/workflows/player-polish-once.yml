@@ -31,7 +31,7 @@ jobs:
           t = rep(
               t,
               '        if (next) { setServerId(next.id); playServer(next); }\n',
-              '        if (next) {\n            pendingSeekRef.current = videoRef.current?.currentTime || current || 0;\n            setServerId(next.id);\n        }\n',
+              '        if (next) {\n            pendingSeekRef.current = videoRef.current?.currentTime || 0;\n            setServerId(next.id);\n        }\n',
               "failover single load",
           )
 
@@ -83,8 +83,6 @@ jobs:
           )
           p.write_text(t)
 
-          # VixSrc already fetches the master playlist. Return that master to HLS.js so
-          # renditions and subtitle groups stay available instead of collapsing to one variant.
           v = Path("backend/providers/vixsrc.py")
           s = v.read_text()
           s = rep(
