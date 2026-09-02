@@ -1,0 +1,34 @@
+name: One-time SynPlayer clean UI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/synplayer-clean-ui-trigger"
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Patch cleaner SynPlayer UI
+        run: python .github/scripts/clean_synplayer_brand.py
+
+      - name: Validate production build
+        run: |
+          python -m py_compile backend/server.py backend/scraper.py backend/providers/*.py
+          cd frontend
+          yarn install --frozen-lockfile
+          yarn build
+
+      - name: Commit clean player UI
+        run: |
+          git config user.name "Synapse Bot"
+          git config user.email "264532369+lauraevan@users.noreply.github.com"
+          git add frontend/src/components/SynapsePlayer.jsx
+          git commit -m "Clean up player chrome and add SynPlayer pill"
+          git push
