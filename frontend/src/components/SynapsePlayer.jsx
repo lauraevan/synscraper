@@ -11,6 +11,14 @@ import { fmtTime } from "@/lib/format";
 import { saveProgress, getProgress } from "@/lib/storage";
 
 const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2];
+const SOURCE_CATALOG = [
+    { provider: "castle", name: "Orbit" },
+    { provider: "vidlink", name: "Nova" },
+    { provider: "vidnest", name: "Nest" },
+    { provider: "vidzee", name: "Zen" },
+    { provider: "vidrock", name: "Rock" },
+    { provider: "vixsrc", name: "Vix" },
+];
 const QUALITY_LADDER = [
     { label: "4K", height: 2160 }, { label: "1440p", height: 1440 },
     { label: "1080p", height: 1080 }, { label: "720p", height: 720 },
@@ -622,7 +630,13 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
     const pct = duration ? (current / duration) * 100 : 0;
     const seekPct = scrubPct == null ? pct : scrubPct;
     const bufPct = duration ? (buffered / duration) * 100 : 0;
-    const captionSources = Array.from(new Map(servers.map((s) => [s.provider, s])).values()).slice(0, 6);
+    const sourceSlots = SOURCE_CATALOG.map((source) => {
+        const server = servers.find((s) => s.provider === source.provider);
+        return server
+            ? { ...server, displayName: source.name, available: true }
+            : { id: `unavailable-${source.provider}`, provider: source.provider, name: source.name, displayName: source.name, available: false };
+    });
+    const captionSources = sourceSlots.filter((s) => s.available);
     const externalCaptions = Array.from(new Map(
         servers.flatMap((s) => (s.captions || []).map((c) => [c.play_url || c.id, { ...c, serverName: s.name }]))
     ).values());
@@ -785,17 +799,19 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
                                         <p className="mt-0.5 text-[11px] text-white/40">Switch without losing your place</p>
                                     </div>
                                     <div className="max-h-64 overflow-y-auto scrollbar-none">
-                                        {servers.map((s) => (
+                                        {sourceSlots.map((s) => (
                                             <button
                                                 key={s.id}
-                                                onClick={() => selectServer(s)}
-                                                className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition ${serverId === s.id ? "bg-white text-black" : "text-white/80 hover:bg-white/10 hover:text-white"}`}
+                                                disabled={!s.available}
+                                                onClick={() => s.available && selectServer(s)}
+                                                className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition ${serverId === s.id ? "bg-white text-black" : s.available ? "text-white/80 hover:bg-white/10 hover:text-white" : "cursor-not-allowed text-white/28"}`}
                                             >
-                                                <span className="min-w-0 flex-1 truncate text-sm font-medium">{s.name}</span>
+                                                <span className="min-w-0 flex-1 truncate text-sm font-medium">{s.displayName || s.name}</span>
+                                                {!s.available && <span className="text-[9px] font-medium uppercase tracking-[0.12em] text-white/28">Unavailable</span>}
                                                 <img
                                                     src="https://flagsapi.com/US/flat/24.png"
                                                     alt="US"
-                                                    className="h-4 w-6 shrink-0 rounded-[2px] object-cover"
+                                                    className={`h-4 w-6 shrink-0 rounded-[2px] object-cover ${s.available ? "opacity-100" : "opacity-25"}`}
                                                     loading="lazy"
                                                 />
                                             </button>
@@ -1078,11 +1094,12 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
 
                             {settingsPage === "server" && (
                                 <div className="space-y-1 py-1">
-                                    {servers.map((s) => (
-                                        <button key={s.id} onClick={() => selectServerInSettings(s)} className={`flex w-full items-center gap-3 rounded-2xl px-5 py-4 text-left transition ${serverId === s.id ? "bg-white text-black" : "text-white/85 hover:bg-white/[0.06]"}`}>
+                                    {sourceSlots.map((s) => (
+                                        <button key={s.id} disabled={!s.available} onClick={() => s.available && selectServerInSettings(s)} className={`flex w-full items-center gap-3 rounded-2xl px-5 py-4 text-left transition ${serverId === s.id ? "bg-white text-black" : s.available ? "text-white/85 hover:bg-white/[0.06]" : "cursor-not-allowed text-white/25"}`}>
                                             <Cloud className="h-5 w-5 shrink-0" strokeWidth={1.6} />
-                                            <span className="min-w-0 flex-1 truncate text-[16px]">{s.name}</span>
-                                            <img src="https://flagsapi.com/US/flat/24.png" alt="US" className="h-4 w-6 rounded-[2px] object-cover" />
+                                            <span className="min-w-0 flex-1 truncate text-[16px]">{s.displayName || s.name}</span>
+                                            {!s.available && <span className="text-[9px] font-medium uppercase tracking-[0.12em] text-white/28">Unavailable</span>}
+                                            <img src="https://flagsapi.com/US/flat/24.png" alt="US" className={`h-4 w-6 rounded-[2px] object-cover ${s.available ? "opacity-100" : "opacity-25"}`} />
                                             {serverId === s.id && <span className="text-xs opacity-55">Selected</span>}
                                         </button>
                                     ))}
