@@ -24,28 +24,48 @@ jobs:
           import json
           import urllib.request
           import urllib.error
-          from providers.vidzee import VidzeeResolver, API_KEY_URL
-          from providers.vidrock import VidrockResolver, DOMAIN
+          from providers.vidrock import VidrockResolver
 
-          def check_url(name, url):
+          BROWSER_HEADERS = {
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+              'Accept': 'application/json, text/plain, */*',
+              'Accept-Language': 'en-US,en;q=0.9',
+              'Referer': 'https://vidrock.net/',
+              'Origin': 'https://vidrock.net',
+          }
+
+          def check_url(name, url, headers=None):
               try:
-                  req = urllib.request.Request(url, headers={'User-Agent':'Mozilla/5.0','Accept':'application/json, */*'})
+                  req = urllib.request.Request(url, headers=headers or BROWSER_HEADERS)
                   with urllib.request.urlopen(req, timeout=15) as r:
                       body = r.read(512).decode('utf-8', errors='ignore')
-                      print(f'{name}_HTTP={getattr(r, "status", 200)} CT={r.headers.get("Content-Type", "")} BODY_PREFIX={body[:80]!r}')
+                      shape = ''
+                      try:
+                          data = json.loads(body)
+                          shape = type(data).__name__
+                          if isinstance(data, dict): shape += ':' + ','.join(list(data.keys())[:8])
+                      except Exception:
+                          shape = body[:40].replace('\n', ' ')
+                      print(f'{name}_HTTP={getattr(r, "status", 200)} CT={r.headers.get("Content-Type", "")} SHAPE={shape!r}')
+              except urllib.error.HTTPError as e:
+                  print(f'{name}_HTTP={e.code} CT={e.headers.get("Content-Type", "")}')
               except Exception as e:
-                  print(f'{name}_HTTP_ERROR={type(e).__name__}:{e}')
+                  print(f'{name}_ERROR={type(e).__name__}:{e}')
 
-          check_url('VIDZEE_KEY', API_KEY_URL)
-          check_url('VIDROCK_HOME', DOMAIN)
+          rock = VidrockResolver()
+          encrypted = rock._encrypt_and_encode('550')
+          check_url('VIDROCK_HOME', 'https://vidrock.net/')
+          check_url('VIDROCK_EMBED', 'https://vidrock.net/embed/movie/550')
+          check_url('VIDROCK_MOVIE_PAGE', 'https://vidrock.net/movie/550')
+          check_url('VIDROCK_API_PLAIN', 'https://vidrock.net/api/movie/550')
+          check_url('VIDROCK_API_ENCRYPTED', f'https://vidrock.net/api/movie/{encrypted}')
 
-          for label, resolver in [('ZEN', VidzeeResolver(debug=True)), ('ROCK', VidrockResolver(debug=True))]:
-              try:
-                  raw = resolver.resolve('550', media_type='movie')
-                  data = json.loads(raw)
-                  print(f'{label}_STATUS={data.get("status")}')
-                  print(f'{label}_MESSAGE={data.get("message", "")}')
-                  print(f'{label}_COUNT={len(data.get("playable_urls") or [])}')
-              except Exception as e:
-                  print(f'{label}_EXCEPTION={type(e).__name__}:{e}')
+          vz_headers = {
+              'User-Agent': BROWSER_HEADERS['User-Agent'],
+              'Accept': 'application/json, */*',
+              'Referer': 'https://player.vidzee.wtf/',
+              'Origin': 'https://player.vidzee.wtf',
+          }
+          for server in ('dcloud','tik','ipcloud','v6:Hindi'):
+              check_url(f'VIDZEE_{server}', f'https://core.vidzee.wtf/streams/movie/550?s={server}&e=0', vz_headers)
           PY
