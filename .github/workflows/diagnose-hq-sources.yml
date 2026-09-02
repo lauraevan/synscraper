@@ -1,0 +1,90 @@
+name: Diagnose HQ source variants
+
+on:
+  push:
+    paths:
+      - '.github/workflows/diagnose-hq-sources.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install -q -r requirements.txt
+      - name: Inspect Vidy and CineJoy HLS variant ladders
+        shell: bash
+        run: |
+          mkdir -p hq-diagnostic
+          python - <<'PY'
+          import json, re, sys
+          from urllib.parse import urljoin
+          import requests
+          sys.path.insert(0, 'backend')
+          from providers.vidy import VidyResolver, DEFAULT_PROVIDERS
+          from providers.cinejoy import CineJoyResolver
+
+          def variants(url, headers):
+              try:
+                  r = requests.get(url, headers=headers, timeout=15)
+                  if r.status_code != 200:
+                      return {'http': r.status_code, 'heights': []}
+                  text = r.text
+                  heights = sorted({int(x) for x in re.findall(r'RESOLUTION=\d+x(\d+)', text)}, reverse=True)
+                  return {'http': r.status_code, 'heights': heights, 'master': '#EXT-X-STREAM-INF' in text}
+              except Exception as e:
+                  return {'error': type(e).__name__, 'heights': []}
+
+          report = {'vidy': [], 'cinejoy': []}
+
+          vr = VidyResolver()
+          params = vr._metadata(550, 'movie')
+          for name in DEFAULT_PROVIDERS:
+              try:
+                  decoded = vr._provider(name, 550, params)
+                  streams = vr._playables(decoded, name, 'https://www.vidy.st/movie/550')
+                  report['vidy'].append({
+                      'server': name,
+                      'stream_count': len(streams),
+                      'qualities': [s.get('quality') for s in streams],
+                      'variants': [variants(s['url'], s.get('headers') or {}) for s in streams],
+                  })
+              except Exception as e:
+                  report['vidy'].append({'server': name, 'error': type(e).__name__ + ': ' + str(e)[:120]})
+
+          cr = CineJoyResolver()
+          try:
+              servers = cr._servers()
+          except Exception as e:
+              servers = []
+              report['cinejoy'].append({'server_list_error': type(e).__name__ + ': ' + str(e)[:120]})
+          for server in servers:
+              name = str(server.get('name') or server.get('id') or server.get('server') or '').strip()
+              if not name:
+                  continue
+              try:
+                  data = cr._protected_call(f'/{name}/movie', {'tmdb': '550'})
+                  streams, _ = cr._normalize_streams(data, name)
+                  report['cinejoy'].append({
+                      'server': name,
+                      'stream_count': len(streams),
+                      'qualities': [s.get('quality') for s in streams],
+                      'variants': [variants(s['url'], s.get('headers') or {}) for s in streams],
+                  })
+              except Exception as e:
+                  report['cinejoy'].append({'server': name, 'error': type(e).__name__ + ': ' + str(e)[:120]})
+
+          with open('hq-diagnostic/result.json', 'w') as f:
+              json.dump(report, f, indent=2)
+          print(json.dumps(report, indent=2))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: hq-source-diagnostic
+          path: hq-diagnostic/result.json
+          retention-days: 1
