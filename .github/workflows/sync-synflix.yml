@@ -1,0 +1,54 @@
+name: Sync Synflix scraper and player
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/sync-synflix.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout synscraper
+        uses: actions/checkout@v4
+
+      - name: Fetch source project
+        run: git clone --depth 1 https://github.com/lauraevan/synflix.git /tmp/synflix
+
+      - name: Copy provider stack and existing player app
+        run: |
+          rm -rf backend frontend synflix_scrapers design_guidelines.json
+          cp -a /tmp/synflix/backend ./backend
+          cp -a /tmp/synflix/frontend ./frontend
+          cp -a /tmp/synflix/synflix_scrapers ./synflix_scrapers
+          cp -a /tmp/synflix/design_guidelines.json ./design_guidelines.json
+
+      - name: Apply Vidfast-style UI only
+        run: python .github/scripts/restyle_player.py
+
+      - name: Make frontend backend URL same-origin compatible
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('frontend/src/lib/api.js')
+          s = p.read_text()
+          s = s.replace('const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;', 'const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || "";')
+          p.write_text(s)
+          PY
+
+      - name: Commit synced code
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add backend frontend synflix_scrapers design_guidelines.json
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "Port Synflix providers and restyle player UI"
+            git push origin main
+          fi
