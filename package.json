@@ -1,0 +1,7 @@
+{
+  "name": "synscraper-vercel",
+  "private": true,
+  "scripts": {
+    "build": "yarn --cwd frontend install --frozen-lockfile && yarn --cwd frontend build && rm -rf public && cp -R frontend/build public"
+  }
+}
