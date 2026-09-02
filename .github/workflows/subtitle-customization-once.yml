@@ -1,0 +1,511 @@
+name: One-time subtitle customization
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/subtitle-customization-trigger"
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Upgrade subtitle renderer and controls
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          p = Path("frontend/src/components/SynapsePlayer.jsx")
+          t = p.read_text()
+
+          def rep(old, new, label):
+              global t
+              if old not in t:
+                  raise SystemExit(f"missing patch target: {label}")
+              t = t.replace(old, new, 1)
+
+          rep(
+              '''const STEPS = [
+    "Checking available sources",
+    "Resolving playback links",
+    "Choosing the fastest stream",
+    "Preparing adaptive playback",
+];
+
+const Popover = ({ open, children }) =>
+    open ? (
+        <div className="absolute bottom-14 right-0 min-w-[220px] max-h-80 overflow-y-auto scrollbar-none rounded-2xl bg-black/80 backdrop-blur-2xl border border-white/15 p-2 shadow-2xl z-30">
+            {children}
+        </div>
+    ) : null;
+''',
+              '''const STEPS = [
+    "Checking available sources",
+    "Resolving playback links",
+    "Choosing the fastest stream",
+    "Preparing adaptive playback",
+];
+
+const DEFAULT_CAPTION_STYLE = {
+    size: 100,
+    color: "#ffffff",
+    transparency: 0,
+    background: 45,
+    weight: 600,
+    delay: 0,
+    accuracy: 85,
+    autoCorrect: true,
+    position: 80,
+    outline: 2,
+};
+
+const normalizeCaptionText = (value) => String(value || "")
+    .replace(/<br\\s*\\/?\\s*>/gi, "\\n")
+    .replace(/<[^>]*>/g, "")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .split("\\n")
+    .map((line) => line.replace(/[ \\t]+/g, " ").trim())
+    .filter(Boolean)
+    .join("\\n");
+
+const autoCorrectCaptionText = (value, accuracy = 85) => {
+    const strength = Number(accuracy) || 0;
+    let text = normalizeCaptionText(value);
+    if (strength >= 20) {
+        text = text.replace(/\\s+([,.!?;:])/g, "$1").replace(/([,.!?;:])([A-Za-z])/g, "$1 $2");
+    }
+    if (strength >= 45) {
+        text = text.replace(/([!?.,])\\1{2,}/g, "$1$1");
+    }
+    if (strength >= 65) {
+        text = text.replace(/\\b([A-Za-z][A-Za-z']{1,})\\s+\\1\\b/gi, "$1");
+    }
+    if (strength >= 80) {
+        text = text.replace(/(^|[.!?]\\s+|\\n)([a-z])/g, (m, lead, ch) => `${lead}${ch.toUpperCase()}`);
+        text = text.replace(/\\bi\\b/g, "I");
+    }
+    return text;
+};
+
+const CaptionSlider = ({ label, value, min, max, step = 1, suffix = "", onChange }) => (
+    <label className="block px-3 py-2.5">
+        <div className="mb-2 flex items-center justify-between gap-4 text-xs">
+            <span className="text-white/70">{label}</span>
+            <span className="tabular-nums text-white/45">{Number(value).toFixed(step < 1 ? 2 : 0)}{suffix}</span>
+        </div>
+        <input
+            type="range"
+            min={min}
+            max={max}
+            step={step}
+            value={value}
+            onChange={(e) => onChange(Number(e.target.value))}
+            className="h-1.5 w-full cursor-pointer accent-white"
+        />
+    </label>
+);
+
+const Popover = ({ open, children, wide = false }) =>
+    open ? (
+        <div className={`absolute bottom-14 right-0 overflow-y-auto scrollbar-none rounded-2xl bg-black/88 backdrop-blur-2xl border border-white/15 p-2 shadow-2xl z-30 ${wide ? "w-[370px] max-w-[calc(100vw-2rem)] max-h-[min(72vh,590px)]" : "min-w-[220px] max-h-80"}`}>
+            {children}
+        </div>
+    ) : null;
+''',
+              "caption helpers",
+          )
+
+          rep(
+              '''    const [ripple, setRipple] = useState(null);
+    const [scrubPct, setScrubPct] = useState(null);
+
+    const activeServer = servers.find((s) => s.id === serverId);
+''',
+              '''    const [ripple, setRipple] = useState(null);
+    const [scrubPct, setScrubPct] = useState(null);
+    const [captionText, setCaptionText] = useState("");
+    const [captionStyle, setCaptionStyle] = useState(() => {
+        if (typeof window === "undefined") return DEFAULT_CAPTION_STYLE;
+        try {
+            const saved = JSON.parse(window.localStorage.getItem("synapse-caption-style-v1") || "null");
+            return { ...DEFAULT_CAPTION_STYLE, ...(saved || {}) };
+        } catch {
+            return DEFAULT_CAPTION_STYLE;
+        }
+    });
+
+    const activeServer = servers.find((s) => s.id === serverId);
+''',
+              "caption state",
+          )
+
+          rep(
+              '''                if (autoCaptionRef.current && tracks.length) {
+                    hls.subtitleTrack = 0;
+                    setSub(0);
+                    autoCaptionRef.current = false;
+                }
+''',
+              '''                if (autoCaptionRef.current && tracks.length) {
+                    const preferred = tracks.findIndex((track) => /(^|[-_])en($|[-_])/i.test(track.lang || track.language || "") || /english/i.test(track.name || ""));
+                    const index = preferred >= 0 ? preferred : 0;
+                    hls.subtitleTrack = index;
+                    setSub(index);
+                    autoCaptionRef.current = false;
+                }
+''',
+              "preferred caption",
+          )
+
+          rep(
+              '''    useEffect(() => {
+        const onFs = () => setFs(!!document.fullscreenElement);
+        document.addEventListener("fullscreenchange", onFs);
+        return () => document.removeEventListener("fullscreenchange", onFs);
+    }, []);
+    useEffect(() => () => { if (hlsRef.current) hlsRef.current.destroy(); }, []);
+''',
+              '''    useEffect(() => {
+        const onFs = () => setFs(!!document.fullscreenElement);
+        document.addEventListener("fullscreenchange", onFs);
+        return () => document.removeEventListener("fullscreenchange", onFs);
+    }, []);
+    useEffect(() => () => { if (hlsRef.current) hlsRef.current.destroy(); }, []);
+
+    useEffect(() => {
+        if (typeof window === "undefined") return;
+        window.localStorage.setItem("synapse-caption-style-v1", JSON.stringify(captionStyle));
+    }, [captionStyle]);
+
+    useEffect(() => {
+        if (mode !== "ready" || sub < 0) {
+            setCaptionText("");
+            return undefined;
+        }
+        const updateCaption = () => {
+            const video = videoRef.current;
+            if (!video) return;
+            const wanted = subs[sub] || {};
+            const adjustedTime = video.currentTime - Number(captionStyle.delay || 0);
+            const candidates = Array.from(video.textTracks || []);
+            let track = candidates.find((candidate) => {
+                const labelMatch = wanted.name && candidate.label && wanted.name.toLowerCase() === candidate.label.toLowerCase();
+                const lang = wanted.lang || wanted.language;
+                const langMatch = lang && candidate.language && String(lang).toLowerCase() === candidate.language.toLowerCase();
+                return labelMatch || langMatch;
+            });
+            if (!track) track = candidates.find((candidate) => candidate.mode !== "disabled") || candidates[candidates.length - 1];
+            if (!track || !track.cues) {
+                setCaptionText("");
+                return;
+            }
+            const matching = Array.from(track.cues).filter((cue) => cue.startTime <= adjustedTime && cue.endTime >= adjustedTime);
+            let text = matching.map((cue) => cue.text).filter(Boolean).join("\\n");
+            if (!text && Number(captionStyle.accuracy) >= 60) {
+                const tolerance = Math.min(0.4, Number(captionStyle.accuracy) / 250);
+                const nearby = Array.from(track.cues).find((cue) => adjustedTime >= cue.startTime - tolerance && adjustedTime <= cue.endTime + tolerance);
+                text = nearby?.text || "";
+            }
+            const next = captionStyle.autoCorrect
+                ? autoCorrectCaptionText(text, captionStyle.accuracy)
+                : normalizeCaptionText(text);
+            setCaptionText((old) => old === next ? old : next);
+        };
+        updateCaption();
+        const timer = window.setInterval(updateCaption, 80);
+        return () => window.clearInterval(timer);
+    }, [mode, sub, subs, serverId, captionStyle.delay, captionStyle.accuracy, captionStyle.autoCorrect]);
+''',
+              "caption renderer effect",
+          )
+
+          rep(
+              '''    const changeSub = (i) => { if (hlsRef.current) hlsRef.current.subtitleTrack = i; setSub(i); setMenu(null); };
+''',
+              '''    const changeSub = (i) => {
+        if (hlsRef.current) hlsRef.current.subtitleTrack = i;
+        setSub(i);
+        if (i < 0) setCaptionText("");
+    };
+    const updateCaptionStyle = (key, value) => setCaptionStyle((prev) => ({ ...prev, [key]: value }));
+    const resetCaptionStyle = () => setCaptionStyle(DEFAULT_CAPTION_STYLE);
+''',
+              "subtitle controls handlers",
+          )
+
+          rep(
+              '''                className="absolute inset-0 w-full h-full bg-black object-cover"
+''',
+              '''                className="synapse-video absolute inset-0 w-full h-full bg-black object-cover"
+''',
+              "video class",
+          )
+
+          rep(
+              '''            />
+
+            {mode === "ready" && showControls && (
+''',
+              '''            />
+            <style>{`.synapse-video::cue { color: transparent !important; background: transparent !important; text-shadow: none !important; }`}</style>
+
+            {mode === "ready" && sub >= 0 && captionText && (
+                <div
+                    data-testid="synapse-custom-captions"
+                    className="absolute left-1/2 z-[19] max-w-[88%] -translate-x-1/2 whitespace-pre-line text-center leading-[1.24] pointer-events-none transition-[bottom,font-size] duration-150"
+                    style={{
+                        bottom: `${100 - captionStyle.position}%`,
+                        fontSize: `clamp(14px, ${1.75 * (captionStyle.size / 100)}vw, ${34 * (captionStyle.size / 100)}px)`,
+                        color: captionStyle.color,
+                        opacity: Math.max(0.1, (100 - captionStyle.transparency) / 100),
+                        fontWeight: captionStyle.weight,
+                        WebkitTextStroke: `${captionStyle.outline}px rgba(0,0,0,0.92)`,
+                        paintOrder: "stroke fill",
+                    }}
+                >
+                    <span
+                        className="inline box-decoration-clone rounded-md px-2.5 py-1 shadow-[0_2px_10px_rgba(0,0,0,0.28)]"
+                        style={{ backgroundColor: `rgba(0,0,0,${captionStyle.background / 100})` }}
+                    >
+                        {captionText}
+                    </span>
+                </div>
+            )}
+
+            {mode === "ready" && showControls && (
+''',
+              "custom caption overlay",
+          )
+
+          rep(
+              '''                        <div className="flex items-center gap-3 md:gap-4">
+                            <div className="flex items-center group/vol">
+                                <button data-testid="synapse-mute-btn" onClick={toggleMute} className="text-white/95 hover:text-white active:scale-95 transition" aria-label="Mute">
+                                    {muted || volume === 0 ? <VolumeX className="w-8 h-8 md:w-9 md:h-9 fill-current/10 stroke-[2.2]" /> : <Volume2 className="w-8 h-8 md:w-9 md:h-9 fill-current/10 stroke-[2.2]" />}
+                                </button>
+                                <input
+                                    data-testid="synapse-volume-slider"
+                                    type="range" min="0" max="1" step="0.05" value={muted ? 0 : volume}
+                                    onChange={(e) => setVol(parseFloat(e.target.value))}
+                                    className="w-0 group-hover/vol:w-20 focus:w-20 transition-all duration-200 ml-2 accent-white"
+                                    aria-label="Volume"
+                                />
+                            </div>
+''',
+              '''                        <div className="flex items-center gap-3 md:gap-4">
+                            <div className="flex min-w-[118px] items-center gap-2 rounded-full border border-white/10 bg-white/[0.045] px-1.5 py-1 md:min-w-[168px] md:gap-3 md:px-2">
+                                <button data-testid="synapse-mute-btn" onClick={toggleMute} className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-white/90 hover:bg-white/10 hover:text-white active:scale-95 transition" aria-label="Mute">
+                                    {muted || volume === 0 ? <VolumeX className="h-5 w-5 md:h-[22px] md:w-[22px] stroke-[1.9]" /> : <Volume2 className="h-5 w-5 md:h-[22px] md:w-[22px] stroke-[1.9]" />}
+                                </button>
+                                <input
+                                    data-testid="synapse-volume-slider"
+                                    type="range" min="0" max="1" step="0.02" value={muted ? 0 : volume}
+                                    onChange={(e) => setVol(parseFloat(e.target.value))}
+                                    className="h-1.5 w-16 min-w-0 cursor-pointer accent-white md:w-24"
+                                    aria-label="Volume"
+                                />
+                            </div>
+''',
+              "volume layout",
+          )
+
+          rep(
+              '''                            <div className="ml-auto flex items-center gap-4 md:gap-7">
+                                {hasNext && (
+                                    <button data-testid="synapse-next-episode-btn" onClick={onNextEpisode} className="hidden sm:block text-white/85 hover:text-white active:scale-95 transition" title="Next episode (N)">
+                                        <SkipForward className="w-7 h-7 md:w-8 md:h-8" />
+                                    </button>
+                                )}
+''',
+              '''                            <div className="ml-auto flex items-center gap-1.5 md:gap-2">
+                                {hasNext && (
+                                    <button data-testid="synapse-next-episode-btn" onClick={onNextEpisode} className="hidden sm:grid h-10 w-10 md:h-11 md:w-11 place-items-center rounded-full border border-white/10 bg-white/[0.04] text-white/85 hover:bg-white/10 hover:text-white active:scale-95 transition" title="Next episode (N)">
+                                        <SkipForward className="h-[21px] w-[21px] stroke-[1.9]" />
+                                    </button>
+                                )}
+''',
+              "right cluster",
+          )
+
+          rep(
+              '''                                        className={`w-10 h-8 md:w-12 md:h-9 rounded-lg border-2 flex items-center justify-center transition ${sub >= 0 ? "bg-white text-black border-white" : "text-white/90 border-white/70 hover:border-white"}`}
+''',
+              '''                                        className={`grid h-10 w-10 md:h-11 md:w-11 place-items-center rounded-full border transition active:scale-95 ${sub >= 0 ? "bg-white text-black border-white" : "bg-white/[0.04] text-white/90 border-white/10 hover:bg-white/10 hover:text-white"}`}
+''',
+              "caption icon button",
+          )
+
+          rep(
+              '''                                        <Subtitles className="w-6 h-6 md:w-7 md:h-7 stroke-[2.2]" />
+''',
+              '''                                        <Subtitles className="h-[22px] w-[22px] stroke-[1.9]" />
+''',
+              "caption icon",
+          )
+
+          rep(
+              '''                                    <Popover open={menu === "subs"}>
+                                        <p className="px-3 py-2 text-[10px] uppercase tracking-[0.18em] text-white/45">Caption source</p>
+                                        <div className="max-h-36 overflow-y-auto scrollbar-none">
+                                            {captionSources.map((s) => (
+                                                <MenuItem key={s.provider} active={serverId === s.id} onClick={() => selectCaptionSource(s)}>
+                                                    <span>{s.name}</span><span className="text-[10px] opacity-45">{s.provider}</span>
+                                                </MenuItem>
+                                            ))}
+                                        </div>
+                                        <div className="h-px bg-white/10 my-2" />
+                                        <p className="px-3 py-2 text-[10px] uppercase tracking-[0.18em] text-white/45">Tracks · {activeServer?.name || "Current source"}</p>
+                                        <MenuItem active={sub === -1} onClick={() => changeSub(-1)} testId="sub-off">Off</MenuItem>
+                                        {subs.map((track, i) => (
+                                            <MenuItem key={i} active={sub === i} onClick={() => changeSub(i)}>{track.name || track.lang || `Track ${i + 1}`}</MenuItem>
+                                        ))}
+                                        {!subs.length && <p className="px-3 py-3 text-xs text-white/45">This source has no exposed caption tracks. Try another source above.</p>}
+                                    </Popover>
+''',
+              '''                                    <Popover open={menu === "subs"} wide>
+                                        <div className="sticky top-0 z-10 -mx-2 -mt-2 mb-1 border-b border-white/10 bg-black/90 px-5 py-4 backdrop-blur-2xl">
+                                            <p className="text-sm font-semibold text-white">Subtitles</p>
+                                            <p className="mt-0.5 text-[11px] text-white/40">Full track controls, appearance and sync</p>
+                                        </div>
+
+                                        <p className="px-3 py-2 text-[10px] uppercase tracking-[0.18em] text-white/45">Caption source</p>
+                                        <div className="max-h-36 overflow-y-auto scrollbar-none">
+                                            {captionSources.map((s) => (
+                                                <MenuItem key={s.provider} active={serverId === s.id} onClick={() => selectCaptionSource(s)}>
+                                                    <span>{s.name}</span><span className="text-[10px] opacity-45">{s.provider}</span>
+                                                </MenuItem>
+                                            ))}
+                                        </div>
+
+                                        <div className="h-px bg-white/10 my-2" />
+                                        <p className="px-3 py-2 text-[10px] uppercase tracking-[0.18em] text-white/45">All tracks · {activeServer?.name || "Current source"}</p>
+                                        <MenuItem active={sub === -1} onClick={() => changeSub(-1)} testId="sub-off">Off</MenuItem>
+                                        {subs.map((track, i) => (
+                                            <MenuItem key={i} active={sub === i} onClick={() => changeSub(i)}>
+                                                <span>{track.name || track.lang || `Track ${i + 1}`}</span>
+                                                <span className="text-[10px] uppercase opacity-40">{track.lang || track.language || "CC"}</span>
+                                            </MenuItem>
+                                        ))}
+                                        {!subs.length && <p className="px-3 py-3 text-xs leading-relaxed text-white/45">This source exposes no caption track. Pick another source above; Synapse keeps your movie position while it switches.</p>}
+
+                                        <div className="h-px bg-white/10 my-3" />
+                                        <div className="flex items-center justify-between px-3 py-2">
+                                            <div>
+                                                <p className="text-[10px] uppercase tracking-[0.18em] text-white/45">Appearance & sync</p>
+                                                <p className="mt-1 text-[11px] text-white/30">Changes preview live on the movie.</p>
+                                            </div>
+                                            <button onClick={resetCaptionStyle} className="rounded-lg border border-white/10 px-2.5 py-1.5 text-[11px] text-white/55 hover:bg-white/10 hover:text-white">Reset</button>
+                                        </div>
+
+                                        <CaptionSlider label="Size" value={captionStyle.size} min={60} max={180} suffix="%" onChange={(v) => updateCaptionStyle("size", v)} />
+                                        <CaptionSlider label="Transparency" value={captionStyle.transparency} min={0} max={90} suffix="%" onChange={(v) => updateCaptionStyle("transparency", v)} />
+                                        <CaptionSlider label="Boldness" value={captionStyle.weight} min={300} max={900} step={100} onChange={(v) => updateCaptionStyle("weight", v)} />
+                                        <CaptionSlider label="Outline" value={captionStyle.outline} min={0} max={4} step={0.5} suffix="px" onChange={(v) => updateCaptionStyle("outline", v)} />
+                                        <CaptionSlider label="Background" value={captionStyle.background} min={0} max={90} suffix="%" onChange={(v) => updateCaptionStyle("background", v)} />
+                                        <CaptionSlider label="Vertical position" value={captionStyle.position} min={60} max={92} suffix="%" onChange={(v) => updateCaptionStyle("position", v)} />
+                                        <CaptionSlider label="Delay" value={captionStyle.delay} min={-5} max={5} step={0.05} suffix="s" onChange={(v) => updateCaptionStyle("delay", v)} />
+                                        <CaptionSlider label="Accuracy assist" value={captionStyle.accuracy} min={0} max={100} suffix="%" onChange={(v) => updateCaptionStyle("accuracy", v)} />
+
+                                        <div className="px-3 py-3">
+                                            <div className="mb-2 flex items-center justify-between">
+                                                <span className="text-xs text-white/70">Color</span>
+                                                <input
+                                                    type="color"
+                                                    value={captionStyle.color}
+                                                    onChange={(e) => updateCaptionStyle("color", e.target.value)}
+                                                    className="h-8 w-11 cursor-pointer rounded-md border border-white/10 bg-transparent p-0.5"
+                                                    aria-label="Subtitle color"
+                                                />
+                                            </div>
+                                            <div className="flex gap-2">
+                                                {["#ffffff", "#ffe66d", "#77e0ff", "#9cff8f", "#ff9edb"].map((color) => (
+                                                    <button
+                                                        key={color}
+                                                        onClick={() => updateCaptionStyle("color", color)}
+                                                        className={`h-7 w-7 rounded-full border-2 transition-transform hover:scale-110 ${captionStyle.color.toLowerCase() === color ? "border-white" : "border-white/15"}`}
+                                                        style={{ backgroundColor: color }}
+                                                        aria-label={`Use ${color} subtitles`}
+                                                    />
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        <div className="mx-3 mb-2 flex items-center justify-between gap-4 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-3">
+                                            <div>
+                                                <p className="text-xs font-medium text-white/80">Auto-correct subtitles</p>
+                                                <p className="mt-1 text-[10px] leading-relaxed text-white/35">Fix spacing, repeated words, casing and obvious caption formatting errors.</p>
+                                            </div>
+                                            <button
+                                                role="switch"
+                                                aria-checked={captionStyle.autoCorrect}
+                                                onClick={() => updateCaptionStyle("autoCorrect", !captionStyle.autoCorrect)}
+                                                className={`relative h-6 w-11 shrink-0 rounded-full transition ${captionStyle.autoCorrect ? "bg-white" : "bg-white/15"}`}
+                                            >
+                                                <span className={`absolute top-1 h-4 w-4 rounded-full transition-all ${captionStyle.autoCorrect ? "left-6 bg-black" : "left-1 bg-white/60"}`} />
+                                            </button>
+                                        </div>
+                                    </Popover>
+''',
+              "subtitle customization panel",
+          )
+
+          rep(
+              '''                                        className="text-white/90 hover:text-white active:scale-95 transition"
+''',
+              '''                                        className="grid h-10 w-10 md:h-11 md:w-11 place-items-center rounded-full border border-white/10 bg-white/[0.04] text-white/90 hover:bg-white/10 hover:text-white active:scale-95 transition"
+''',
+              "settings button",
+          )
+
+          rep(
+              '''                                        <Settings className="w-8 h-8 md:w-9 md:h-9 fill-white stroke-[2]" />
+''',
+              '''                                        <Settings className="h-[22px] w-[22px] stroke-[1.9]" />
+''',
+              "settings icon",
+          )
+
+          rep(
+              '''                                <button onClick={togglePip} className="hidden sm:block text-white/90 hover:text-white active:scale-95 transition" title="Picture in Picture" aria-label="Picture in Picture">
+                                    <PictureInPicture2 className="w-8 h-8 md:w-9 md:h-9 stroke-[2]" />
+                                </button>
+
+                                <button data-testid="synapse-fullscreen-btn" onClick={toggleFs} className="text-white/90 hover:text-white active:scale-95 transition" title="Fullscreen (F)" aria-label="Fullscreen">
+                                    {fs ? <Minimize className="w-8 h-8 md:w-10 md:h-10 stroke-[1.8]" /> : <Maximize className="w-8 h-8 md:w-10 md:h-10 stroke-[1.8]" />}
+                                </button>
+''',
+              '''                                <button onClick={togglePip} className="hidden sm:grid h-10 w-10 md:h-11 md:w-11 place-items-center rounded-full border border-white/10 bg-white/[0.04] text-white/90 hover:bg-white/10 hover:text-white active:scale-95 transition" title="Picture in Picture" aria-label="Picture in Picture">
+                                    <PictureInPicture2 className="h-[21px] w-[21px] stroke-[1.9]" />
+                                </button>
+
+                                <button data-testid="synapse-fullscreen-btn" onClick={toggleFs} className="grid h-10 w-10 md:h-11 md:w-11 place-items-center rounded-full border border-white/10 bg-white/[0.04] text-white/90 hover:bg-white/10 hover:text-white active:scale-95 transition" title="Fullscreen (F)" aria-label="Fullscreen">
+                                    {fs ? <Minimize className="h-[22px] w-[22px] stroke-[1.9]" /> : <Maximize className="h-[22px] w-[22px] stroke-[1.9]" />}
+                                </button>
+''',
+              "pip fullscreen buttons",
+          )
+
+          p.write_text(t)
+          PY
+
+      - name: Validate production build
+        run: |
+          cd frontend
+          yarn install --frozen-lockfile
+          yarn build
+
+      - name: Commit subtitle upgrade
+        run: |
+          git config user.name "Synapse Bot"
+          git config user.email "264532369+lauraevan@users.noreply.github.com"
+          git add frontend/src/components/SynapsePlayer.jsx
+          git commit -m "Add full subtitle customization and polish player controls"
+          git push
