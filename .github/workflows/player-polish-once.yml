@@ -34,6 +34,12 @@ jobs:
               '        if (next) {\n            pendingSeekRef.current = videoRef.current?.currentTime || 0;\n            setServerId(next.id);\n        }\n',
               "failover single load",
           )
+          t = rep(
+              t,
+              '    }, [servers, playServer]);\n',
+              '    }, [servers]);\n',
+              "failover dependencies",
+          )
 
           t = rep(
               t,
