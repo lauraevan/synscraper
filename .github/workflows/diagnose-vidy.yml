@@ -24,30 +24,29 @@ jobs:
 
           out = Path('vidy-diagnostic')
           UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36'
-          base_headers = {
-              'User-Agent': UA,
-              'Accept': '*/*',
-              'Accept-Language': 'en-US,en;q=0.9',
-          }
+          headers = {'User-Agent': UA, 'Accept': '*/*', 'Accept-Language': 'en-US,en;q=0.9'}
 
           def get(url, referer=None):
-              h = dict(base_headers)
-              if referer:
-                  h['Referer'] = referer
+              h = dict(headers)
+              if referer: h['Referer'] = referer
               req = urllib.request.Request(url, headers=h)
               with urllib.request.urlopen(req, timeout=30) as r:
                   text = r.read().decode('utf-8', 'ignore')
                   return r.geturl(), r.status, dict(r.headers.items()), text
 
           page = 'https://www.vidy.st/movie/550'
-          final, status, headers, body = get(page)
+          final, status, page_headers, body = get(page)
           (out/'page.html').write_text(body, encoding='utf-8')
-
           scripts = [urljoin(final, html.unescape(s)) for s in re.findall(r'<script[^>]+src=["\']([^"\']+)["\']', body, re.I)]
-          scripts = list(dict.fromkeys(scripts))
           scripts += [
-              'https://www.vidy.st/_next/static/chunks/6476-dd8490594847612a.js',
+              'https://www.vidy.st/_next/static/chunks/6476.dd8490594847612a.js',
               'https://www.vidy.st/_next/static/chunks/8351-25a4464f409a78c6.js',
+              'https://www.vidy.st/_next/static/chunks/pages/tv/%5B...params%5D-ec2210bf54af641f.js',
+              'https://www.vidy.st/_next/static/chunks/3820-73e303cf0d62c4a5.js',
+              'https://www.vidy.st/_next/static/chunks/8518-b404545f2621e84f.js',
+              'https://www.vidy.st/_next/static/chunks/8077-3a1675927c366922.js',
+              'https://www.vidy.st/_next/static/chunks/3220-e830bf00c755ec3d.js',
+              'https://www.vidy.st/_next/static/chunks/pages/anime/%5B...params%5D-464c71a5a8dcd556.js',
           ]
           scripts = list(dict.fromkeys(scripts))
 
@@ -62,27 +61,22 @@ jobs:
               (out/name).write_text(text, encoding='utf-8')
               captures.append({'url': u, 'status': st, 'content_type': hs.get('Content-Type',''), 'file': name, 'bytes': len(text)})
 
-          summary = {'page': final, 'page_status': status, 'scripts': scripts, 'captures': captures, 'interesting': []}
-          needles = ['api', 'fetch(', 'axios', 'tmdb', 'movie', 'episode', 'source', 'stream', 'provider', 'server', 'embed', 'decrypt', 'crypto', 'token', 'm3u8', 'mpd', 'b35ebba4']
+          summary = {'page': final, 'page_status': status, 'captures': captures, 'interesting': []}
+          needles = ['api.wecollege', '/seed', '/sources', 'fetch(', 'axios', 'tmdb', 'movie', 'episode', 'season', 'source', 'stream', 'provider', 'server', 'embed', 'decrypt', 'crypto', 'token', 'm3u8', 'mpd', 'b35ebba4']
           for cap in captures:
               name = cap.get('file')
-              if not name:
-                  continue
+              if not name: continue
               text = (out/name).read_text(encoding='utf-8', errors='ignore')
               low = text.lower()
               for needle in needles:
                   start = 0
                   count = 0
-                  while count < 20:
+                  while count < 30:
                       pos = low.find(needle.lower(), start)
-                      if pos < 0:
-                          break
-                      summary['interesting'].append({'file': name, 'needle': needle, 'position': pos, 'snippet': text[max(0,pos-900):min(len(text),pos+2400)]})
+                      if pos < 0: break
+                      summary['interesting'].append({'file': name, 'needle': needle, 'position': pos, 'snippet': text[max(0,pos-1000):min(len(text),pos+3000)]})
                       start = pos + len(needle)
                       count += 1
-              endpoints = sorted(set(re.findall(r'https?://[^"\'`\\\s<>]+|/[A-Za-z0-9_.~!$&()*+,;=:@%/?#\-]{3,}', text)))
-              summary.setdefault('endpoints', {})[name] = [e for e in endpoints if any(k in e.lower() for k in ('api','movie','tv','anime','source','stream','embed','server','token','provider','watch'))][:1000]
-
           (out/'summary.json').write_text(json.dumps(summary, indent=2), encoding='utf-8')
           PY
       - name: Upload diagnostic
