@@ -3,7 +3,7 @@ import Hls from "hls.js";
 import {
     Play, Pause, Volume2, VolumeX, Maximize, Minimize, SkipForward,
     RotateCcw, RotateCw, Settings, Subtitles, Gauge, PictureInPicture2,
-    Keyboard, ChevronLeft, Zap, ServerCog, X, ShieldCheck, AlertTriangle, Cloud,
+    Keyboard, ServerCog, X, ShieldCheck, AlertTriangle, Cloud,
 } from "lucide-react";
 import { getStreams, hlsProxyUrl } from "@/lib/api";
 import { fmtTime } from "@/lib/format";
@@ -16,10 +16,10 @@ const SHORTCUTS = [
     ["N", "Next Episode"], ["C", "Subtitles"], ["?", "This help"],
 ];
 const STEPS = [
-    "Fetching VidUp embed…",
-    "Extracting session token ✓",
-    "Scraping mirror servers…",
-    "Relaying HLS through Synapse proxy…",
+    "Checking available sources",
+    "Resolving playback links",
+    "Choosing the fastest stream",
+    "Preparing adaptive playback",
 ];
 
 const Popover = ({ open, children }) =>
@@ -222,10 +222,10 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
 
     const pct = duration ? (current / duration) * 100 : 0;
     const bufPct = duration ? (buffered / duration) * 100 : 0;
-    const srcName = activeServer?.name || "VidUp";
     const releaseDate = meta.release_date || meta.first_air_date || "";
     const year = releaseDate ? String(releaseDate).slice(0, 4) : "";
     const displayTitle = `${meta.title || "Untitled"}${year ? ` (${year})` : ""}`;
+    const resolvePct = ((stepIdx + 1) / STEPS.length) * 100;
 
     return (
         <div
@@ -258,20 +258,50 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
             )}
 
             {mode === "loading" && (
-                <div data-testid="synapse-resolving" className="absolute inset-0 flex flex-col items-center justify-center bg-black/92 backdrop-blur-sm z-40 px-6">
-                    <div className="relative w-16 h-16 mb-6">
-                        <span className="absolute inset-0 rounded-full border border-white/20 syn-radar-ring" />
-                        <span className="absolute inset-0 rounded-full border border-white/20 syn-radar-ring" style={{ animationDelay: "0.5s" }} />
-                        <div className="absolute inset-0 flex items-center justify-center"><Zap className="w-6 h-6 text-white" /></div>
-                    </div>
-                    <p className="text-xl font-semibold tracking-tight mb-1">Synapse Player</p>
-                    <p className="text-xs uppercase tracking-[0.24em] text-white/50 mb-5">Resolving stream</p>
-                    <div className="w-full max-w-md space-y-1.5 font-mono text-xs text-white/45">
-                        {STEPS.slice(0, stepIdx + 1).map((s, i) => (
-                            <div key={i} className="flex items-center gap-2 syn-fade-up">
-                                {i < stepIdx ? <ShieldCheck className="w-3.5 h-3.5 text-white/70" /> : <span className="text-white">›</span>} {s}
+                <div data-testid="synapse-resolving" className="absolute inset-0 z-40 overflow-hidden bg-black">
+                    {meta.backdrop_path && (
+                        <img
+                            src={`https://image.tmdb.org/t/p/original${meta.backdrop_path}`}
+                            alt=""
+                            className="absolute inset-0 h-full w-full scale-105 object-cover opacity-25 blur-[2px]"
+                        />
+                    )}
+                    <div className="absolute inset-0 bg-[linear-gradient(to_bottom,rgba(0,0,0,0.58),rgba(0,0,0,0.88)),radial-gradient(circle_at_50%_38%,rgba(255,255,255,0.08),transparent_34%)]" />
+
+                    <Cloud className="absolute left-5 top-5 h-10 w-10 text-white/70 md:left-7 md:top-7 md:h-12 md:w-12" strokeWidth={1.55} />
+
+                    <div className="relative flex h-full flex-col items-center justify-center px-6 text-center">
+                        <div className="relative mb-7 grid h-20 w-20 place-items-center rounded-full border border-white/12 bg-white/[0.035] backdrop-blur-xl md:h-24 md:w-24">
+                            <div className="absolute inset-2 rounded-full border border-white/10 syn-soft-pulse" />
+                            <Cloud className="h-9 w-9 text-white/85 md:h-11 md:w-11" strokeWidth={1.4} />
+                        </div>
+
+                        <p className="text-[11px] font-medium uppercase tracking-[0.24em] text-white/35">Synapse Player</p>
+                        <h2 className="mt-3 text-2xl font-semibold tracking-[-0.035em] text-white md:text-4xl">Finding the best source</h2>
+                        <p className="mt-2 max-w-lg truncate text-sm text-white/48 md:text-base">{displayTitle}</p>
+                        <p className="mt-3 text-xs text-white/28">This usually only takes a few seconds.</p>
+
+                        <div className="mt-8 w-full max-w-md">
+                            <div className="relative h-1 overflow-hidden rounded-full bg-white/10">
+                                <div className="absolute inset-y-0 left-0 rounded-full bg-white/70 transition-all duration-700" style={{ width: `${resolvePct}%` }} />
+                                <div className="syn-resolve-sweep absolute inset-y-0 w-20 bg-gradient-to-r from-transparent via-white/80 to-transparent" />
                             </div>
-                        ))}
+
+                            <div className="mt-5 space-y-2 text-left">
+                                {STEPS.map((step, i) => {
+                                    const complete = i < stepIdx;
+                                    const active = i === stepIdx;
+                                    return (
+                                        <div key={step} className={`flex items-center gap-3 rounded-xl px-3 py-2 text-xs transition-all duration-300 ${active ? "bg-white/[0.055] text-white/75" : complete ? "text-white/45" : "text-white/20"}`}>
+                                            <div className={`grid h-5 w-5 shrink-0 place-items-center rounded-full border ${complete ? "border-white/25 bg-white/[0.08]" : active ? "border-white/35" : "border-white/10"}`}>
+                                                {complete ? <ShieldCheck className="h-3 w-3" /> : <span className={`h-1.5 w-1.5 rounded-full ${active ? "bg-white syn-soft-pulse" : "bg-white/15"}`} />}
+                                            </div>
+                                            <span>{step}</span>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
                     </div>
                 </div>
             )}
@@ -287,7 +317,6 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
 
             {mode === "ready" && (
                 <>
-                    {/* Vidfast-style top chrome: cloud/home at left, title centered. */}
                     <div className={`absolute top-0 left-0 right-0 z-30 transition-opacity duration-300 ${showControls ? "opacity-100" : "opacity-0 pointer-events-none"}`}>
                         <button
                             data-testid="synapse-back-btn"
@@ -304,7 +333,6 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
                         </div>
                     </div>
 
-                    {/* Large center playback/10-second controls from the reference UI. */}
                     <div
                         onClick={(e) => e.stopPropagation()}
                         className={`absolute inset-0 z-20 flex items-center justify-center gap-[11vw] max-md:gap-16 transition-opacity duration-300 ${showControls ? "opacity-100" : "opacity-0 pointer-events-none"}`}
@@ -329,7 +357,6 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
                         </button>
                     </div>
 
-                    {/* Minimal lower chrome matching the reference. */}
                     <div
                         onClick={(e) => e.stopPropagation()}
                         className={`absolute bottom-0 left-0 right-0 z-30 px-4 md:px-7 pb-4 md:pb-7 pt-12 transition-opacity duration-300 ${showControls ? "opacity-100" : "opacity-0 pointer-events-none"}`}
