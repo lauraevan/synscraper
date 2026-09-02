@@ -1,0 +1,108 @@
+name: Diagnose CineJoy live player
+
+on:
+  push:
+    paths:
+      - '.github/workflows/diagnose-cinejoy.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Capture CineJoy app shell and scripts
+        shell: bash
+        run: |
+          mkdir -p cinejoy-diagnostic
+          python - <<'PY'
+          import html, json, re, urllib.request
+          from pathlib import Path
+          from urllib.parse import urljoin
+
+          out = Path('cinejoy-diagnostic')
+          UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36'
+          base_headers = {
+              'User-Agent': UA,
+              'Accept': '*/*',
+              'Accept-Language': 'en-US,en;q=0.9',
+          }
+
+          def get(url, referer=None):
+              h = dict(base_headers)
+              if referer:
+                  h['Referer'] = referer
+              req = urllib.request.Request(url, headers=h)
+              with urllib.request.urlopen(req, timeout=30) as r:
+                  raw = r.read()
+                  text = raw.decode('utf-8', 'ignore')
+                  return r.geturl(), r.status, dict(r.headers.items()), text
+
+          summary = {'pages': [], 'captures': [], 'interesting': []}
+          page_urls = [
+              'https://cinejoy.to/',
+              'https://cinejoy.to/robots.txt',
+              'https://cinejoy.to/sitemap.xml',
+          ]
+          scripts = []
+          for idx, page in enumerate(page_urls):
+              try:
+                  final, status, headers, body = get(page)
+              except Exception as e:
+                  summary['pages'].append({'url': page, 'error': repr(e)})
+                  continue
+              name = f'page-{idx}.txt'
+              (out/name).write_text(body, encoding='utf-8')
+              summary['pages'].append({'url': final, 'status': status, 'content_type': headers.get('Content-Type',''), 'file': name, 'bytes': len(body)})
+              if '<script' in body.lower():
+                  for src in re.findall(r'<script[^>]+src=["\']([^"\']+)["\']', body, re.I):
+                      scripts.append(urljoin(final, html.unescape(src)))
+
+          scripts = list(dict.fromkeys(scripts))
+          for idx, url in enumerate(scripts[:80]):
+              try:
+                  final, status, headers, text = get(url, 'https://cinejoy.to/')
+              except Exception as e:
+                  summary['captures'].append({'url': url, 'error': repr(e)})
+                  continue
+              name = f'script-{idx}.js'
+              (out/name).write_text(text, encoding='utf-8')
+              summary['captures'].append({'url': final, 'status': status, 'content_type': headers.get('Content-Type',''), 'file': name, 'bytes': len(text)})
+
+          needles = [
+              'fetch(', 'axios', '/api/', 'api.', 'tmdb', 'imdb', 'movie', 'tv', 'season', 'episode',
+              'source', 'stream', 'server', 'provider', 'embed', 'iframe', 'm3u8', 'mpd', 'token', 'decrypt',
+              'crypto', 'atob', 'base64', 'manifest', 'playlist'
+          ]
+          for item in summary['captures']:
+              name = item.get('file')
+              if not name:
+                  continue
+              text = (out/name).read_text(encoding='utf-8', errors='ignore')
+              low = text.lower()
+              for needle in needles:
+                  start = 0
+                  count = 0
+                  while count < 20:
+                      pos = low.find(needle.lower(), start)
+                      if pos < 0:
+                          break
+                      summary['interesting'].append({
+                          'file': name,
+                          'needle': needle,
+                          'position': pos,
+                          'snippet': text[max(0,pos-900):min(len(text),pos+2600)],
+                      })
+                      start = pos + len(needle)
+                      count += 1
+
+          (out/'summary.json').write_text(json.dumps(summary, indent=2), encoding='utf-8')
+          PY
+      - name: Upload diagnostic
+        uses: actions/upload-artifact@v4
+        with:
+          name: cinejoy-diagnostic
+          path: cinejoy-diagnostic/
+          retention-days: 1
