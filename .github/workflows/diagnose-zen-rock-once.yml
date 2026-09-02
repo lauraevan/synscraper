@@ -19,33 +19,48 @@ jobs:
       - run: pip install -r backend/requirements.txt
       - name: Compile backend
         run: python -m py_compile backend/server.py backend/scraper.py backend/providers/*.py
-      - name: Live resolver smoke test
+      - name: Rock session diagnostics
         run: |
           cd backend
           python - <<'PY'
-          import json
-          import urllib.request
-          from providers.vidzee import VidzeeResolver
-          from providers.vidrock import VidrockResolver
+          import requests
 
-          def smoke(label, resolver):
-              data = json.loads(resolver.resolve('550', media_type='movie'))
-              print(f'{label}_STATUS={data.get("status")}')
-              print(f'{label}_COUNT={len(data.get("playable_urls") or [])}')
-              if data.get('status') != 'success' or not data.get('playable_urls'):
-                  raise SystemExit(f'{label} failed: {data.get("message")}')
-              stream = data['playable_urls'][0]
-              headers = dict(stream.get('headers') or {})
-              headers.setdefault('User-Agent', 'Mozilla/5.0')
-              headers.setdefault('Accept', '*/*')
-              req = urllib.request.Request(stream['url'], headers=headers)
-              with urllib.request.urlopen(req, timeout=20) as response:
-                  prefix = response.read(256)
-                  print(f'{label}_PLAYBACK_HTTP={getattr(response, "status", 200)}')
-                  print(f'{label}_PLAYBACK_CT={response.headers.get("Content-Type", "")}')
-                  if not prefix:
-                      raise SystemExit(f'{label} playback body was empty')
+          ua = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
+          api = 'https://vidrock.net/api/movie/550'
 
-          smoke('ZEN', VidzeeResolver(debug=True))
-          smoke('ROCK', VidrockResolver(debug=True))
+          variants = [
+              ('DIRECT_MIN', {'User-Agent': ua, 'Accept': 'application/json, text/plain, */*', 'Referer': 'https://vidrock.net/'}),
+              ('DIRECT_FETCH', {
+                  'User-Agent': ua,
+                  'Accept': 'application/json, text/plain, */*',
+                  'Accept-Language': 'en-US,en;q=0.9',
+                  'Referer': 'https://vidrock.net/',
+                  'Sec-Fetch-Dest': 'empty',
+                  'Sec-Fetch-Mode': 'cors',
+                  'Sec-Fetch-Site': 'same-origin',
+              }),
+          ]
+
+          for name, headers in variants:
+              try:
+                  r = requests.get(api, headers=headers, timeout=15)
+                  print(f'{name}_HTTP={r.status_code} CT={r.headers.get("content-type", "")}')
+              except Exception as e:
+                  print(f'{name}_ERROR={type(e).__name__}:{e}')
+
+          s = requests.Session()
+          s.headers.update({
+              'User-Agent': ua,
+              'Accept-Language': 'en-US,en;q=0.9',
+          })
+          home = s.get('https://vidrock.net/', headers={'Accept': 'text/html,application/xhtml+xml'}, timeout=15)
+          print(f'SESSION_HOME_HTTP={home.status_code} COOKIE_COUNT={len(s.cookies)}')
+          r = s.get(api, headers={
+              'Accept': 'application/json, text/plain, */*',
+              'Referer': 'https://vidrock.net/',
+              'Sec-Fetch-Dest': 'empty',
+              'Sec-Fetch-Mode': 'cors',
+              'Sec-Fetch-Site': 'same-origin',
+          }, timeout=15)
+          print(f'SESSION_API_HTTP={r.status_code} CT={r.headers.get("content-type", "")} COOKIE_COUNT={len(s.cookies)}')
           PY
