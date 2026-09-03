@@ -441,7 +441,22 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
             for (const item of current || []) map.set(`${item.provider}|${item.name}|${item.quality}`, item);
             for (const item of incoming || []) {
                 const key = `${item.provider}|${item.name}|${item.quality}`;
-                if (!map.has(key)) map.set(key, item);
+                const existing = map.get(key);
+                if (!existing) {
+                    map.set(key, item);
+                    continue;
+                }
+                const captionMap = new Map();
+                for (const caption of [...(existing.captions || []), ...(item.captions || [])]) {
+                    const captionKey = caption.play_url || caption.id || `${caption.lang || "und"}:${caption.name || "caption"}`;
+                    captionMap.set(captionKey, caption);
+                }
+                map.set(key, {
+                    ...existing,
+                    ...item,
+                    id: existing.id,
+                    captions: Array.from(captionMap.values()),
+                });
             }
             return Array.from(map.values());
         };
@@ -840,7 +855,7 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
         };
         window.addEventListener("keydown", onKey);
         return () => window.removeEventListener("keydown", onKey);
-    }, [mode, sub, subs, hasNext, wake]); // eslint-disable-line
+    }, [mode, sub, subs, hasNext, wake, captionsEnabled]); // eslint-disable-line
 
     const pct = duration ? (current / duration) * 100 : 0;
     const seekPct = scrubPct == null ? pct : scrubPct;
