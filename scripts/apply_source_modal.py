@@ -1,0 +1,146 @@
+from pathlib import Path
+import re
+
+path = Path("frontend/src/components/SynapsePlayer.jsx")
+s = path.read_text()
+
+# The existing source-badge patch embedded both uploaded images but swapped the
+# variable names. Keep the exact bytes and assign PNG=India, WebP=4K.
+matches = re.findall(
+    r'const SOURCE_(?:4K_BADGE|INDIA_FLAG) = "(data:image/(?:png|webp);base64,[^"]+)";',
+    s,
+)
+png = next((value for value in matches if value.startswith("data:image/png;")), None)
+webp = next((value for value in matches if value.startswith("data:image/webp;")), None)
+if not png or not webp:
+    raise SystemExit("uploaded source badge data URIs were not found")
+
+s = re.sub(
+    r'const SOURCE_4K_BADGE = "data:image/(?:png|webp);base64,[^"]+";',
+    f'const SOURCE_4K_BADGE = "{webp}";',
+    s,
+    count=1,
+)
+s = re.sub(
+    r'const SOURCE_INDIA_FLAG = "data:image/(?:png|webp);base64,[^"]+";',
+    f'const SOURCE_INDIA_FLAG = "{png}";',
+    s,
+    count=1,
+)
+
+start_marker = '                        <div className="absolute left-5 top-5 md:left-7 md:top-7">'
+end_marker = '                        <div className="absolute left-1/2 top-5 md:top-6 -translate-x-1/2 text-center max-w-[60%] pointer-events-none">'
+start = s.find(start_marker)
+end = s.find(end_marker, start + 1)
+if start < 0 or end < 0:
+    raise SystemExit(f"source picker boundaries missing: start={start}, end={end}")
+
+modal = '''                        <div className="absolute left-5 top-5 md:left-7 md:top-7">
+                            <button
+                                data-testid="synapse-source-cloud-btn"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setMenu(menu === "sources" ? null : "sources");
+                                }}
+                                className={`grid h-11 w-11 md:h-12 md:w-12 place-items-center transition-all duration-200 active:scale-95 ${menu === "sources" ? "text-white scale-105" : "text-white/85 hover:text-white hover:scale-105"}`}
+                                aria-label="Choose source"
+                                title="Sources"
+                            >
+                                <Cloud className="h-7 w-7 md:h-8 md:w-8 stroke-[1.55]" />
+                            </button>
+
+                            {menu === "sources" && (
+                                <div
+                                    data-testid="synapse-source-popout"
+                                    data-source-layout="modal"
+                                    className="fixed inset-0 z-[90] flex items-center justify-center bg-black/60 px-4 py-6 backdrop-blur-md"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setMenu(null);
+                                    }}
+                                >
+                                    <div
+                                        onClick={(e) => e.stopPropagation()}
+                                        className="w-[min(92vw,520px)] max-h-[min(78vh,620px)] overflow-hidden rounded-[28px] border border-white/[0.12] bg-[#0b0b0c]/95 shadow-[0_30px_100px_rgba(0,0,0,0.72)] backdrop-blur-3xl"
+                                    >
+                                        <div className="flex items-center gap-3 border-b border-white/[0.08] px-5 py-4 md:px-6 md:py-5">
+                                            <div className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-white/[0.07]">
+                                                <Cloud className="h-5 w-5 text-white/82" strokeWidth={1.7} />
+                                            </div>
+                                            <div className="min-w-0 flex-1">
+                                                <p className="text-[15px] font-semibold tracking-[-0.015em] text-white md:text-[17px]">Choose a source</p>
+                                                <p className="mt-0.5 text-[10px] text-white/38 md:text-[11px]">Switch servers without losing your place</p>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={() => setMenu(null)}
+                                                className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-white/55 transition hover:bg-white/[0.07] hover:text-white"
+                                                aria-label="Close sources"
+                                            >
+                                                <X className="h-5 w-5" strokeWidth={1.7} />
+                                            </button>
+                                        </div>
+
+                                        <div className="max-h-[min(62vh,500px)] overflow-y-auto p-2.5 scrollbar-none md:p-3">
+                                            {sourceSlots.map((s) => {
+                                                const selected = serverId === s.id;
+                                                const show4K = sourceHas4KBadge(s);
+                                                const hindi = sourceIsHindi(s);
+                                                return (
+                                                    <button
+                                                        key={s.id}
+                                                        disabled={!s.available}
+                                                        onClick={() => {
+                                                            if (!s.available) return;
+                                                            selectServer(s);
+                                                            setMenu(null);
+                                                        }}
+                                                        className={`flex w-full items-center gap-3 rounded-2xl px-3.5 py-3 text-left transition md:px-4 md:py-3.5 ${selected ? "bg-white text-black" : s.available ? "text-white/82 hover:bg-white/[0.075] hover:text-white" : "cursor-not-allowed text-white/25"}`}
+                                                    >
+                                                        <div className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl ${selected ? "bg-black/[0.07]" : "bg-white/[0.055]"}`}>
+                                                            <Cloud className={`h-[18px] w-[18px] ${selected ? "text-black/70" : "text-white/60"}`} strokeWidth={1.7} />
+                                                        </div>
+                                                        <div className="min-w-0 flex-1">
+                                                            <div className="flex min-w-0 items-center gap-2">
+                                                                <span className="truncate text-[14px] font-semibold tracking-[-0.01em]">{s.displayName || s.name}</span>
+                                                                {selected && <span className="shrink-0 rounded-full bg-current/10 px-1.5 py-0.5 text-[8px] font-semibold uppercase tracking-[0.08em] opacity-55">Active</span>}
+                                                            </div>
+                                                            <p className={`mt-0.5 truncate text-[10px] uppercase tracking-[0.08em] ${selected ? "text-black/45" : "text-white/32"}`}>
+                                                                {!s.available ? "Unavailable" : show4K ? "4K source" : hindi ? "Hindi source" : (s.provider || s.quality || "Stream")}
+                                                            </p>
+                                                        </div>
+                                                        {show4K && (
+                                                            <img
+                                                                src={SOURCE_4K_BADGE}
+                                                                alt="4K"
+                                                                title="4K source"
+                                                                className={`h-8 w-14 shrink-0 object-contain ${s.available ? "opacity-100" : "opacity-25"}`}
+                                                            />
+                                                        )}
+                                                        <img
+                                                            src={hindi ? SOURCE_INDIA_FLAG : sourceFlag(s)}
+                                                            alt={hindi ? "India" : "US"}
+                                                            title={hindi ? "Hindi source" : "US source"}
+                                                            className={`h-5 w-7 shrink-0 rounded-[3px] object-cover ${s.available ? "opacity-100" : "opacity-25"}`}
+                                                            loading="lazy"
+                                                        />
+                                                    </button>
+                                                );
+                                            })}
+                                            {sourcesLoading && (
+                                                <div className="flex items-center gap-2 px-4 py-3 text-[10px] text-white/35">
+                                                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                                    Loading more sources…
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+'''
+
+s = s[:start] + modal + s[end:]
+path.write_text(s)
+print("source modal patch applied")
