@@ -1,10 +1,9 @@
 """Vercel-safe SynScraper HLS -> MP4 download routes.
 
-The player already uses /api/hls because some provider segments need SynScraper's
-referer/origin handling and transport-stream sanitizing. The first download worker
-fed the upstream playlist directly to FFmpeg, bypassing that proven path. This
-worker keeps the same public API but makes FFmpeg read through SynScraper's own HLS
-proxy so downloads see the exact bytes that playback sees.
+FFmpeg reads through SynScraper's /api/hls proxy so provider headers and the TS
+sanitizer match normal playback. The worker also waits for a real fragmented-MP4
+media fragment before committing response headers; an empty init/moov box is not
+accepted as a successful download.
 """
 
 import asyncio
@@ -21,6 +20,8 @@ logger = logging.getLogger("synscraper.download.v2")
 router = APIRouter()
 
 MAX_DOWNLOAD_HEIGHT = legacy.MAX_DOWNLOAD_HEIGHT
+STARTUP_TIMEOUT_SECONDS = 55
+MAX_PREFLIGHT_BYTES = 4 * 1024 * 1024
 
 
 def _public_origin(request: Request) -> str:
@@ -66,6 +67,54 @@ async def _read_stderr(process) -> bytes:
     return bytes(data)
 
 
+def _friendly_ffmpeg_error(stderr: str) -> str:
+    lowered = stderr.lower()
+    if "403" in lowered or "forbidden" in lowered:
+        return "The selected source rejected one of the HLS requests"
+    if "404" in lowered or "not found" in lowered:
+        return "An HLS playlist or segment was not found"
+    if "timed out" in lowered or "connection timed out" in lowered:
+        return "The selected source timed out while preparing the download"
+    if "invalid data" in lowered or "could not find codec" in lowered:
+        return "FFmpeg could not read the selected HLS stream"
+    if "end of file" in lowered or "eof" in lowered:
+        return "The selected source ended before any video was received"
+    return "FFmpeg could not remux the selected stream"
+
+
+def _contains_real_media(data: bytes) -> bool:
+    """A fragmented MP4 is only useful once at least one moof+mdat pair exists.
+
+    FFmpeg writes an empty initialization moov almost immediately. Treating that as
+    successful was the reason browsers could receive tiny, zero-second MP4 files.
+    """
+    return b"moof" in data and b"mdat" in data
+
+
+async def _wait_for_media_fragment(process) -> bytes:
+    """Buffer startup output until FFmpeg emits actual media, exits, or times out."""
+    assert process.stdout is not None
+    buffered = bytearray()
+
+    async def collect() -> bytes:
+        while len(buffered) < MAX_PREFLIGHT_BYTES:
+            chunk = await process.stdout.read(256 * 1024)
+            if not chunk:
+                break
+            buffered.extend(chunk)
+            if _contains_real_media(buffered):
+                break
+        return bytes(buffered)
+
+    try:
+        return await asyncio.wait_for(collect(), timeout=STARTUP_TIMEOUT_SECONDS)
+    except asyncio.TimeoutError as exc:
+        if process.returncode is None:
+            process.kill()
+            await process.wait()
+        raise HTTPException(504, "The stream did not produce downloadable video in time") from exc
+
+
 @router.get("/download/health")
 async def download_health(request: Request):
     ffmpeg = legacy._find_ffmpeg()
@@ -73,6 +122,7 @@ async def download_health(request: Request):
         "ok": bool(ffmpeg),
         "ffmpeg": bool(ffmpeg),
         "proxy_mode": True,
+        "media_fragment_gate": True,
         "origin": _public_origin(request),
         "max_download_height": MAX_DOWNLOAD_HEIGHT,
     }
@@ -87,8 +137,9 @@ async def download_options(
     provider: str = Query(...),
     mirror: str = Query(""),
 ):
-    # Playlist probing itself is safe to do directly; segment downloads are what need
-    # to pass through /api/hls so they receive the same cleanup as normal playback.
+    # Keep this endpoint fast: it verifies the resolved playlist and reports the
+    # actual <=1080p variants. The download endpoint performs the stronger FFmpeg
+    # media-fragment gate before any MP4 response is committed.
     return await legacy.download_options(type, id, season, episode, provider, mirror)
 
 
@@ -113,9 +164,6 @@ async def download(
         type, id, season, episode, provider, mirror, quality
     )
 
-    # Critical difference from v1: FFmpeg now consumes SynScraper's own HLS proxy.
-    # That proxy carries Referer/Origin and strips the provider PNG prefix from TS
-    # segments, matching the path already proven by player playback.
     input_url = _proxied_playlist_url(request, playlist_url, server)
 
     cmd = [
@@ -123,14 +171,19 @@ async def download(
         "-hide_banner",
         "-loglevel", "error",
         "-nostdin",
-        "-rw_timeout", "20000000",
+        "-rw_timeout", "30000000",
         "-user_agent", legacy.UA,
+        # Provider playlists occasionally have damaged/missing timestamps. Generate
+        # timestamps where possible and drop corrupt packets instead of producing a
+        # zero-duration fragment stream.
+        "-fflags", "+genpts+discardcorrupt",
         "-i", input_url,
         "-map", "0:v:0?",
         "-map", "0:a:0?",
         "-map_metadata", "-1",
         "-c", "copy",
-        "-movflags", "+frag_keyframe+empty_moov+default_base_moof",
+        "-avoid_negative_ts", "make_zero",
+        "-movflags", "+frag_keyframe+empty_moov+default_base_moof+negative_cts_offsets",
         "-f", "mp4",
         "pipe:1",
     ]
@@ -146,45 +199,42 @@ async def download(
         raise HTTPException(500, "Could not start FFmpeg") from exc
 
     stderr_task = asyncio.create_task(_read_stderr(process))
-    assert process.stdout is not None
 
     try:
-        first_chunk = await asyncio.wait_for(process.stdout.read(256 * 1024), timeout=45)
-    except asyncio.TimeoutError as exc:
-        process.kill()
-        await process.wait()
-        stderr_task.cancel()
-        raise HTTPException(504, "FFmpeg did not start producing the MP4 in time") from exc
+        startup = await _wait_for_media_fragment(process)
+    except HTTPException:
+        if not stderr_task.done():
+            try:
+                await asyncio.wait_for(stderr_task, timeout=2)
+            except (asyncio.TimeoutError, asyncio.CancelledError):
+                stderr_task.cancel()
+        raise
 
-    if not first_chunk:
+    if not _contains_real_media(startup):
         return_code = await process.wait()
-        stderr = (await stderr_task).decode("utf-8", errors="replace")[-1600:]
-        logger.warning("ffmpeg failed before output rc=%s: %s", return_code, stderr)
-        # Keep provider URLs/tokens out of the browser while still exposing a useful
-        # reason for troubleshooting.
-        lowered = stderr.lower()
-        if "403" in lowered or "forbidden" in lowered:
-            message = "The selected source rejected one of the HLS requests"
-        elif "404" in lowered or "not found" in lowered:
-            message = "An HLS playlist or segment was not found"
-        elif "invalid data" in lowered or "could not find codec" in lowered:
-            message = "FFmpeg could not read the selected HLS stream"
-        else:
-            message = "FFmpeg could not remux the selected stream"
-        raise HTTPException(502, message)
+        stderr = (await stderr_task).decode("utf-8", errors="replace")[-2000:]
+        logger.warning("ffmpeg produced no media fragment rc=%s: %s", return_code, stderr)
+        raise HTTPException(502, _friendly_ffmpeg_error(stderr))
 
     filename = legacy._safe_filename(title, type, season, episode, quality)
 
     async def body():
         try:
-            yield first_chunk
+            # Startup contains the init boxes plus the first real media fragment.
+            # Do not call request.is_disconnected() here: on serverless ASGI bridges
+            # it can report a disconnect after response hand-off and prematurely kill
+            # an otherwise healthy browser download.
+            yield startup
+            assert process.stdout is not None
             while True:
-                if await request.is_disconnected():
-                    break
                 chunk = await process.stdout.read(256 * 1024)
                 if not chunk:
                     break
                 yield chunk
+        except asyncio.CancelledError:
+            # StreamingResponse cancellation is the reliable signal that the client
+            # truly went away; cleanup happens in finally.
+            raise
         finally:
             if process.returncode is None:
                 process.terminate()
@@ -194,7 +244,7 @@ async def download(
                     process.kill()
                     await process.wait()
             try:
-                stderr = (await stderr_task).decode("utf-8", errors="replace")[-1600:]
+                stderr = (await stderr_task).decode("utf-8", errors="replace")[-2000:]
                 if process.returncode not in (0, None):
                     logger.warning("ffmpeg exited rc=%s: %s", process.returncode, stderr)
             except asyncio.CancelledError:
@@ -208,7 +258,8 @@ async def download(
             "Cache-Control": "no-store",
             "X-Content-Type-Options": "nosniff",
             "X-Accel-Buffering": "no",
-            "X-SynScraper-Download-Mode": "hls-proxy-remux",
+            "X-SynScraper-Download-Mode": "hls-proxy-remux-v3",
+            "X-SynScraper-Media-Gate": "moof-mdat",
             "X-SynScraper-Max-Download-Height": str(MAX_DOWNLOAD_HEIGHT),
         },
     )
