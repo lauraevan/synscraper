@@ -845,7 +845,7 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
                                     e.stopPropagation();
                                     setMenu(menu === "sources" ? null : "sources");
                                 }}
-                                className={`grid h-11 w-11 md:h-12 md:w-12 place-items-center rounded-full border backdrop-blur-xl transition-all duration-200 active:scale-95 ${menu === "sources" ? "border-white/25 bg-white/14 text-white" : "border-white/[0.08] bg-black/18 text-white/85 hover:bg-white/[0.08] hover:text-white"}`}
+                                className={`grid h-11 w-11 md:h-12 md:w-12 place-items-center transition-all duration-200 active:scale-95 ${menu === "sources" ? "text-white scale-105" : "text-white/85 hover:text-white hover:scale-105"}`}
                                 aria-label="Choose source"
                                 title="Sources"
                             >
@@ -886,7 +886,7 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
                         </div>
 
                         <div className="absolute left-1/2 top-5 md:top-6 -translate-x-1/2 text-center max-w-[60%] pointer-events-none">
-                            <p className="text-[10px] md:text-xs font-medium uppercase tracking-[0.18em] text-white/38 leading-none">Now playing</p>
+                            <p className="text-[10px] md:text-xs font-medium uppercase tracking-[0.18em] text-white/38 leading-none">You're Watching</p>
                             <p className="mt-1.5 text-sm md:text-lg font-medium tracking-[-0.02em] text-white/92 truncate">{displayTitle}</p>
                         </div>
 
@@ -918,7 +918,7 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
 
                     <div
                         onClick={(e) => e.stopPropagation()}
-                        className={`absolute bottom-0 left-0 right-0 z-30 px-4 md:px-7 pb-4 md:pb-6 pt-10 transition-opacity duration-300 ${showControls ? "opacity-100" : "opacity-0 pointer-events-none"}`}
+                        className={`absolute bottom-0 left-0 right-0 z-30 px-5 md:px-8 pb-5 md:pb-7 pt-12 transition-opacity duration-300 ${showControls ? "opacity-100" : "opacity-0 pointer-events-none"}`}
                     >
                         <div className="group/seek relative mb-5 md:mb-6 h-4 flex items-center">
                             <div className="absolute left-0 right-0 h-[4px] rounded-full bg-white/20 overflow-hidden">
@@ -945,8 +945,8 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
                         </div>
 
                         <div className="flex items-center gap-3 md:gap-4">
-                            <div className="flex min-w-[118px] items-center gap-2 rounded-full border border-white/10 bg-white/[0.045] px-1.5 py-1 md:min-w-[168px] md:gap-3 md:px-2">
-                                <button data-testid="synapse-mute-btn" onClick={toggleMute} className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-white/90 hover:bg-white/10 hover:text-white active:scale-95 transition" aria-label="Mute">
+                            <div className="flex min-w-[118px] items-center gap-2 md:min-w-[168px] md:gap-3">
+                                <button data-testid="synapse-mute-btn" onClick={toggleMute} className="grid h-9 w-9 shrink-0 place-items-center text-white/90 hover:text-white hover:scale-105 active:scale-95 transition" aria-label="Mute">
                                     {muted || volume === 0 ? <VolumeX className="h-5 w-5 md:h-[22px] md:w-[22px] stroke-[1.9]" /> : <Volume2 className="h-5 w-5 md:h-[22px] md:w-[22px] stroke-[1.9]" />}
                                 </button>
                                 <input
@@ -964,7 +964,7 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
 
                             <div className="ml-auto flex items-center gap-1 md:gap-1.5">
                                 {hasNext && (
-                                    <button data-testid="synapse-next-episode-btn" onClick={onNextEpisode} className="hidden sm:grid h-10 w-10 md:h-11 md:w-11 place-items-center rounded-full border border-white/10 bg-white/[0.04] text-white/85 hover:bg-white/10 hover:text-white active:scale-95 transition" title="Next episode (N)">
+                                    <button data-testid="synapse-next-episode-btn" onClick={onNextEpisode} className="hidden sm:grid h-10 w-10 md:h-11 md:w-11 place-items-center text-white/85 hover:text-white hover:scale-105 active:scale-95 transition" title="Next episode (N)">
                                         <SkipForward className="h-[21px] w-[21px] stroke-[1.9]" />
                                     </button>
                                 )}
@@ -973,11 +973,11 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
                                     <button
                                         data-testid="synapse-subtitles-menu"
                                         onClick={() => setMenu(menu === "subs" ? null : "subs")}
-                                        className={`grid h-10 w-10 md:h-11 md:w-11 place-items-center rounded-full border transition active:scale-95 ${sub >= 0 || externalCaptionId ? "bg-white text-black border-white" : "bg-white/[0.04] text-white/90 border-white/10 hover:bg-white/10 hover:text-white"}`}
+                                        className={`grid h-10 w-10 md:h-11 md:w-11 place-items-center transition active:scale-95 hover:scale-105 ${sub >= 0 || externalCaptionId ? "text-white" : "text-white/85 hover:text-white"}`}
                                         title="Captions (C)"
                                         aria-label="Captions"
                                     >
-                                        <Subtitles className="h-[22px] w-[22px] stroke-[1.9]" />
+                                        <Subtitles className="h-[25px] w-[25px] stroke-[1.8]" />
                                     </button>
                                     <Popover open={menu === "subs"} wide>
                                         <div className="sticky top-0 z-10 -mx-2 -mt-2 mb-1 border-b border-white/10 bg-black/90 px-5 py-4 backdrop-blur-2xl">
@@ -1084,20 +1084,20 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
                                     <button
                                         data-testid="synapse-quality-menu"
                                         onClick={() => { setSettingsPage("root"); setMenu(menu === "settings" ? null : "settings"); }}
-                                        className={`grid h-10 w-10 md:h-11 md:w-11 place-items-center rounded-full border transition active:scale-95 ${menu === "settings" ? "border-white/20 bg-white/14 text-white" : "border-white/10 bg-white/[0.04] text-white/90 hover:bg-white/10 hover:text-white"}`}
+                                        className={`grid h-10 w-10 md:h-11 md:w-11 place-items-center transition active:scale-95 hover:scale-105 ${menu === "settings" ? "text-white" : "text-white/85 hover:text-white"}`}
                                         title="Settings"
                                         aria-label="Settings"
                                     >
-                                        <Settings className="h-[22px] w-[22px] stroke-[1.9]" />
+                                        <Settings className="h-[25px] w-[25px] stroke-[1.8]" />
                                     </button>
                                 </div>
 
-                                <button onClick={togglePip} className="hidden sm:grid h-10 w-10 md:h-11 md:w-11 place-items-center rounded-full border border-white/10 bg-white/[0.04] text-white/90 hover:bg-white/10 hover:text-white active:scale-95 transition" title="Picture in Picture" aria-label="Picture in Picture">
-                                    <PictureInPicture2 className="h-[21px] w-[21px] stroke-[1.9]" />
+                                <button onClick={togglePip} className="hidden sm:grid h-10 w-10 md:h-11 md:w-11 place-items-center text-white/85 hover:text-white hover:scale-105 active:scale-95 transition" title="Picture in Picture" aria-label="Picture in Picture">
+                                    <PictureInPicture2 className="h-[24px] w-[24px] stroke-[1.8]" />
                                 </button>
 
-                                <button data-testid="synapse-fullscreen-btn" onClick={toggleFs} className="grid h-10 w-10 md:h-11 md:w-11 place-items-center rounded-full border border-white/10 bg-white/[0.04] text-white/90 hover:bg-white/10 hover:text-white active:scale-95 transition" title="Fullscreen (F)" aria-label="Fullscreen">
-                                    {fs ? <Minimize className="h-[22px] w-[22px] stroke-[1.9]" /> : <Maximize className="h-[22px] w-[22px] stroke-[1.9]" />}
+                                <button data-testid="synapse-fullscreen-btn" onClick={toggleFs} className="grid h-10 w-10 md:h-11 md:w-11 place-items-center text-white/85 hover:text-white hover:scale-105 active:scale-95 transition" title="Fullscreen (F)" aria-label="Fullscreen">
+                                    {fs ? <Minimize className="h-[26px] w-[26px] stroke-[1.8]" /> : <Maximize className="h-[26px] w-[26px] stroke-[1.8]" />}
                                 </button>
                             </div>
                         </div>
