@@ -16,46 +16,52 @@ jobs:
           python-version: '3.12'
       - name: Install diagnostic dependency
         run: python -m pip install -q requests
-      - name: Inspect current public player assets
+      - name: Inspect current VidCore org embed config
         run: |
           python - <<'PY'
-          import re, requests
+          import html, re, requests
           from urllib.parse import urljoin
 
           s=requests.Session()
           s.headers.update({'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/137 Safari/537.36'})
-          urls=[
-            'https://vidcore.org/embed/movie/1083381',
-            'https://www.vidcore.org/embed/movie/1083381',
-            'https://vidcore.org/movie/1083381',
-            'https://vidcore.io/movie/1083381',
-          ]
-          for u in urls:
-            try:
-              r=s.get(u,timeout=12,allow_redirects=True)
-              print('\nPAGE',u,'STATUS',r.status_code,'FINAL',r.url,'LEN',len(r.text),'CT',r.headers.get('content-type'))
-              page=r.text
-              for pat in [r'\\"en\\":\\"([^\\"]+)', r'"en"\s*:\s*"([^"]+)"']:
-                m=re.search(pat,page)
-                if m: print('EN_FOUND',len(m.group(1)),m.group(1)[:24])
-              scripts=[]
-              for src in re.findall(r'<script[^>]+src=["\']([^"\']+)',page,re.I):
-                full=urljoin(r.url,src)
-                if full not in scripts: scripts.append(full)
-              print('SCRIPTS',len(scripts))
-              for x in scripts[:40]: print('SCRIPT',x)
-              for x in scripts[:40]:
-                try:
-                  js=s.get(x,timeout=10).text
-                except Exception: continue
-                low=js.lower()
-                keys=['/ja/','e9ac6-y0mng','untucgorjge','x-requested-with','1000018218870967','premiere 4k','serverlist','decrypt','/api/','catalog','server']
-                found=[k for k in keys if k in low]
-                if found:
-                  print('MATCH',x,'KEYS',found,'LEN',len(js))
-                  for k in found:
-                    i=low.find(k)
-                    print('CTX',k,js[max(0,i-300):i+520].replace('\n',' ')[:850])
-            except Exception as e:
-              print('PAGE_ERROR',u,repr(e))
+          u='https://vidcore.org/embed/movie/1083381'
+          r=s.get(u,timeout=12,allow_redirects=True)
+          page=html.unescape(r.text)
+          print('PAGE_STATUS',r.status_code,'FINAL',r.url,'LEN',len(page))
+
+          # Show useful inline player/config contexts without dumping the full document.
+          needles=['.m3u8','master.m3u8','playlist','sources','source:','file:','tracks','subtitles','player','fetch(','axios','xmlhttprequest','/api/','server','stream','manifest']
+          lower=page.lower()
+          for needle in needles:
+            starts=[]
+            pos=0
+            while len(starts)<6:
+              i=lower.find(needle,pos)
+              if i<0: break
+              starts.append(i); pos=i+len(needle)
+            print('\nNEEDLE',needle,'COUNT_SHOWN',len(starts))
+            for i in starts:
+              print('CTX',page[max(0,i-420):i+720].replace('\n',' ')[:1140])
+
+          # Print only candidate URLs/endpoints from HTML.
+          vals=[]
+          for x in re.findall(r'https?://[^\s"\'<>\\]+',page):
+            if x not in vals: vals.append(x)
+          print('\nURLS')
+          for x in vals[:80]: print(x[:500])
+
+          # Inspect the small custom player.js (not the bundled hls.js library).
+          purl=urljoin(r.url,'/player/js/player.js')
+          js=s.get(purl,timeout=12).text
+          print('\nPLAYER_JS_LEN',len(js))
+          low=js.lower()
+          for needle in ['fetch(','xmlhttprequest','ajax','/api/','source','manifest','m3u8','server','stream','url']:
+            hits=[]; pos=0
+            while len(hits)<8:
+              i=low.find(needle,pos)
+              if i<0: break
+              hits.append(i); pos=i+len(needle)
+            if hits:
+              print('JS_NEEDLE',needle)
+              for i in hits: print('JS_CTX',js[max(0,i-350):i+650].replace('\n',' ')[:1000])
           PY
