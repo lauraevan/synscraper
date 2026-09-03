@@ -2,8 +2,8 @@
 """Current VidCore.org resolver for SynScraper.
 
 Uses VidCore's public primary source API exposed by the current embed player and
-returns its HLS renditions in SynScraper's normal resolver shape. This resolver
-does not implement DRM handling.
+returns its relay-backed HLS renditions in SynScraper's normal resolver shape.
+This resolver does not implement DRM handling.
 """
 
 from __future__ import annotations
@@ -11,15 +11,20 @@ from __future__ import annotations
 import json
 import os
 from typing import Any
+from urllib.parse import quote
 
 import requests
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"
 
 BASE_URL = os.environ.get("VIDCORE_ORIGIN", "https://vidcore.org").rstrip("/")
 PRIMARY_API = os.environ.get(
     "VIDCORE_PRIMARY_API",
     "https://vidrack.created.app/api/sources/cineplay",
+).strip()
+CORS_RELAY = os.environ.get(
+    "VIDCORE_CORS_RELAY",
+    "https://php-fredhorton613.wasmer.app/proxy1.php?play=",
 ).strip()
 USER_AGENT = os.environ.get(
     "SCRAPER_USER_AGENT",
@@ -72,6 +77,12 @@ class VidCoreResolver:
             return f"/embed/tv/{media_id}/{int(season)}/{int(episode)}"
         return f"/embed/movie/{media_id}"
 
+    @staticmethod
+    def _relay_url(url: str) -> str:
+        if not CORS_RELAY:
+            return url
+        return f"{CORS_RELAY}{quote(url, safe='')}"
+
     def resolve(
         self,
         media_id: str | int,
@@ -121,13 +132,18 @@ class VidCoreResolver:
             for item in sources:
                 if not isinstance(item, dict):
                     continue
-                url = str(item.get("url") or "").strip()
-                if not url.startswith(("http://", "https://")) or url in seen:
+                raw_url = str(item.get("url") or "").strip()
+                if not raw_url.startswith(("http://", "https://")) or raw_url in seen:
                     continue
-                seen.add(url)
+                seen.add(raw_url)
+                stream_type = self._stream_type(item, raw_url)
+                # VidCore's current CDN intentionally rejects direct HLS access.
+                # Its own player routes manifests and media segments through this
+                # relay, which rewrites segment/init URLs to the same relay path.
+                play_url = self._relay_url(raw_url) if stream_type == "hls" else raw_url
                 playable.append({
-                    "url": url,
-                    "type": self._stream_type(item, url),
+                    "url": play_url,
+                    "type": stream_type,
                     "quality": self._quality(item),
                     "label": item.get("label") or "VidCore",
                     "server": "VidCore",
