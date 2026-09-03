@@ -3,39 +3,25 @@ from pathlib import Path
 player_path = Path("frontend/src/components/SynapsePlayer.jsx")
 s = player_path.read_text()
 
-def replace_once(old, new, label):
-    global s
-    if old not in s:
-        raise SystemExit(f"missing patch target: {label}")
-    s = s.replace(old, new, 1)
-
-replace_once(
-    '    AudioWaveform, WandSparkles, CirclePlus, RefreshCw, Palette,\n} from "lucide-react";',
-    '    AudioWaveform, WandSparkles, CirclePlus, RefreshCw, Palette, Download, Loader2,\n} from "lucide-react";',
-    "lucide imports",
-)
-
-replace_once(
-    'import { getStreams, hlsProxyUrl } from "@/lib/api";',
-    'import { getStreams, hlsProxyUrl, getDownloadOptions, downloadWorkerUrl } from "@/lib/api";',
-    "download api imports",
-)
-
-replace_once(
-    '    const [settingsPage, setSettingsPage] = useState("root");\n    const [autoPlay, setAutoPlay] = useState(true);',
-    '''    const [settingsPage, setSettingsPage] = useState("root");
+state_old = '''    const [settingsPage, setSettingsPage] = useState("root");
     const [downloadSourceKey, setDownloadSourceKey] = useState("");
     const [downloadQuality, setDownloadQuality] = useState("1080");
     const [downloadQualities, setDownloadQualities] = useState([]);
     const [downloadLoading, setDownloadLoading] = useState(false);
     const [downloadError, setDownloadError] = useState("");
-    const [autoPlay, setAutoPlay] = useState(true);''',
-    "download state",
-)
+    const [autoPlay, setAutoPlay] = useState(true);'''
+state_new = '''    const [settingsPage, setSettingsPage] = useState("root");
+    const [downloadItems, setDownloadItems] = useState([]);
+    const [downloadLoading, setDownloadLoading] = useState(false);
+    const [downloadError, setDownloadError] = useState("");
+    const [autoPlay, setAutoPlay] = useState(true);'''
+if state_old not in s:
+    raise SystemExit("missing download state block")
+s = s.replace(state_old, state_new, 1)
 
-replace_once(
-    '    const activeServer = servers.find((s) => s.id === serverId);\n    useEffect(() => { autoPlayRef.current = autoPlay; }, [autoPlay]);',
-    '''    const activeServer = servers.find((s) => s.id === serverId);
+logic_start = s.index('    const activeServer = servers.find((s) => s.id === serverId);')
+logic_end = s.index('    useEffect(() => { autoPlayRef.current = autoPlay; }, [autoPlay]);', logic_start)
+logic_new = '''    const activeServer = servers.find((s) => s.id === serverId);
     const downloadSources = (() => {
         const found = new Map();
         servers.filter((server) => server?.type === "hls").forEach((server) => {
@@ -48,66 +34,74 @@ replace_once(
             return aMiami - bMiami || a.name.localeCompare(b.name);
         });
     })();
-    const selectedDownloadSource = downloadSources.find((source) => source.key === downloadSourceKey) || null;
 
     useEffect(() => {
-        if (settingsPage !== "download" || !downloadSources.length) return;
-        const activeKey = activeServer?.type === "hls" ? `${activeServer.provider}|${activeServer.name}` : "";
-        if (!downloadSourceKey || !downloadSources.some((source) => source.key === downloadSourceKey)) {
-            setDownloadSourceKey(downloadSources.some((source) => source.key === activeKey) ? activeKey : downloadSources[0].key);
-        }
-    }, [settingsPage, servers, serverId, downloadSourceKey]); // eslint-disable-line react-hooks/exhaustive-deps
-
-    useEffect(() => {
-        if (settingsPage !== "download" || !selectedDownloadSource) return undefined;
+        if (settingsPage !== "download") return undefined;
         let alive = true;
         setDownloadLoading(true);
         setDownloadError("");
-        getDownloadOptions({
-            type: mediaType,
-            id,
-            season,
-            episode,
-            provider: selectedDownloadSource.provider,
-            mirror: selectedDownloadSource.name,
-        })
-            .then((data) => {
-                if (!alive) return;
-                const available = (data?.available_qualities || [])
-                    .map(Number)
-                    .filter((height) => height > 0 && height <= 1080)
-                    .sort((a, b) => b - a);
-                setDownloadQualities(available);
-                setDownloadQuality((currentQuality) => {
-                    const currentHeight = Number(currentQuality);
-                    if (available.includes(currentHeight)) return String(currentHeight);
-                    if (available.includes(1080)) return "1080";
-                    return available.length ? String(available[0]) : "auto";
-                });
-            })
-            .catch((err) => {
-                if (!alive) return;
-                setDownloadQualities([]);
-                setDownloadQuality("auto");
-                setDownloadError(err?.message || "Could not inspect download qualities.");
-            })
-            .finally(() => {
-                if (alive) setDownloadLoading(false);
-            });
-        return () => { alive = false; };
-    }, [settingsPage, downloadSourceKey, mediaType, id, season, episode]); // eslint-disable-line react-hooks/exhaustive-deps
+        setDownloadItems([]);
 
-    const startDownloadFromSettings = () => {
-        if (!selectedDownloadSource || typeof document === "undefined") return;
-        setDownloadError("");
+        if (!downloadSources.length) {
+            setDownloadLoading(false);
+            setDownloadError("No downloadable HLS streams are available for this title.");
+            return undefined;
+        }
+
+        Promise.allSettled(downloadSources.map(async (source) => {
+            const data = await getDownloadOptions({
+                type: mediaType,
+                id,
+                season,
+                episode,
+                provider: source.provider,
+                mirror: source.name,
+            });
+            const qualities = (data?.available_qualities || [])
+                .map(Number)
+                .filter((height) => height > 0 && height <= 1080)
+                .sort((a, b) => b - a);
+            const usable = qualities.length ? qualities.map(String) : ["auto"];
+            return usable.map((quality) => ({
+                key: `${source.key}|${quality}`,
+                provider: source.provider,
+                source: source.name,
+                quality,
+            }));
+        })).then((results) => {
+            if (!alive) return;
+            const items = results
+                .filter((result) => result.status === "fulfilled")
+                .flatMap((result) => result.value);
+            const unique = Array.from(new Map(items.map((item) => [item.key, item])).values());
+            unique.sort((a, b) => {
+                const aMiami = a.provider === "vidy" && /miami/i.test(a.source) ? 0 : 1;
+                const bMiami = b.provider === "vidy" && /miami/i.test(b.source) ? 0 : 1;
+                const aq = a.quality === "auto" ? 0 : Number(a.quality);
+                const bq = b.quality === "auto" ? 0 : Number(b.quality);
+                return aMiami - bMiami || bq - aq || a.source.localeCompare(b.source);
+            });
+            setDownloadItems(unique);
+            const failed = results.filter((result) => result.status === "rejected").length;
+            if (!unique.length) setDownloadError("No downloads could be prepared from the available streams.");
+            else if (failed) setDownloadError(`${failed} source${failed === 1 ? "" : "s"} couldn't be checked, but the downloads below are ready.`);
+        }).finally(() => {
+            if (alive) setDownloadLoading(false);
+        });
+
+        return () => { alive = false; };
+    }, [settingsPage, servers, mediaType, id, season, episode]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    const startDownloadFromSettings = (item) => {
+        if (!item || typeof document === "undefined") return;
         const url = downloadWorkerUrl({
             type: mediaType,
             id,
             season,
             episode,
-            provider: selectedDownloadSource.provider,
-            mirror: selectedDownloadSource.name,
-            quality: downloadQuality || "auto",
+            provider: item.provider,
+            mirror: item.source,
+            quality: item.quality || "auto",
             title: meta?.title || "Synapse",
         });
         const anchor = document.createElement("a");
@@ -119,117 +113,73 @@ replace_once(
         anchor.remove();
     };
 
-    useEffect(() => { autoPlayRef.current = autoPlay; }, [autoPlay]);''',
-    "download effects",
-)
+'''
+s = s[:logic_start] + logic_new + s[logic_end:]
 
-replace_once(
-    '                                        quality: "Quality",\n                                        speed: "Playback speed",',
-    '                                        quality: "Quality",\n                                        download: "Download",\n                                        speed: "Playback speed",',
-    "settings title",
-)
+page_start = s.index('                            {settingsPage === "download" && (')
+page_end = s.index('                            {settingsPage === "speed" && (', page_start)
+page_new = '''                            {settingsPage === "download" && (
+                                <div className="py-1.5" data-testid="synapse-download-settings-page">
+                                    <div className="px-4 pb-3 pt-2">
+                                        <p className="text-[13px] font-medium text-white/82">Available downloads</p>
+                                        <p className="mt-1 text-[10px] leading-relaxed text-white/34">Pick a ready download below. SynScraper finds the source and quality for you; MP4 downloads are capped at 1080p.</p>
+                                    </div>
 
-replace_once(
-    '''                                    <button onClick={() => setSettingsPage("speed")} className="group flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-white/[0.045]">
-                                        <RefreshCw className="h-[19px] w-[19px] shrink-0 text-white/55" strokeWidth={1.7} />
-                                        <span className="flex-1 text-[14px] font-medium text-white/86">Playback speed</span>
-                                        <span className="text-[12px] text-white/40">{rate}x</span>
-                                        <ChevronRight className="h-4 w-4 text-white/25 transition group-hover:text-white/50" />
-                                    </button>''',
-    '''                                    <button onClick={() => setSettingsPage("download")} className="group flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-white/[0.045]" data-testid="synapse-download-settings-row">
-                                        <Download className="h-[19px] w-[19px] shrink-0 text-white/55" strokeWidth={1.7} />
-                                        <span className="flex-1 text-[14px] font-medium text-white/86">Download</span>
-                                        <span className="text-[12px] text-white/40">MP4 · 1080p max</span>
-                                        <ChevronRight className="h-4 w-4 text-white/25 transition group-hover:text-white/50" />
-                                    </button>
-                                    <button onClick={() => setSettingsPage("speed")} className="group flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-white/[0.045]">
-                                        <RefreshCw className="h-[19px] w-[19px] shrink-0 text-white/55" strokeWidth={1.7} />
-                                        <span className="flex-1 text-[14px] font-medium text-white/86">Playback speed</span>
-                                        <span className="text-[12px] text-white/40">{rate}x</span>
-                                        <ChevronRight className="h-4 w-4 text-white/25 transition group-hover:text-white/50" />
-                                    </button>''',
-    "download settings row",
-)
+                                    {downloadLoading && (
+                                        <div className="border-t border-white/[0.06] px-4 py-4">
+                                            <div className="flex items-center gap-2 text-[11px] text-white/42">
+                                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                                Finding available downloads…
+                                            </div>
+                                            <div className="mt-3 space-y-2">
+                                                {[0, 1, 2].map((item) => <div key={item} className="h-[58px] animate-pulse rounded-xl bg-white/[0.035]" />)}
+                                            </div>
+                                        </div>
+                                    )}
 
-replace_once(
-    '''                            {settingsPage === "speed" && (
-                                <div className="p-3">''',
-    '''                            {settingsPage === "download" && (
-                                <div className="p-4" data-testid="synapse-download-settings-page">
-                                    <p className="mb-4 text-[11px] leading-relaxed text-white/34">Download the current title as an MP4. Downloads are capped at 1080p and remux the selected HLS source without re-encoding.</p>
-
-                                    <label className="block">
-                                        <span className="mb-1.5 block text-[9px] font-semibold uppercase tracking-[0.18em] text-white/28">Source</span>
-                                        <select
-                                            value={downloadSourceKey}
-                                            onChange={(event) => setDownloadSourceKey(event.target.value)}
-                                            className="h-11 w-full rounded-xl border border-white/[0.09] bg-white/[0.045] px-3 text-[13px] text-white outline-none"
-                                            disabled={!downloadSources.length}
-                                            data-testid="synapse-download-source"
-                                        >
-                                            {!downloadSources.length && <option value="">No HLS sources</option>}
-                                            {downloadSources.map((source) => <option key={source.key} value={source.key} className="bg-black">{source.name}</option>)}
-                                        </select>
-                                    </label>
-
-                                    <div className="mt-4">
-                                        <span className="mb-1.5 block text-[9px] font-semibold uppercase tracking-[0.18em] text-white/28">Quality · 1080p maximum</span>
-                                        <div className="grid grid-cols-2 gap-2">
-                                            {(downloadQualities.length ? downloadQualities : ["auto"]).map((quality) => {
-                                                const value = String(quality);
-                                                const selected = downloadQuality === value;
+                                    {!downloadLoading && downloadItems.length > 0 && (
+                                        <div className="border-t border-white/[0.06]" data-testid="synapse-download-list">
+                                            {downloadItems.map((item, index) => {
+                                                const isMiami = item.provider === "vidy" && /miami/i.test(item.source);
+                                                const qualityLabel = item.quality === "auto" ? "Best ≤1080p" : `${item.quality}p`;
                                                 return (
-                                                    <button
-                                                        key={`download-quality-${value}`}
-                                                        type="button"
-                                                        onClick={() => setDownloadQuality(value)}
-                                                        disabled={downloadLoading}
-                                                        className={`rounded-xl border px-3 py-3 text-[13px] font-medium transition ${selected ? "border-white bg-white text-black" : "border-white/[0.08] bg-white/[0.025] text-white/68 hover:bg-white/[0.055]"}`}
-                                                    >
-                                                        {value === "auto" ? "Auto ≤1080p" : `${value}p`}
-                                                    </button>
+                                                    <div key={item.key} className="flex items-center gap-3 border-b border-white/[0.055] px-4 py-3" data-testid="synapse-download-item">
+                                                        <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-white/[0.055] text-white/72">
+                                                            <Download className="h-4 w-4" strokeWidth={1.8} />
+                                                        </div>
+                                                        <div className="min-w-0 flex-1">
+                                                            <div className="flex min-w-0 items-center gap-2">
+                                                                <span className="truncate text-[13px] font-medium text-white/88">{item.source}</span>
+                                                                {isMiami && index === 0 && <span className="shrink-0 rounded-full bg-white/[0.09] px-1.5 py-0.5 text-[8px] font-semibold uppercase tracking-[0.08em] text-white/50">Recommended</span>}
+                                                            </div>
+                                                            <p className="mt-0.5 text-[10px] text-white/34">MP4 · {qualityLabel}</p>
+                                                        </div>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => startDownloadFromSettings(item)}
+                                                            className="shrink-0 rounded-lg bg-white px-3 py-2 text-[11px] font-semibold text-black transition hover:bg-white/90 active:scale-[0.98]"
+                                                            data-testid="synapse-download-mp4"
+                                                        >
+                                                            Download
+                                                        </button>
+                                                    </div>
                                                 );
                                             })}
                                         </div>
-                                    </div>
+                                    )}
 
-                                    {downloadLoading && <div className="mt-4 flex items-center gap-2 text-[11px] text-white/38"><Loader2 className="h-3.5 w-3.5 animate-spin" />Inspecting available qualities…</div>}
-                                    {downloadError && <p className="mt-3 text-[11px] leading-relaxed text-red-300/75">{downloadError}</p>}
+                                    {!downloadLoading && !downloadItems.length && (
+                                        <div className="border-t border-white/[0.06] px-4 py-5 text-center">
+                                            <Download className="mx-auto h-5 w-5 text-white/28" />
+                                            <p className="mt-2 text-[11px] text-white/36">No downloadable stream was found.</p>
+                                        </div>
+                                    )}
 
-                                    <button
-                                        type="button"
-                                        onClick={startDownloadFromSettings}
-                                        disabled={!selectedDownloadSource || downloadLoading}
-                                        className="mt-5 inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-white px-4 text-[13px] font-semibold text-black transition hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-35"
-                                        data-testid="synapse-download-mp4"
-                                    >
-                                        {downloadLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-                                        Download MP4
-                                    </button>
-                                    <p className="mt-2 text-center text-[9px] text-white/25">{selectedDownloadSource ? `${selectedDownloadSource.name} · ${downloadQuality === "auto" ? "Auto ≤1080p" : `${downloadQuality}p`}` : "Choose a source"}</p>
+                                    {downloadError && <p className="px-4 py-3 text-[10px] leading-relaxed text-white/30">{downloadError}</p>}
                                 </div>
                             )}
 
-                            {settingsPage === "speed" && (
-                                <div className="p-3">''',
-    "download settings page",
-)
+'''
+s = s[:page_start] + page_new + s[page_end:]
 
 player_path.write_text(s)
-
-watch_path = Path("frontend/src/pages/Watch.jsx")
-w = watch_path.read_text()
-w = w.replace('import { DownloadPanel } from "@/components/DownloadPanel";\n', "", 1)
-old_panel = '''
-                <DownloadPanel
-                    mediaType={mediaType}
-                    id={id}
-                    season={season}
-                    episode={episode}
-                    title={meta.title}
-                />
-'''
-if old_panel not in w:
-    raise SystemExit("missing patch target: old download panel")
-w = w.replace(old_panel, "\n", 1)
-watch_path.write_text(w)
