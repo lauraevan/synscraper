@@ -46,7 +46,7 @@ export const getDetails = (mediaType, id) =>
 export const getSeason = (id, season) =>
     cached(`season:${id}:${season}`, 180_000, () => http.get(`/tv/${id}/season/${season}`).then((r) => r.data));
 export const getGenres = (mediaType) =>
-    cached(`genres:${mediaType}`, 600_000, () => http.get(`/genre/${mediaType}/list`).then((r) => r.data));
+    cached(`genres:${mediaType}`, 600_000, () => http.get(`/genre/${mediaType}`).then((r) => r.data));
 export const discover = (mediaType, params) =>
     cached(`discover:${mediaType}:${JSON.stringify(params || {})}`, 30_000, () => http.get(`/discover/${mediaType}`, { params }).then((r) => r.data));
 export const getStreams = (type, id, season, episode, options = {}) => {
