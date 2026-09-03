@@ -1,0 +1,59 @@
+name: Diagnose current VidCore API
+
+on:
+  push:
+    branches: [vidcore-integration]
+    paths:
+      - '.github/workflows/diagnose-vidcore-current.yml'
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Inspect current public player assets
+        run: |
+          python - <<'PY'
+          import re, requests
+          from urllib.parse import urljoin
+
+          s=requests.Session()
+          s.headers.update({'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/137 Safari/537.36'})
+          urls=[
+            'https://vidcore.org/embed/movie/1083381',
+            'https://www.vidcore.org/embed/movie/1083381',
+            'https://vidcore.org/movie/1083381',
+            'https://vidcore.io/movie/1083381',
+          ]
+          for u in urls:
+            try:
+              r=s.get(u,timeout=12,allow_redirects=True)
+              print('\nPAGE',u,'STATUS',r.status_code,'FINAL',r.url,'LEN',len(r.text),'CT',r.headers.get('content-type'))
+              page=r.text
+              for pat in [r'\\"en\\":\\"([^\\"]+)', r'"en"\s*:\s*"([^"]+)"']:
+                m=re.search(pat,page)
+                if m: print('EN_FOUND',len(m.group(1)),m.group(1)[:24])
+              scripts=[]
+              for src in re.findall(r'<script[^>]+src=["\']([^"\']+)',page,re.I):
+                full=urljoin(r.url,src)
+                if full not in scripts: scripts.append(full)
+              print('SCRIPTS',len(scripts))
+              for x in scripts[:30]: print('SCRIPT',x)
+              for x in scripts[:30]:
+                try:
+                  js=s.get(x,timeout=10).text
+                except Exception: continue
+                low=js.lower()
+                keys=['/ja/','e9ac6-y0mng','untucgorjge','x-requested-with','1000018218870967','premiere 4k','serverlist','decrypt']
+                found=[k for k in keys if k in low]
+                if found:
+                  print('MATCH',x,'KEYS',found,'LEN',len(js))
+                  for k in found:
+                    i=low.find(k)
+                    print('CTX',k,js[max(0,i-240):i+420].replace('\n',' ')[:700])
+            except Exception as e:
+              print('PAGE_ERROR',u,repr(e))
+          PY
