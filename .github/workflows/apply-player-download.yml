@@ -9,20 +9,20 @@ permissions:
 
 jobs:
   patch:
-    if: ${{ github.event.head_commit.message == 'Run player download patch' }}
+    if: ${{ github.event.head_commit.message == 'Run download list patch' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Patch player
+      - name: Patch player download list
         run: python scripts/apply_player_download.py
 
       - name: Commit changes
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add frontend/src/components/SynapsePlayer.jsx frontend/src/pages/Watch.jsx
-          git commit -m "Move downloads into player settings"
+          git add frontend/src/components/SynapsePlayer.jsx
+          git commit -m "Replace download selectors with download list"
           git push origin HEAD:main
