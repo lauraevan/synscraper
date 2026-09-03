@@ -11,8 +11,8 @@ import { fmtTime } from "@/lib/format";
 import { saveProgress, getProgress } from "@/lib/storage";
 
 const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2];
-const SOURCE_4K_BADGE = "data:image/png;base64,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";
-const SOURCE_INDIA_FLAG = "data:image/webp;base64,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";
+const SOURCE_4K_BADGE = "data:image/webp;base64,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";
+const SOURCE_INDIA_FLAG = "data:image/png;base64,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";
 const sourceHas4KBadge = (source) =>
     source?.provider === "vidcore"
     || (source?.provider === "vidy" && /miami/i.test(String(source?.displayName || source?.name || "")));
@@ -1317,44 +1317,89 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
                             {menu === "sources" && (
                                 <div
                                     data-testid="synapse-source-popout"
-                                    onClick={(e) => e.stopPropagation()}
-                                    className="absolute left-0 top-[3.2rem] md:top-[3.45rem] z-40 w-[244px] max-w-[calc(100vw-2.5rem)] overflow-hidden rounded-2xl border border-white/10 bg-black/86 p-2 shadow-[0_18px_50px_rgba(0,0,0,0.42)] backdrop-blur-2xl"
+                                    data-source-layout="modal"
+                                    className="fixed inset-0 z-[90] flex items-center justify-center bg-black/60 px-4 py-6 backdrop-blur-md"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setMenu(null);
+                                    }}
                                 >
-                                    <div className="px-3 pb-2 pt-2.5">
-                                        <p className="text-sm font-semibold text-white">Sources</p>
-                                        <p className="mt-0.5 text-[11px] text-white/40">Switch without losing your place</p>
-                                    </div>
-                                    <div className="max-h-64 overflow-y-auto scrollbar-none">
-                                        {sourceSlots.map((s) => (
+                                    <div
+                                        onClick={(e) => e.stopPropagation()}
+                                        className="w-[min(92vw,520px)] max-h-[min(78vh,620px)] overflow-hidden rounded-[28px] border border-white/[0.12] bg-[#0b0b0c]/95 shadow-[0_30px_100px_rgba(0,0,0,0.72)] backdrop-blur-3xl"
+                                    >
+                                        <div className="flex items-center gap-3 border-b border-white/[0.08] px-5 py-4 md:px-6 md:py-5">
+                                            <div className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-white/[0.07]">
+                                                <Cloud className="h-5 w-5 text-white/82" strokeWidth={1.7} />
+                                            </div>
+                                            <div className="min-w-0 flex-1">
+                                                <p className="text-[15px] font-semibold tracking-[-0.015em] text-white md:text-[17px]">Choose a source</p>
+                                                <p className="mt-0.5 text-[10px] text-white/38 md:text-[11px]">Switch servers without losing your place</p>
+                                            </div>
                                             <button
-                                                key={s.id}
-                                                disabled={!s.available}
-                                                onClick={() => s.available && selectServer(s)}
-                                                className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition ${serverId === s.id ? "bg-white text-black" : s.available ? "text-white/80 hover:bg-white/10 hover:text-white" : "cursor-not-allowed text-white/28"}`}
+                                                type="button"
+                                                onClick={() => setMenu(null)}
+                                                className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-white/55 transition hover:bg-white/[0.07] hover:text-white"
+                                                aria-label="Close sources"
                                             >
-                                                <span className="min-w-0 flex-1 truncate text-sm font-medium">{s.displayName || s.name}</span>
-                                                {sourceHas4KBadge(s) && (
-                                                    <img
-                                                        src={SOURCE_4K_BADGE}
-                                                        alt="4K"
-                                                        title="4K source"
-                                                        className={`h-[18px] w-[18px] shrink-0 object-contain ${s.available ? "opacity-100" : "opacity-25"}`}
-                                                    />
-                                                )}
-                                                {!s.available && <span className="text-[9px] font-medium uppercase tracking-[0.12em] text-white/28">Unavailable</span>}
-                                                <img
-                                                    src={sourceFlag(s)}
-                                                    alt={sourceIsHindi(s) ? "India" : "US"}
-                                                    title={sourceIsHindi(s) ? "Hindi source" : "US source"}
-                                                    className={`h-4 w-6 shrink-0 rounded-[2px] object-cover ${s.available ? "opacity-100" : "opacity-25"}`}
-                                                    loading="lazy"
-                                                />
+                                                <X className="h-5 w-5" strokeWidth={1.7} />
                                             </button>
-                                        ))}
+                                        </div>
+
+                                        <div className="max-h-[min(62vh,500px)] overflow-y-auto p-2.5 scrollbar-none md:p-3">
+                                            {sourceSlots.map((s) => {
+                                                const selected = serverId === s.id;
+                                                const show4K = sourceHas4KBadge(s);
+                                                const hindi = sourceIsHindi(s);
+                                                return (
+                                                    <button
+                                                        key={s.id}
+                                                        disabled={!s.available}
+                                                        onClick={() => {
+                                                            if (!s.available) return;
+                                                            selectServer(s);
+                                                            setMenu(null);
+                                                        }}
+                                                        className={`flex w-full items-center gap-3 rounded-2xl px-3.5 py-3 text-left transition md:px-4 md:py-3.5 ${selected ? "bg-white text-black" : s.available ? "text-white/82 hover:bg-white/[0.075] hover:text-white" : "cursor-not-allowed text-white/25"}`}
+                                                    >
+                                                        <div className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl ${selected ? "bg-black/[0.07]" : "bg-white/[0.055]"}`}>
+                                                            <Cloud className={`h-[18px] w-[18px] ${selected ? "text-black/70" : "text-white/60"}`} strokeWidth={1.7} />
+                                                        </div>
+                                                        <div className="min-w-0 flex-1">
+                                                            <div className="flex min-w-0 items-center gap-2">
+                                                                <span className="truncate text-[14px] font-semibold tracking-[-0.01em]">{s.displayName || s.name}</span>
+                                                                {selected && <span className="shrink-0 rounded-full bg-current/10 px-1.5 py-0.5 text-[8px] font-semibold uppercase tracking-[0.08em] opacity-55">Active</span>}
+                                                            </div>
+                                                            <p className={`mt-0.5 truncate text-[10px] uppercase tracking-[0.08em] ${selected ? "text-black/45" : "text-white/32"}`}>
+                                                                {!s.available ? "Unavailable" : show4K ? "4K source" : hindi ? "Hindi source" : (s.provider || s.quality || "Stream")}
+                                                            </p>
+                                                        </div>
+                                                        {show4K && (
+                                                            <img
+                                                                src={SOURCE_4K_BADGE}
+                                                                alt="4K"
+                                                                title="4K source"
+                                                                className={`h-8 w-14 shrink-0 object-contain ${s.available ? "opacity-100" : "opacity-25"}`}
+                                                            />
+                                                        )}
+                                                        <img
+                                                            src={hindi ? SOURCE_INDIA_FLAG : sourceFlag(s)}
+                                                            alt={hindi ? "India" : "US"}
+                                                            title={hindi ? "Hindi source" : "US source"}
+                                                            className={`h-5 w-7 shrink-0 rounded-[3px] object-cover ${s.available ? "opacity-100" : "opacity-25"}`}
+                                                            loading="lazy"
+                                                        />
+                                                    </button>
+                                                );
+                                            })}
+                                            {sourcesLoading && (
+                                                <div className="flex items-center gap-2 px-4 py-3 text-[10px] text-white/35">
+                                                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                                    Loading more sources…
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
-                                    {sourcesLoading && (
-                                        <div className="border-t border-white/10 px-3 py-2 text-[10px] text-white/35">Loading more sources…</div>
-                                    )}
                                 </div>
                             )}
                         </div>
