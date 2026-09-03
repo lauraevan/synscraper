@@ -5,4 +5,4 @@ BACKEND_DIR = Path(__file__).resolve().parents[1] / "backend"
 if str(BACKEND_DIR) not in sys.path:
     sys.path.insert(0, str(BACKEND_DIR))
 
-from server import app  # noqa: E402,F401
+from server_with_download import app  # noqa: E402,F401
