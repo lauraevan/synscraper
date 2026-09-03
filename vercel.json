@@ -5,10 +5,12 @@
   "outputDirectory": "public",
   "functions": {
     "api/index.py": {
-      "includeFiles": "backend/**"
+      "includeFiles": "backend/**",
+      "maxDuration": 300
     },
     "api/[...path].py": {
-      "includeFiles": "backend/**"
+      "includeFiles": "backend/**",
+      "maxDuration": 300
     }
   },
   "rewrites": [
