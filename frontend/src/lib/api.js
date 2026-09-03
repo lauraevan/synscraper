@@ -1,9 +1,11 @@
 import axios from "axios";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || "";
-const DOWNLOAD_WORKER_URL = (process.env.REACT_APP_DOWNLOAD_WORKER_URL || "").replace(/\/$/, "");
+const DOWNLOAD_BASE_URL = (process.env.REACT_APP_DOWNLOAD_WORKER_URL || BACKEND_URL || "").replace(/\/$/, "");
 export const API = `${BACKEND_URL}/api`;
-export const DOWNLOADS_CONFIGURED = Boolean(DOWNLOAD_WORKER_URL);
+// Downloads now default to the same backend. REACT_APP_DOWNLOAD_WORKER_URL remains
+// an optional override for a dedicated worker/container deployment.
+export const DOWNLOADS_CONFIGURED = true;
 
 const http = axios.create({ baseURL: API, timeout: 30000 });
 const memoryCache = new Map();
@@ -44,7 +46,7 @@ export const getDetails = (mediaType, id) =>
 export const getSeason = (id, season) =>
     cached(`season:${id}:${season}`, 180_000, () => http.get(`/tv/${id}/season/${season}`).then((r) => r.data));
 export const getGenres = (mediaType) =>
-    cached(`genres:${mediaType}`, 600_000, () => http.get(`/genre/${mediaType}`).then((r) => r.data));
+    cached(`genres:${mediaType}`, 600_000, () => http.get(`/genre/${mediaType}/list`).then((r) => r.data));
 export const discover = (mediaType, params) =>
     cached(`discover:${mediaType}:${JSON.stringify(params || {})}`, 30_000, () => http.get(`/discover/${mediaType}`, { params }).then((r) => r.data));
 export const getStreams = (type, id, season, episode, options = {}) => {
@@ -83,13 +85,12 @@ const downloadParams = (params = {}) => {
 };
 
 export const getDownloadOptions = async (params) => {
-    if (!DOWNLOAD_WORKER_URL) throw new Error("Download worker is not configured");
     const query = downloadParams(params);
     query.delete("quality");
     query.delete("title");
-    const response = await fetch(`${DOWNLOAD_WORKER_URL}/api/download/options?${query.toString()}`);
+    const response = await fetch(`${DOWNLOAD_BASE_URL}/api/download/options?${query.toString()}`);
     if (!response.ok) {
-        let message = `Download worker returned HTTP ${response.status}`;
+        let message = `Download API returned HTTP ${response.status}`;
         try {
             const body = await response.json();
             message = body?.detail?.message || body?.detail || message;
@@ -99,10 +100,8 @@ export const getDownloadOptions = async (params) => {
     return response.json();
 };
 
-export const downloadWorkerUrl = (params) => {
-    if (!DOWNLOAD_WORKER_URL) return null;
-    return `${DOWNLOAD_WORKER_URL}/api/download?${downloadParams(params).toString()}`;
-};
+export const downloadWorkerUrl = (params) =>
+    `${DOWNLOAD_BASE_URL}/api/download?${downloadParams(params).toString()}`;
 
 // image helpers
 const IMG = "https://image.tmdb.org/t/p";
