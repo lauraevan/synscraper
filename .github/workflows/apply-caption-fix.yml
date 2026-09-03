@@ -34,9 +34,15 @@ jobs:
           import scraper, server
 
           async def main():
-              streams = await scraper.scrape_streams('movie', '1083381', provider_id='vidy', mirror='miami')
-              cap = next((c for s in streams for c in (s.get('captions') or []) if c.get('url')), None)
-              assert cap, 'No Miami caption found'
+              cap = None
+              for attempt in range(3):
+                  scraper._cache.clear()
+                  streams = await scraper.scrape_streams('movie', '1083381')
+                  cap = next((c for s in streams for c in (s.get('captions') or []) if c.get('url')), None)
+                  if cap:
+                      break
+                  await asyncio.sleep(0.8)
+              assert cap, 'No live caption metadata found after 3 full-source attempts'
               response = await server.caption(cap['url'], cap.get('referer') or None, cap.get('origin') or None)
               body = bytes(response.body)
               assert b'-->' in body, 'Caption proxy did not return timed text'
@@ -62,4 +68,4 @@ jobs:
           git commit -m "Fix captions and automatically choose the best track"
           git push
 
-# one-time runner
+# one-time runner retry
