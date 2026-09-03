@@ -640,9 +640,35 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
 
         const startBackground = (exclude) => {
             if (backgroundPromise) return backgroundPromise;
-            backgroundPromise = getStreams(mediaType, id, season, episode, { timeout: 45000, exclude, ...streamResolveHints })
-                .then((data) => mergePayload(data, true))
-                .catch(() => [])
+
+            const excluded = new Set(
+                String(exclude || "")
+                    .split(",")
+                    .map((value) => value.trim().toLowerCase())
+                    .filter(Boolean),
+            );
+            const providers = ["castle", "vidlink", "vidnest", "vidzee", "vidrock", "vidy", "cinejoy", "vidcore", "vixsrc"];
+            const requests = providers
+                .filter((provider) => !excluded.has(provider))
+                .map((provider) => getStreams(mediaType, id, season, episode, {
+                    provider,
+                    mirror: provider === "vidy" ? "fast" : undefined,
+                    timeout: provider === "cinejoy" ? 12000 : 9500,
+                    ...streamResolveHints,
+                })
+                    .then((data) => mergePayload(data, true))
+                    .catch(() => []));
+
+            if (!requests.length) {
+                backgroundPromise = Promise.resolve([]);
+                if (alive) setSourcesLoading(false);
+                return backgroundPromise;
+            }
+
+            backgroundPromise = Promise.allSettled(requests)
+                .then((results) => results.flatMap((result) =>
+                    result.status === "fulfilled" && Array.isArray(result.value) ? result.value : []
+                ))
                 .finally(() => {
                     if (alive) setSourcesLoading(false);
                 });
@@ -678,7 +704,7 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
                 // Give Miami a clean startup lane when there is no different starred default.
                 backgroundTimer = window.setTimeout(
                     () => startBackground(hasMiamiCaptions ? "vidy,cinejoy" : "cinejoy"),
-                    3200,
+                    700,
                 );
                 heavyTimer = window.setTimeout(() => startHeavyCineJoy(), 6500);
                 return list;
