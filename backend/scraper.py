@@ -205,6 +205,8 @@ async def scrape_streams(media_type: str, tmdb_id, season=None, episode=None, pr
                         "ipcloud": "IPCloud",
                         "v6:hindi": "V6 Hindi",
                     }.get(subserver.lower(), subserver)
+                elif pid == "castle" and subserver.lower() == "castle":
+                    display_name = "Houston"
                 else:
                     display_name = subserver
                     if display_name.lower().startswith(name.lower()):
