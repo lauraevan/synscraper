@@ -157,9 +157,14 @@ def _caption_url(url, ref, origin):
 async def streams(type: str = "movie", id: str = Query(...),
                   season: int | None = None, episode: int | None = None,
                   provider: str | None = None, mirror: str | None = None,
-                  exclude: str | None = None):
+                  exclude: str | None = None, title: str | None = None,
+                  year: int | None = None, imdb_id: str | None = None):
+    metadata_hint = None
+    if title:
+        metadata_hint = {"title": title, "year": year, "imdbId": imdb_id or ""}
     servers = await scraper.scrape_streams(
-        type, id, season, episode, provider_id=provider, mirror=mirror, exclude=exclude
+        type, id, season, episode, provider_id=provider, mirror=mirror,
+        exclude=exclude, metadata_hint=metadata_hint
     )
     out = []
     for s in servers:

@@ -58,6 +58,9 @@ export const getStreams = (type, id, season, episode, options = {}) => {
         provider: options.provider,
         mirror: options.mirror,
         exclude: options.exclude,
+        title: options.title,
+        year: options.year,
+        imdb_id: options.imdbId,
     };
     const key = `streams:${JSON.stringify(params)}`;
     return cached(key, 45_000, () => http.get("/streams", {

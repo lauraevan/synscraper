@@ -22,6 +22,8 @@ import urllib.parse
 import urllib.request
 from typing import Any
 
+import requests
+
 __version__ = "0.3.1"
 
 BASE_URL = "https://www.vidy.st"
@@ -157,6 +159,10 @@ class VidyResolver:
     def __init__(self, debug: bool = False):
         self.debug = debug
         self.ssl_context = ssl.create_default_context()
+        # Separate pools avoid cross-thread session contention while letting
+        # seed -> Miami source reuse the same api.wecollege.net TLS connection.
+        self.api_session = requests.Session()
+        self.db_session = requests.Session()
 
     def log(self, message: str) -> None:
         if self.debug:
@@ -171,12 +177,6 @@ class VidyResolver:
         accept: str = "application/json,text/plain,*/*",
         timeout: float = 7.5,
     ) -> Any:
-        if params:
-            query = urllib.parse.urlencode(
-                [(key, value) for key, value in params.items() if value is not None]
-            )
-            url = f"{url}{'&' if '?' in url else '?'}{query}"
-
         headers = {
             "User-Agent": USER_AGENT,
             "Accept": accept,
@@ -184,22 +184,22 @@ class VidyResolver:
             "Referer": referer or f"{BASE_URL}/",
             "Origin": BASE_URL,
         }
-        req = urllib.request.Request(url, headers=headers, method="GET")
         self.log(f"GET {url}")
+        session = self.api_session if url.startswith(API_BASE) else self.db_session
         try:
-            with urllib.request.urlopen(req, timeout=timeout, context=self.ssl_context) as response:
-                raw = response.read().decode("utf-8", errors="strict")
-                content_type = response.headers.get("Content-Type", "").lower()
-        except urllib.error.HTTPError as exc:
-            body = exc.read().decode("utf-8", errors="ignore")
-            raise RuntimeError(f"HTTP {exc.code} from {url}: {body[:240]}") from exc
-        except urllib.error.URLError as exc:
-            raise RuntimeError(f"URL error for {url}: {exc.reason}") from exc
+            response = session.get(url, params=params, headers=headers, timeout=timeout)
+            response.raise_for_status()
+        except requests.RequestException as exc:
+            body = getattr(exc.response, "text", "") if getattr(exc, "response", None) is not None else ""
+            status = getattr(getattr(exc, "response", None), "status_code", "")
+            raise RuntimeError(f"HTTP {status or 'error'} from {url}: {body[:240] or exc}") from exc
 
+        content_type = response.headers.get("Content-Type", "").lower()
+        raw = response.text
         if "json" in content_type:
             try:
-                return json.loads(raw)
-            except json.JSONDecodeError:
+                return response.json()
+            except ValueError:
                 pass
         stripped = raw.strip()
         if stripped.startswith(("{", "[", '"')):
@@ -438,6 +438,7 @@ class VidyResolver:
         provider: str = "auto",
         verify: bool = False,
         dub: bool = False,
+        metadata_hint: dict[str, Any] | None = None,
     ) -> str:
         try:
             numeric_id = int(media_id)
@@ -481,13 +482,32 @@ class VidyResolver:
             page_url = f"{BASE_URL}/tv/{numeric_id}/{int(season)}/{int(episode)}"
 
         try:
-            # Metadata and the short-lived seed are independent network calls.
-            # Resolve them in parallel so Miami only waits on the slower one.
-            with ThreadPoolExecutor(max_workers=2) as prep_pool:
-                metadata_future = prep_pool.submit(self._metadata, numeric_id, media_type)
-                seed_future = prep_pool.submit(self._seed, numeric_id)
-                params = metadata_future.result()
-                shared_seed = seed_future.result()
+            hint = metadata_hint if isinstance(metadata_hint, dict) else {}
+            hint_title = str(hint.get("title") or "").strip()
+            if hint_title:
+                # Reuse metadata the player already has and remove a whole
+                # db.wecollege.net round-trip from Miami's critical path.
+                hint_year = hint.get("year")
+                try:
+                    hint_year = int(hint_year) if hint_year is not None else None
+                except (TypeError, ValueError):
+                    hint_year = None
+                params = {
+                    "title": hint_title,
+                    "mediaType": media_type,
+                    "year": hint_year,
+                    "tmdbId": numeric_id,
+                    "imdbId": str(hint.get("imdbId") or ""),
+                }
+                shared_seed = self._seed(numeric_id)
+            else:
+                # Metadata and the short-lived seed are independent network calls.
+                # Resolve them in parallel so Miami only waits on the slower one.
+                with ThreadPoolExecutor(max_workers=2) as prep_pool:
+                    metadata_future = prep_pool.submit(self._metadata, numeric_id, media_type)
+                    seed_future = prep_pool.submit(self._seed, numeric_id)
+                    params = metadata_future.result()
+                    shared_seed = seed_future.result()
 
             if media_type == "tv":
                 params["seasonId"] = int(season)

@@ -11,6 +11,23 @@ import { fmtTime } from "@/lib/format";
 import { saveProgress, getProgress } from "@/lib/storage";
 
 const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2];
+const SOURCE_4K_BADGE = "data:image/png;base64,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";
+const SOURCE_INDIA_FLAG = "data:image/webp;base64,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";
+const sourceHas4KBadge = (source) =>
+    source?.provider === "vidcore"
+    || (source?.provider === "vidy" && /miami/i.test(String(source?.displayName || source?.name || "")));
+const sourceIsHindi = (source) => {
+    const language = String(source?.lang || source?.language || "").trim().toLowerCase();
+    const label = [source?.displayName, source?.name, source?.label, source?.subserver]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+    return language === "hi" || language === "hin" || /(^|[ :_\-])hindi($|[ :_\-])/i.test(label);
+};
+const sourceFlag = (source) => sourceIsHindi(source)
+    ? SOURCE_INDIA_FLAG
+    : "https://flagsapi.com/US/flat/24.png";
+
 const SOURCE_CATALOG = [
     { provider: "vidy", name: "Miami" },
     { provider: "castle", name: "Houston" },
@@ -315,6 +332,11 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
     });
 
     const activeServer = servers.find((s) => s.id === serverId);
+    const streamResolveHints = {
+        title: meta?.title || meta?.name || "",
+        year: Number(String(meta?.release_date || meta?.first_air_date || "").slice(0, 4)) || undefined,
+        imdbId: meta?.imdb_id || meta?.external_ids?.imdb_id || undefined,
+    };
     const downloadSources = (() => {
         const found = new Map();
         servers.filter((server) => server?.type === "hls").forEach((server) => {
@@ -426,20 +448,21 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
             const isMiami = server.provider === "vidy" && /miami/i.test(String(server.name || ""));
             const hls = new Hls({
                 enableWorker: true,
+                progressive: isMiami,
                 startFragPrefetch: true,
-                maxBufferLength: 30,
-                maxMaxBufferLength: 60,
+                maxBufferLength: isMiami ? 18 : 30,
+                maxMaxBufferLength: isMiami ? 36 : 60,
                 backBufferLength: 30,
-                abrEwmaDefaultEstimate: isMiami ? 8_000_000 : 5_000_000,
-                manifestLoadingTimeOut: 7000,
+                abrEwmaDefaultEstimate: isMiami ? 24_000_000 : 5_000_000,
+                manifestLoadingTimeOut: isMiami ? 4500 : 7000,
                 manifestLoadingMaxRetry: 2,
-                manifestLoadingRetryDelay: 250,
-                levelLoadingTimeOut: 8000,
+                manifestLoadingRetryDelay: isMiami ? 120 : 250,
+                levelLoadingTimeOut: isMiami ? 5500 : 8000,
                 levelLoadingMaxRetry: 2,
-                levelLoadingRetryDelay: 250,
-                fragLoadingTimeOut: 15000,
+                levelLoadingRetryDelay: isMiami ? 120 : 250,
+                fragLoadingTimeOut: isMiami ? 10000 : 15000,
                 fragLoadingMaxRetry: 3,
-                fragLoadingRetryDelay: 250,
+                fragLoadingRetryDelay: isMiami ? 120 : 250,
             });
             hlsRef.current = hls;
             hls.loadSource(url);
@@ -596,7 +619,7 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
 
         const startBackground = (exclude) => {
             if (backgroundPromise) return backgroundPromise;
-            backgroundPromise = getStreams(mediaType, id, season, episode, { timeout: 45000, exclude })
+            backgroundPromise = getStreams(mediaType, id, season, episode, { timeout: 45000, exclude, ...streamResolveHints })
                 .then(mergePayload)
                 .catch(() => [])
                 .finally(() => {
@@ -605,7 +628,7 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
             return backgroundPromise;
         };
 
-        const quick = getStreams(mediaType, id, season, episode, { provider: "vidy", mirror: "miami", timeout: 8500 })
+        const quick = getStreams(mediaType, id, season, episode, { provider: "vidy", mirror: "miami", timeout: 5200, ...streamResolveHints })
             .then((d) => {
                 if (!alive) return [];
                 const list = mergePayload(d);
@@ -614,14 +637,15 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
                 }
 
                 const hasMiamiCaptions = list.some((server) => (server.captions || []).length > 0);
-                // Keep the first second almost entirely for Miami + its manifest.
-                // If Miami omitted captions this time, let the fast Vidy fallback tier refresh them.
+                // Give Miami a clean startup lane: do not make its manifest/first fragments
+                // compete with the whole provider pool. Backups arrive after playback has had time
+                // to establish a buffer.
                 backgroundTimer = window.setTimeout(
                     () => startBackground(hasMiamiCaptions ? "vidy,cinejoy" : "cinejoy"),
-                    700,
+                    3200,
                 );
-                // CineJoy is WASM-heavy. Load it only after playback has had time to settle.
-                heavyTimer = window.setTimeout(() => startHeavyCineJoy(), 3800);
+                // CineJoy is WASM-heavy, so keep it well out of Miami's first-frame window.
+                heavyTimer = window.setTimeout(() => startHeavyCineJoy(), 6500);
                 return list;
             })
             .catch(() => startBackground(undefined));
@@ -1309,10 +1333,19 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
                                                 className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition ${serverId === s.id ? "bg-white text-black" : s.available ? "text-white/80 hover:bg-white/10 hover:text-white" : "cursor-not-allowed text-white/28"}`}
                                             >
                                                 <span className="min-w-0 flex-1 truncate text-sm font-medium">{s.displayName || s.name}</span>
+                                                {sourceHas4KBadge(s) && (
+                                                    <img
+                                                        src={SOURCE_4K_BADGE}
+                                                        alt="4K"
+                                                        title="4K source"
+                                                        className={`h-[18px] w-[18px] shrink-0 object-contain ${s.available ? "opacity-100" : "opacity-25"}`}
+                                                    />
+                                                )}
                                                 {!s.available && <span className="text-[9px] font-medium uppercase tracking-[0.12em] text-white/28">Unavailable</span>}
                                                 <img
-                                                    src="https://flagsapi.com/US/flat/24.png"
-                                                    alt="US"
+                                                    src={sourceFlag(s)}
+                                                    alt={sourceIsHindi(s) ? "India" : "US"}
+                                                    title={sourceIsHindi(s) ? "Hindi source" : "US source"}
                                                     className={`h-4 w-6 shrink-0 rounded-[2px] object-cover ${s.available ? "opacity-100" : "opacity-25"}`}
                                                     loading="lazy"
                                                 />
@@ -1639,6 +1672,8 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
                                                 <button key={s.id} disabled={!s.available} onClick={() => s.available && selectServerInSettings(s)} className={`flex w-full items-center gap-3 border-b border-white/[0.055] px-4 py-3 text-left transition ${s.available ? "hover:bg-white/[0.045]" : "cursor-not-allowed opacity-30"}`}>
                                                     <span className={`h-2 w-2 shrink-0 rounded-full ${selected ? "bg-white" : "bg-white/18"}`} />
                                                     <span className={`min-w-0 flex-1 truncate text-[14px] ${selected ? "font-semibold text-white" : "font-medium text-white/72"}`}>{s.displayName || s.name}</span>
+                                                    {sourceHas4KBadge(s) && <img src={SOURCE_4K_BADGE} alt="4K" title="4K source" className="h-[18px] w-[18px] shrink-0 object-contain" />}
+                                                    <img src={sourceFlag(s)} alt={sourceIsHindi(s) ? "India" : "US"} title={sourceIsHindi(s) ? "Hindi source" : "US source"} className="h-4 w-6 shrink-0 rounded-[2px] object-cover" loading="lazy" />
                                                     {!s.available ? <span className="text-[9px] uppercase tracking-[0.12em] text-white/30">Unavailable</span> : selected ? <span className="text-[10px] font-medium text-white/45">Active</span> : null}
                                                 </button>
                                             );

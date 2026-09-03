@@ -114,7 +114,7 @@ def _resolver_class(spec):
     return getattr(module, class_name)
 
 
-def _run_one(spec, provider_id, media_type, tmdb_id, season, episode, provider_hint=None, fast_mirrors=False):
+def _run_one(spec, provider_id, media_type, tmdb_id, season, episode, provider_hint=None, fast_mirrors=False, metadata_hint=None):
     try:
         cls = _resolver_class(spec)
         r = cls()
@@ -124,6 +124,8 @@ def _run_one(spec, provider_id, media_type, tmdb_id, season, episode, provider_h
                 resolve_kwargs["provider"] = provider_hint
             elif fast_mirrors:
                 resolve_kwargs["provider"] = "fast"
+            if metadata_hint:
+                resolve_kwargs["metadata_hint"] = metadata_hint
         out = r.resolve(str(tmdb_id), media_type=media_type, season=season, episode=episode, **resolve_kwargs)
         data = json.loads(out) if isinstance(out, str) else out
         if data.get("status") != "success":
@@ -161,7 +163,7 @@ def _run_one(spec, provider_id, media_type, tmdb_id, season, episode, provider_h
         return []
 
 
-async def scrape_streams(media_type: str, tmdb_id, season=None, episode=None, provider_id=None, mirror=None, exclude=None) -> list:
+async def scrape_streams(media_type: str, tmdb_id, season=None, episode=None, provider_id=None, mirror=None, exclude=None, metadata_hint=None) -> list:
     """Return normalized playable servers, optionally scoped/excluding providers."""
     excluded = {part.strip().lower() for part in str(exclude or "").split(",") if part.strip()}
     normalized_exclude = ",".join(sorted(excluded))
@@ -185,7 +187,7 @@ async def scrape_streams(media_type: str, tmdb_id, season=None, episode=None, pr
             streams = await asyncio.wait_for(
                 asyncio.to_thread(
                     _run_one, spec, pid, media_type, tmdb_id, season, episode,
-                    provider_hint, provider_id is None and not mirror,
+                    provider_hint, provider_id is None and not mirror, metadata_hint,
                 ),
                 timeout=per_provider_timeout,
             )
