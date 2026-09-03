@@ -1356,122 +1356,6 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
                             >
                                 <Cloud className="h-7 w-7 stroke-[1.55] md:h-8 md:w-8" />
                             </button>
-
-                            {menu === "sources" && (
-                                <div
-                                    data-testid="synapse-source-popout"
-                                    data-source-layout="server-modal"
-                                    className="fixed inset-0 z-[90] flex items-center justify-center bg-black/55 px-4 py-6 backdrop-blur-[5px]"
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        setMenu(null);
-                                    }}
-                                >
-                                    <div
-                                        onClick={(e) => e.stopPropagation()}
-                                        className="w-[min(92vw,600px)] max-h-[min(82vh,680px)] overflow-hidden rounded-[24px] border border-white/[0.10] bg-[#242424] shadow-[0_28px_95px_rgba(0,0,0,0.72)]"
-                                    >
-                                        <div className="flex h-[74px] items-center border-b border-white/[0.15] px-6 md:px-7">
-                                            <h3 className="flex-1 text-[20px] font-medium tracking-[-0.02em] text-white/95 md:text-[22px]">Servers</h3>
-                                            <button
-                                                type="button"
-                                                onClick={() => setMenu(null)}
-                                                className="grid h-11 w-11 place-items-center rounded-full text-white/72 transition hover:bg-white/[0.06] hover:text-white"
-                                                aria-label="Close servers"
-                                            >
-                                                <X className="h-8 w-8" strokeWidth={1.55} />
-                                            </button>
-                                        </div>
-
-                                        <div className="max-h-[min(67vh,570px)] overflow-y-auto px-3 py-2 scrollbar-none md:px-4 md:py-3">
-                                            {sourceSlots.map((s) => {
-                                                const selected = sourcePreferenceKey(activeServer) === sourcePreferenceKey(s);
-                                                const favorite = preferredSourceKey === sourcePreferenceKey(s);
-                                                const show4K = sourceHas4KBadge(s);
-                                                const hindi = sourceIsHindi(s);
-                                                const subtitle = !s.available
-                                                    ? "Unavailable"
-                                                    : show4K
-                                                        ? "Original audio, 4K"
-                                                        : hindi
-                                                            ? "Hindi audio"
-                                                            : s.provider === "cinejoy"
-                                                                ? "Multiple audio"
-                                                                : "Original audio";
-                                                return (
-                                                    <div
-                                                        key={s.id}
-                                                        data-source-favorite={favorite ? "true" : "false"}
-                                                        className={`group flex min-h-[76px] items-center rounded-[16px] px-2 transition ${s.available ? "hover:bg-white/[0.045]" : "opacity-40"}`}
-                                                    >
-                                                        <button
-                                                            type="button"
-                                                            disabled={!s.available}
-                                                            onClick={() => {
-                                                                if (!s.available) return;
-                                                                selectServer(s);
-                                                                setMenu(null);
-                                                            }}
-                                                            className={`flex min-w-0 flex-1 items-center gap-4 px-2 py-3 text-left ${s.available ? "cursor-pointer" : "cursor-not-allowed"}`}
-                                                        >
-                                                            <div className="flex h-9 w-10 shrink-0 items-center justify-center">
-                                                                {show4K ? (
-                                                                    <img
-                                                                        src={SOURCE_4K_BADGE}
-                                                                        alt="4K"
-                                                                        title="4K source"
-                                                                        className="h-8 w-10 object-contain"
-                                                                    />
-                                                                ) : (
-                                                                    <img
-                                                                        src={hindi ? SOURCE_INDIA_FLAG : sourceFlag(s)}
-                                                                        alt={hindi ? "India" : "US"}
-                                                                        title={hindi ? "Hindi v6 source" : "Original audio source"}
-                                                                        className="h-6 w-8 rounded-[2px] object-cover"
-                                                                        loading="lazy"
-                                                                    />
-                                                                )}
-                                                            </div>
-                                                            <div className="min-w-0 flex-1">
-                                                                <p className={`truncate text-[17px] font-medium tracking-[-0.015em] md:text-[19px] ${selected ? "text-[#ecd36d]" : "text-white/95"}`}>
-                                                                    {s.displayName || s.name}
-                                                                </p>
-                                                                <p className="mt-0.5 truncate text-[12px] text-white/38 md:text-[13px]">{subtitle}</p>
-                                                            </div>
-                                                        </button>
-
-                                                        <button
-                                                            type="button"
-                                                            disabled={!s.available}
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                toggleFavoriteSource(s);
-                                                            }}
-                                                            className={`grid h-11 w-11 shrink-0 place-items-center rounded-full transition ${favorite ? "text-[#efd268]" : "text-[#e2c45f] hover:bg-white/[0.05] hover:text-[#ffe28a]"}`}
-                                                            aria-label={favorite ? `Remove ${s.displayName || s.name} as default source` : `Make ${s.displayName || s.name} the default source`}
-                                                            title={favorite ? "Default source" : "Make default source"}
-                                                        >
-                                                            <Star className={`h-7 w-7 ${favorite ? "fill-current" : ""}`} strokeWidth={1.65} />
-                                                        </button>
-
-                                                        {selected && (
-                                                            <div className="mr-1 grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#0b6f62] text-white shadow-[0_4px_18px_rgba(0,0,0,0.24)]" title="Currently playing">
-                                                                <Play className="ml-0.5 h-4 w-4 fill-current" strokeWidth={1.4} />
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                );
-                                            })}
-                                            {sourcesLoading && (
-                                                <div className="flex items-center gap-2 px-5 py-4 text-[12px] text-white/38">
-                                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                                    Loading more servers…
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
                         </div>
 
                         <div className="absolute left-1/2 top-5 md:top-6 -translate-x-1/2 text-center max-w-[60%] pointer-events-none">
@@ -1480,6 +1364,122 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
                         </div>
 
                     </div>
+
+                    {menu === "sources" && (
+                        <div
+                            data-testid="synapse-source-popout"
+                            data-source-layout="player-modal"
+                            className="absolute inset-0 z-[95] flex items-center justify-center bg-black/55 px-4 py-6 backdrop-blur-[5px] pointer-events-auto"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setMenu(null);
+                            }}
+                        >
+                            <div
+                                onClick={(e) => e.stopPropagation()}
+                                className="w-[min(92vw,600px)] max-h-[min(82vh,680px)] overflow-hidden rounded-[24px] border border-white/[0.10] bg-[#242424] shadow-[0_28px_95px_rgba(0,0,0,0.72)]"
+                            >
+                                <div className="flex h-[74px] items-center border-b border-white/[0.15] px-6 md:px-7">
+                                    <h3 className="flex-1 text-[20px] font-medium tracking-[-0.02em] text-white/95 md:text-[22px]">Servers</h3>
+                                    <button
+                                        type="button"
+                                        onClick={() => setMenu(null)}
+                                        className="grid h-11 w-11 place-items-center rounded-full text-white/72 transition hover:bg-white/[0.06] hover:text-white"
+                                        aria-label="Close servers"
+                                    >
+                                        <X className="h-8 w-8" strokeWidth={1.55} />
+                                    </button>
+                                </div>
+
+                                <div className="max-h-[min(67vh,570px)] overflow-y-auto px-3 py-2 scrollbar-none md:px-4 md:py-3">
+                                    {sourceSlots.map((s) => {
+                                        const selected = sourcePreferenceKey(activeServer) === sourcePreferenceKey(s);
+                                        const favorite = preferredSourceKey === sourcePreferenceKey(s);
+                                        const show4K = sourceHas4KBadge(s);
+                                        const hindi = sourceIsHindi(s);
+                                        const subtitle = !s.available
+                                            ? "Unavailable"
+                                            : show4K
+                                                ? "Original audio, 4K"
+                                                : hindi
+                                                    ? "Hindi audio"
+                                                    : s.provider === "cinejoy"
+                                                        ? "Multiple audio"
+                                                        : "Original audio";
+                                        return (
+                                            <div
+                                                key={s.id}
+                                                data-source-favorite={favorite ? "true" : "false"}
+                                                className={`group flex min-h-[76px] items-center rounded-[16px] px-2 transition ${s.available ? "hover:bg-white/[0.045]" : "opacity-40"}`}
+                                            >
+                                                <button
+                                                    type="button"
+                                                    disabled={!s.available}
+                                                    onClick={() => {
+                                                        if (!s.available) return;
+                                                        selectServer(s);
+                                                        setMenu(null);
+                                                    }}
+                                                    className={`flex min-w-0 flex-1 items-center gap-4 px-2 py-3 text-left ${s.available ? "cursor-pointer" : "cursor-not-allowed"}`}
+                                                >
+                                                    <div className="flex h-9 w-10 shrink-0 items-center justify-center">
+                                                        {show4K ? (
+                                                            <img
+                                                                src={SOURCE_4K_BADGE}
+                                                                alt="4K"
+                                                                title="4K source"
+                                                                className="h-8 w-10 object-contain"
+                                                            />
+                                                        ) : (
+                                                            <img
+                                                                src={hindi ? SOURCE_INDIA_FLAG : sourceFlag(s)}
+                                                                alt={hindi ? "India" : "US"}
+                                                                title={hindi ? "Hindi v6 source" : "Original audio source"}
+                                                                className="h-6 w-8 rounded-[2px] object-cover"
+                                                                loading="lazy"
+                                                            />
+                                                        )}
+                                                    </div>
+                                                    <div className="min-w-0 flex-1">
+                                                        <p className={`truncate text-[17px] font-medium tracking-[-0.015em] md:text-[19px] ${selected ? "text-[#ecd36d]" : "text-white/95"}`}>
+                                                            {s.displayName || s.name}
+                                                        </p>
+                                                        <p className="mt-0.5 truncate text-[12px] text-white/38 md:text-[13px]">{subtitle}</p>
+                                                    </div>
+                                                </button>
+
+                                                <button
+                                                    type="button"
+                                                    disabled={!s.available}
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        toggleFavoriteSource(s);
+                                                    }}
+                                                    className={`grid h-11 w-11 shrink-0 place-items-center rounded-full transition ${favorite ? "text-[#efd268]" : "text-[#e2c45f] hover:bg-white/[0.05] hover:text-[#ffe28a]"}`}
+                                                    aria-label={favorite ? `Remove ${s.displayName || s.name} as default source` : `Make ${s.displayName || s.name} the default source`}
+                                                    title={favorite ? "Default source" : "Make default source"}
+                                                >
+                                                    <Star className={`h-7 w-7 ${favorite ? "fill-current" : ""}`} strokeWidth={1.65} />
+                                                </button>
+
+                                                {selected && (
+                                                    <div className="mr-1 grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#0b6f62] text-white shadow-[0_4px_18px_rgba(0,0,0,0.24)]" title="Currently playing">
+                                                        <Play className="ml-0.5 h-4 w-4 fill-current" strokeWidth={1.4} />
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+                                    {sourcesLoading && (
+                                        <div className="flex items-center gap-2 px-5 py-4 text-[12px] text-white/38">
+                                            <Loader2 className="h-4 w-4 animate-spin" />
+                                            Loading more servers…
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    )}
 
                     <div
                         onClick={(e) => e.stopPropagation()}
