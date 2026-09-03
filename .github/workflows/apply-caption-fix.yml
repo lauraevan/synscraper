@@ -1,0 +1,63 @@
+name: Apply caption fix
+
+on:
+  push:
+    paths:
+      - '.github/workflows/apply-caption-fix.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Apply caption patch
+        run: python .github/scripts/apply_caption_fix.py
+      - name: Install backend dependencies
+        run: python -m pip install -q -r requirements.txt
+      - name: Validate caption proxy
+        run: |
+          python -m py_compile backend/server.py backend/scraper.py
+          python - <<'PY'
+          import asyncio, sys
+          sys.path.insert(0, 'backend')
+          import scraper, server
+
+          async def main():
+              streams = await scraper.scrape_streams('movie', '1083381', provider_id='vidy', mirror='miami')
+              cap = next((c for s in streams for c in (s.get('captions') or []) if c.get('url')), None)
+              assert cap, 'No Miami caption found'
+              response = await server.caption(cap['url'], cap.get('referer') or None, cap.get('origin') or None)
+              body = bytes(response.body)
+              assert b'-->' in body, 'Caption proxy did not return timed text'
+              assert response.media_type == 'text/vtt'
+              print('CAPTION_PROXY_OK', len(body))
+          asyncio.run(main())
+          PY
+      - name: Build frontend
+        run: |
+          grep -q 'captionLanguageOptions' frontend/src/components/SynapsePlayer.jsx
+          grep -q 'Best ·' frontend/src/components/SynapsePlayer.jsx
+          grep -q '/api/caption' backend/server.py
+          yarn --cwd frontend install
+          CI=false GENERATE_SOURCEMAP=false yarn --cwd frontend build
+          rm -rf public backend/public
+          cp -R frontend/build public
+          cp -R frontend/build backend/public
+      - name: Commit caption fix
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add backend/server.py frontend/src/components/SynapsePlayer.jsx public backend/public
+          git commit -m "Fix captions and automatically choose the best track"
+          git push
