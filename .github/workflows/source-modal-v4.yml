@@ -1,0 +1,39 @@
+name: Apply source modal v4
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: ${{ github.event.head_commit.message == 'Run source modal patch v4' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Patch source picker
+        run: python scripts/apply_source_modal.py
+      - name: Validate React build
+        run: |
+          npm install -g yarn@1.22.22
+          yarn --cwd frontend install --frozen-lockfile
+          yarn --cwd frontend build
+          grep -R "data-source-layout" frontend/build/static/js >/dev/null
+          grep -R "4K source" frontend/build/static/js >/dev/null
+          grep -R "Hindi source" frontend/build/static/js >/dev/null
+      - name: Commit changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add frontend/src/components/SynapsePlayer.jsx
+          git commit -m "Center source picker and fix source badges"
+          git pull --rebase origin main
+          git push origin HEAD:main
