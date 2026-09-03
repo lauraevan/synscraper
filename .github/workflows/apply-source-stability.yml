@@ -1,0 +1,194 @@
+name: Apply source stability fixes
+
+on:
+  push:
+    paths:
+      - '.github/workflows/apply-source-stability.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Patch Vidy, CineJoy, backend naming, and selector
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import json
+
+          def replace_once(path, old, new, label):
+              p = Path(path)
+              text = p.read_text()
+              if new in text:
+                  print(f'{label}: already applied')
+                  return
+              if old not in text:
+                  raise SystemExit(f'{label}: pattern not found in {path}')
+              p.write_text(text.replace(old, new, 1))
+              print(f'{label}: applied')
+
+          # -------- Vidy: share one seed, query all default mirrors concurrently, keep 2160 first --------
+          vp = Path('synflix_scrapers/vidy.py')
+          v = vp.read_text()
+          if 'from concurrent.futures import ThreadPoolExecutor, as_completed' not in v:
+              v = v.replace(
+                  'from __future__ import annotations\n\n',
+                  'from __future__ import annotations\n\nfrom concurrent.futures import ThreadPoolExecutor, as_completed\n'
+              )
+          old = '''    def _provider(\n        self,\n        provider: str,\n        media_id: int,\n        params: dict[str, Any],\n    ) -> dict[str, Any]:\n        query = dict(params)\n        query["title"] = urllib.parse.quote(str(query.get("title") or ""), safe="")\n\n        seed = self._seed(media_id)\n        query.update({"enc": "2", "seed": seed})\n'''
+          new = '''    def _provider(\n        self,\n        provider: str,\n        media_id: int,\n        params: dict[str, Any],\n        seed: str | None = None,\n    ) -> dict[str, Any]:\n        query = dict(params)\n        query["title"] = urllib.parse.quote(str(query.get("title") or ""), safe="")\n\n        seed = str(seed or self._seed(media_id))\n        query.update({"enc": "2", "seed": seed})\n'''
+          if new not in v:
+              if old not in v: raise SystemExit('Vidy provider signature pattern missing')
+              v = v.replace(old, new, 1)
+
+          old_loop = '''            providers = ALL_PROVIDERS if provider == "all" else ((provider,) if provider not in {"auto", ""} else DEFAULT_PROVIDERS)\n            playable: list[dict[str, Any]] = []\n            subtitles: list[dict[str, Any]] = []\n            errors: dict[str, str] = {}\n\n            for name in providers:\n                try:\n                    decoded = self._provider(name, numeric_id, params)\n                    current = self._playables(decoded, name, page_url)\n                    if current:\n                        playable.extend(current)\n                        if isinstance(decoded.get("subtitles"), list):\n                            subtitles.extend(x for x in decoded["subtitles"] if isinstance(x, dict))\n                        if provider != "all":\n                            break\n                except Exception as exc:\n                    errors[name] = str(exc)\n                    self.log(f"{name}: {exc}")\n'''
+          new_loop = '''            providers = ALL_PROVIDERS if provider == "all" else ((provider,) if provider not in {"auto", ""} else DEFAULT_PROVIDERS)\n            playable: list[dict[str, Any]] = []\n            subtitles: list[dict[str, Any]] = []\n            errors: dict[str, str] = {}\n            shared_seed = self._seed(numeric_id)\n\n            def load_provider(name: str):\n                decoded = self._provider(name, numeric_id, params, seed=shared_seed)\n                return name, decoded, self._playables(decoded, name, page_url)\n\n            results = []\n            if len(providers) == 1:\n                try:\n                    results.append(load_provider(providers[0]))\n                except Exception as exc:\n                    errors[providers[0]] = str(exc)\n            else:\n                with ThreadPoolExecutor(max_workers=min(5, len(providers))) as pool:\n                    futures = {pool.submit(load_provider, name): name for name in providers}\n                    for future in as_completed(futures):\n                        name = futures[future]\n                        try:\n                            results.append(future.result())\n                        except Exception as exc:\n                            errors[name] = str(exc)\n                            self.log(f"{name}: {exc}")\n\n            order = {name: idx for idx, name in enumerate(providers)}\n            results.sort(key=lambda item: order.get(item[0], 999))\n            for name, decoded, current in results:\n                if current:\n                    playable.extend(current)\n                    if isinstance(decoded.get("subtitles"), list):\n                        subtitles.extend(x for x in decoded["subtitles"] if isinstance(x, dict))\n'''
+          if new_loop not in v:
+              if old_loop not in v: raise SystemExit('Vidy resolve loop pattern missing')
+              v = v.replace(old_loop, new_loop, 1)
+
+          old_unique = '''                unique.append(source)\n\n            if not unique:\n'''
+          new_unique = '''                unique.append(source)\n\n            def quality_rank(source: dict[str, Any]) -> int:\n                match = re.search(r"(2160|1440|1080|720|480|360)", str(source.get("quality") or ""), re.I)\n                return int(match.group(1)) if match else 0\n\n            unique.sort(key=lambda source: (-quality_rank(source), str(source.get("server") or "")))\n\n            if not unique:\n'''
+          if new_unique not in v:
+              if old_unique not in v: raise SystemExit('Vidy quality sort insertion point missing')
+              v = v.replace(old_unique, new_unique, 1)
+          v = v.replace('__version__ = "0.2.0"', '__version__ = "0.3.0"', 1)
+          vp.write_text(v)
+          Path('backend/providers/vidy.py').write_text(v)
+
+          # -------- CineJoy: cache protection module/server list and materialize 1080p variants --------
+          cp = Path('backend/providers/cinejoy.py')
+          c = cp.read_text()
+          if 'import threading' not in c:
+              c = c.replace('import secrets\n', 'import secrets\nimport threading\nimport time\n', 1)
+          if 'from urllib.parse import urljoin' not in c:
+              c = c.replace('from typing import Any\n', 'from typing import Any\nfrom urllib.parse import urljoin\n', 1)
+          cache_marker = 'IV_LEN = 12\nTAG_LEN = 16\n'
+          cache_block = '''IV_LEN = 12\nTAG_LEN = 16\n\n_CACHE_LOCK = threading.Lock()\n_CACHED_ENGINE: Engine | None = None\n_CACHED_MODULE: Module | None = None\n_SERVER_CACHE: tuple[float, list[dict[str, Any]]] = (0.0, [])\n'''
+          if '_CACHED_MODULE' not in c:
+              if cache_marker not in c: raise SystemExit('CineJoy cache insertion point missing')
+              c = c.replace(cache_marker, cache_block, 1)
+
+          old_init = '''    def _init_wasm(self) -> None:\n        if self._exports is not None:\n            return\n        response = self.session.get(WASM_URL, timeout=20, headers={"Cache-Control": "no-cache"})\n        response.raise_for_status()\n        self._engine = Engine()\n        self._store = Store(self._engine)\n        module = Module(self._engine, response.content)\n        instance = Instance(self._store, module, [])\n        self._exports = instance.exports(self._store)\n'''
+          new_init = '''    def _init_wasm(self) -> None:\n        global _CACHED_ENGINE, _CACHED_MODULE\n        if self._exports is not None:\n            return\n        with _CACHE_LOCK:\n            if _CACHED_MODULE is None or _CACHED_ENGINE is None:\n                response = self.session.get(WASM_URL, timeout=12, headers={"Cache-Control": "no-cache"})\n                response.raise_for_status()\n                _CACHED_ENGINE = Engine()\n                _CACHED_MODULE = Module(_CACHED_ENGINE, response.content)\n            engine = _CACHED_ENGINE\n            module = _CACHED_MODULE\n        self._engine = engine\n        self._store = Store(engine)\n        instance = Instance(self._store, module, [])\n        self._exports = instance.exports(self._store)\n'''
+          if new_init not in c:
+              if old_init not in c: raise SystemExit('CineJoy wasm init pattern missing')
+              c = c.replace(old_init, new_init, 1)
+
+          old_servers = '''    def _servers(self) -> list[dict[str, Any]]:\n        response = self.session.get(f"{API_BASE}/servers", timeout=20)\n        response.raise_for_status()\n        data = response.json()\n        servers = data.get("servers") if isinstance(data, dict) else None\n        if not isinstance(servers, list):\n            raise RuntimeError("CineJoy server list response changed")\n        return [x for x in servers if isinstance(x, dict) and x.get("status") == "ok"]\n'''
+          new_servers = '''    def _servers(self) -> list[dict[str, Any]]:\n        global _SERVER_CACHE\n        now = time.time()\n        with _CACHE_LOCK:\n            cached_at, cached = _SERVER_CACHE\n            if cached and now - cached_at < 60:\n                return [dict(x) for x in cached]\n        response = self.session.get(f"{API_BASE}/servers", timeout=12)\n        response.raise_for_status()\n        data = response.json()\n        servers = data.get("servers") if isinstance(data, dict) else None\n        if not isinstance(servers, list):\n            raise RuntimeError("CineJoy server list response changed")\n        live = [x for x in servers if isinstance(x, dict) and x.get("status") == "ok"]\n        with _CACHE_LOCK:\n            _SERVER_CACHE = (now, [dict(x) for x in live])\n        return live\n'''
+          if new_servers not in c:
+              if old_servers not in c: raise SystemExit('CineJoy servers pattern missing')
+              c = c.replace(old_servers, new_servers, 1)
+
+          kind_block = '''    @staticmethod\n    def _kind(url: str, explicit: Any = None) -> str:\n        kind = str(explicit or "").lower()\n        low = url.lower()\n        if ".m3u8" in low or kind == "hls": return "hls"\n        if ".mpd" in low or kind in {"dash", "mpd"}: return "dash"\n        if ".mp4" in low or kind in {"file", "mp4"}: return "mp4"\n        return kind or "hls"\n'''
+          variant_block = kind_block + '''\n    def _hls_variants(self, url: str, headers: dict[str, str], wanted: tuple[int, ...] = (1080,)) -> list[tuple[int, str]]:\n        if ".m3u8" not in url.lower():\n            return []\n        try:\n            response = self.session.get(url, headers=headers, timeout=10)\n            response.raise_for_status()\n            lines = response.text.splitlines()\n        except Exception:\n            return []\n        variants: list[tuple[int, str]] = []\n        for index, line in enumerate(lines):\n            if "#EXT-X-STREAM-INF" not in line:\n                continue\n            match = re.search(r"RESOLUTION=\\d+x(\\d+)", line, re.I)\n            if not match:\n                continue\n            height = int(match.group(1))\n            if height not in wanted:\n                continue\n            for candidate in lines[index + 1:]:\n                candidate = candidate.strip()\n                if not candidate or candidate.startswith("#"):\n                    continue\n                variants.append((height, urljoin(url, candidate)))\n                break\n        return variants\n'''
+          if 'def _hls_variants' not in c:
+              if kind_block not in c: raise SystemExit('CineJoy kind block missing')
+              c = c.replace(kind_block, variant_block, 1)
+
+          old_direct = '''            if direct:\n                playable.append({\n                    "url": direct,\n                    "type": self._kind(direct, stream.get("type")),\n                    "quality": self._quality(stream.get("quality") or stream.get("label"), direct),\n                    "headers": {\n                        "Referer": headers.get("Referer") or headers.get("referer") or f"{BASE_URL}/",\n                        "Origin": headers.get("Origin") or headers.get("origin") or BASE_URL,\n                        "User-Agent": headers.get("User-Agent") or headers.get("user-agent") or USER_AGENT,\n                    },\n                    "server": f"CineJoy · {provider}",\n                    "captions": captions,\n                })\n'''
+          new_direct = '''            if direct:\n                normalized_headers = {\n                    "Referer": headers.get("Referer") or headers.get("referer") or f"{BASE_URL}/",\n                    "Origin": headers.get("Origin") or headers.get("origin") or BASE_URL,\n                    "User-Agent": headers.get("User-Agent") or headers.get("user-agent") or USER_AGENT,\n                }\n                direct_quality = self._quality(stream.get("quality") or stream.get("label"), direct)\n                playable.append({\n                    "url": direct,\n                    "type": self._kind(direct, stream.get("type")),\n                    "quality": direct_quality,\n                    "headers": normalized_headers,\n                    "server": f"CineJoy · {provider}",\n                    "captions": captions,\n                })\n                if self._kind(direct, stream.get("type")) == "hls" and not re.search(r"1080", str(direct_quality), re.I):\n                    for height, variant_url in self._hls_variants(direct, normalized_headers, (1080,)):\n                        playable.append({\n                            "url": variant_url,\n                            "type": "hls",\n                            "quality": f"{height}p",\n                            "headers": normalized_headers,\n                            "server": f"CineJoy · {provider}",\n                            "captions": captions,\n                        })\n'''
+          if new_direct not in c:
+              if old_direct not in c: raise SystemExit('CineJoy direct stream pattern missing')
+              c = c.replace(old_direct, new_direct, 1)
+          c = c.replace('__version__ = "0.1.0"', '__version__ = "0.2.0"', 1)
+          cp.write_text(c)
+
+          # -------- Backend: preserve exact upstream mirror names --------
+          sp = Path('backend/scraper.py')
+          s = sp.read_text()
+          old_names = '''            if pid == "vidzee" and subserver:\n                pretty = {\n                    "dcloud": "DCloud",\n                    "tik": "Tik",\n                    "ipcloud": "IPCloud",\n                    "v6:hindi": "V6 Hindi",\n                }.get(subserver.lower(), subserver)\n                display_name = f"{name} · {pretty}"\n            else:\n                display_name = name if idx == 0 else f"{name} {idx + 1}"\n'''
+          new_names = '''            if subserver:\n                if pid == "vidzee":\n                    pretty = {\n                        "dcloud": "DCloud",\n                        "tik": "Tik",\n                        "ipcloud": "IPCloud",\n                        "v6:hindi": "V6 Hindi",\n                    }.get(subserver.lower(), subserver)\n                    display_name = f"{name} · {pretty}"\n                elif subserver.lower().startswith(name.lower()):\n                    display_name = subserver\n                else:\n                    display_name = f"{name} · {subserver}"\n            else:\n                display_name = name if idx == 0 else f"{name} {idx + 1}"\n'''
+          if new_names not in s:
+              if old_names not in s: raise SystemExit('Backend server naming pattern missing')
+              s = s.replace(old_names, new_names, 1)
+          sp.write_text(s)
+
+          # -------- Frontend: show every exact mirror once, keep quality switches on same mirror --------
+          fp = Path('frontend/src/components/SynapsePlayer.jsx')
+          f = fp.read_text()
+          old_slots = '''    const sourceSlots = SOURCE_CATALOG.flatMap((source) => {\n        const matches = servers.filter((s) => s.provider === source.provider);\n        if (source.provider === "vidzee" && matches.length) {\n            return matches.map((server) => ({\n                ...server,\n                displayName: server.name || source.name,\n                available: true,\n            }));\n        }\n        const server = matches[0];\n        return server\n            ? [{ ...server, displayName: source.name, available: true }]\n            : [{ id: `unavailable-${source.provider}`, provider: source.provider, name: source.name, displayName: source.name, available: false }];\n    });\n'''
+          new_slots = '''    const sourceSlots = SOURCE_CATALOG.flatMap((source) => {\n        const matches = servers.filter((s) => s.provider === source.provider);\n        if (!matches.length) {\n            return [{ id: `unavailable-${source.provider}`, provider: source.provider, name: source.name, displayName: source.name, available: false }];\n        }\n        const mirrors = new Map();\n        for (const server of matches) {\n            const mirrorName = server.name || source.name;\n            const existing = mirrors.get(mirrorName);\n            const score = /^auto/i.test(String(server.quality || "")) ? 100000 : qualityHeight(server.quality);\n            const existingScore = existing ? (/^auto/i.test(String(existing.quality || "")) ? 100000 : qualityHeight(existing.quality)) : -1;\n            if (!existing || score > existingScore) mirrors.set(mirrorName, server);\n        }\n        return Array.from(mirrors.values()).map((server) => ({\n            ...server,\n            displayName: server.name || source.name,\n            available: true,\n        }));\n    });\n'''
+          if new_slots not in f:
+              if old_slots not in f: raise SystemExit('Frontend sourceSlots pattern missing')
+              f = f.replace(old_slots, new_slots, 1)
+
+          old_auto = '''    const autoServer = servers.find((s) => s.provider === activeServer?.provider && /^auto$/i.test(String(s.quality || "")))\n        || servers.find((s) => /^auto$/i.test(String(s.quality || "")));\n'''
+          new_auto = '''    const autoServer = servers.find((s) => s.provider === activeServer?.provider && s.name === activeServer?.name && /^auto/i.test(String(s.quality || "")))\n        || servers.find((s) => s.provider === activeServer?.provider && /^auto/i.test(String(s.quality || "")))\n        || servers.find((s) => /^auto/i.test(String(s.quality || "")));\n'''
+          if new_auto not in f:
+              if old_auto not in f: raise SystemExit('Frontend autoServer pattern missing')
+              f = f.replace(old_auto, new_auto, 1)
+
+          old_quality = '''        const levelIndex = levels.findIndex((l) => Number(l.height || 0) === target.height);\n        const sameProvider = servers.find((s) => s.provider === activeServer?.provider && qualityHeight(s.quality) === target.height);\n        const server = sameProvider || servers.find((s) => qualityHeight(s.quality) === target.height);\n        return { ...target, levelIndex, server, available: levelIndex >= 0 || !!server };\n'''
+          new_quality = '''        const levelIndex = levels.findIndex((l) => Number(l.height || 0) === target.height);\n        const sameMirror = servers.find((s) => s.provider === activeServer?.provider && s.name === activeServer?.name && qualityHeight(s.quality) === target.height);\n        const sameProvider = servers.find((s) => s.provider === activeServer?.provider && qualityHeight(s.quality) === target.height);\n        const server = sameMirror || sameProvider || servers.find((s) => qualityHeight(s.quality) === target.height);\n        return { ...target, levelIndex, server, available: levelIndex >= 0 || !!server };\n'''
+          if new_quality not in f:
+              if old_quality not in f: raise SystemExit('Frontend qualityChoices pattern missing')
+              f = f.replace(old_quality, new_quality, 1)
+          fp.write_text(f)
+
+          # Root Vercel build no longer mutates a hard-coded compiled bundle.
+          package = Path('package.json')
+          pdata = json.loads(package.read_text())
+          pdata.setdefault('scripts', {})['build'] = 'test -f public/index.html'
+          package.write_text(json.dumps(pdata, indent=2) + '\n')
+          PY
+      - name: Backend syntax and live HQ checks
+        shell: bash
+        run: |
+          python -m pip install -q -r requirements.txt
+          python -m py_compile backend/providers/vidy.py backend/providers/cinejoy.py backend/scraper.py
+          python - <<'PY'
+          import json, sys
+          sys.path.insert(0, 'backend')
+          from providers.vidy import VidyResolver
+          from providers.cinejoy import CineJoyResolver
+
+          vidy = json.loads(VidyResolver().resolve('550', media_type='movie'))
+          cine = json.loads(CineJoyResolver().resolve('550', media_type='movie'))
+          vq = [str(x.get('quality')) for x in vidy.get('playable_urls', [])]
+          cq = [str(x.get('quality')) for x in cine.get('playable_urls', [])]
+          vn = sorted(set(str(x.get('server')) for x in vidy.get('playable_urls', [])))
+          cn = sorted(set(str(x.get('server')) for x in cine.get('playable_urls', [])))
+          report = {
+              'vidy_status': vidy.get('status'), 'vidy_qualities': vq, 'vidy_mirrors': vn,
+              'cinejoy_status': cine.get('status'), 'cinejoy_qualities': cq, 'cinejoy_mirrors': cn,
+          }
+          print(json.dumps(report, indent=2))
+          if vidy.get('status') != 'success' or not any('2160' in q for q in vq):
+              raise SystemExit('Vidy 2160p check failed')
+          if cine.get('status') != 'success' or not any('1080' in q for q in cq):
+              raise SystemExit('CineJoy 1080p check failed')
+          if len(vn) < 2 or len(cn) < 2:
+              raise SystemExit('Exact mirror exposure check failed')
+          PY
+      - name: Rebuild production frontend
+        shell: bash
+        run: |
+          cd frontend
+          yarn install --non-interactive
+          CI=false REACT_APP_BACKEND_URL='' yarn build
+          cd ..
+          rm -rf public backend/public
+          cp -a frontend/build public
+          cp -a frontend/build backend/public
+      - name: Commit stable providers and rebuilt selector
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add synflix_scrapers/vidy.py backend/providers/vidy.py backend/providers/cinejoy.py backend/scraper.py frontend/src/components/SynapsePlayer.jsx public backend/public package.json
+          git commit -m 'Stabilize Vidy and CineJoy with exact servers and HQ variants'
+          git push
