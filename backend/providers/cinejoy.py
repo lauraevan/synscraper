@@ -310,6 +310,7 @@ class CineJoyResolver:
         except Exception as exc:
             return json.dumps({"status": "error", "server": "CineJoy", "message": str(exc), "page": page})
         all_playable, all_subtitles, errors = [], [], {}
+        successful_mirrors = 0
         for server in servers[:6]:
             provider = str(server.get("name") or server.get("id") or server.get("server") or "").strip()
             if not provider: continue
@@ -323,7 +324,8 @@ class CineJoyResolver:
                 playable, subtitles = self._normalize_streams(response, provider)
                 if playable:
                     all_playable.extend(playable); all_subtitles.extend(subtitles)
-                    if len(all_playable) >= 3: break
+                    successful_mirrors += 1
+                    if successful_mirrors >= 3: break
             except Exception as exc:
                 errors[provider] = str(exc); self.log(f"{provider}: {exc}")
         unique, seen = [], set()
