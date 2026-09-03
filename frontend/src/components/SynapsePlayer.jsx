@@ -634,30 +634,37 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
     const bufPct = duration ? (buffered / duration) * 100 : 0;
     const sourceSlots = SOURCE_CATALOG.flatMap((source) => {
         const matches = servers.filter((s) => s.provider === source.provider);
-        if (source.provider === "vidzee" && matches.length) {
-            return matches.map((server) => ({
-                ...server,
-                displayName: server.name || source.name,
-                available: true,
-            }));
+        if (!matches.length) {
+            return [{ id: `unavailable-${source.provider}`, provider: source.provider, name: source.name, displayName: source.name, available: false }];
         }
-        const server = matches[0];
-        return server
-            ? [{ ...server, displayName: source.name, available: true }]
-            : [{ id: `unavailable-${source.provider}`, provider: source.provider, name: source.name, displayName: source.name, available: false }];
+        const mirrors = new Map();
+        for (const server of matches) {
+            const mirrorName = server.name || source.name;
+            const existing = mirrors.get(mirrorName);
+            const score = /^auto/i.test(String(server.quality || "")) ? 100000 : qualityHeight(server.quality);
+            const existingScore = existing ? (/^auto/i.test(String(existing.quality || "")) ? 100000 : qualityHeight(existing.quality)) : -1;
+            if (!existing || score > existingScore) mirrors.set(mirrorName, server);
+        }
+        return Array.from(mirrors.values()).map((server) => ({
+            ...server,
+            displayName: server.name || source.name,
+            available: true,
+        }));
     });
     const captionSources = sourceSlots.filter((s) => s.available);
     const externalCaptions = Array.from(new Map(
         servers.flatMap((s) => (s.captions || []).map((c) => [c.play_url || c.id, { ...c, serverName: s.name }]))
     ).values());
     const activeQualityHeight = level >= 0 ? Number(levels[level]?.height || 0) : (levels.length ? 0 : qualityHeight(activeServer?.quality));
-    const autoServer = servers.find((s) => s.provider === activeServer?.provider && /^auto$/i.test(String(s.quality || "")))
-        || servers.find((s) => /^auto$/i.test(String(s.quality || "")));
+    const autoServer = servers.find((s) => s.provider === activeServer?.provider && s.name === activeServer?.name && /^auto/i.test(String(s.quality || "")))
+        || servers.find((s) => s.provider === activeServer?.provider && /^auto/i.test(String(s.quality || "")))
+        || servers.find((s) => /^auto/i.test(String(s.quality || "")));
     const autoQualityAvailable = levels.length > 0 || !!autoServer;
     const qualityChoices = QUALITY_LADDER.map((target) => {
         const levelIndex = levels.findIndex((l) => Number(l.height || 0) === target.height);
+        const sameMirror = servers.find((s) => s.provider === activeServer?.provider && s.name === activeServer?.name && qualityHeight(s.quality) === target.height);
         const sameProvider = servers.find((s) => s.provider === activeServer?.provider && qualityHeight(s.quality) === target.height);
-        const server = sameProvider || servers.find((s) => qualityHeight(s.quality) === target.height);
+        const server = sameMirror || sameProvider || servers.find((s) => qualityHeight(s.quality) === target.height);
         return { ...target, levelIndex, server, available: levelIndex >= 0 || !!server };
     });
     const releaseDate = meta.release_date || meta.first_air_date || "";

@@ -12,13 +12,16 @@ import json
 import os
 import re
 import secrets
+import threading
+import time
 from typing import Any
+from urllib.parse import urljoin
 
 import requests
 from Crypto.Cipher import AES
 from wasmtime import Engine, Instance, Module, Store
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 BASE_URL = "https://cinejoy.to"
 API_BASE = "https://api.shegu.st"
@@ -37,6 +40,11 @@ EPHEMERAL_PUBLIC_LEN = 65
 SEALED_HEADER_LEN = RESPONSE_KEY_LEN + KEY_ID_LEN + EPHEMERAL_PUBLIC_LEN
 IV_LEN = 12
 TAG_LEN = 16
+
+_CACHE_LOCK = threading.Lock()
+_CACHED_ENGINE: Engine | None = None
+_CACHED_MODULE: Module | None = None
+_SERVER_CACHE: tuple[float, list[dict[str, Any]]] = (0.0, [])
 
 
 class CineJoyResolver:
@@ -59,13 +67,19 @@ class CineJoyResolver:
             print(f"[CineJoy] {message}")
 
     def _init_wasm(self) -> None:
+        global _CACHED_ENGINE, _CACHED_MODULE
         if self._exports is not None:
             return
-        response = self.session.get(WASM_URL, timeout=20, headers={"Cache-Control": "no-cache"})
-        response.raise_for_status()
-        self._engine = Engine()
-        self._store = Store(self._engine)
-        module = Module(self._engine, response.content)
+        with _CACHE_LOCK:
+            if _CACHED_MODULE is None or _CACHED_ENGINE is None:
+                response = self.session.get(WASM_URL, timeout=12, headers={"Cache-Control": "no-cache"})
+                response.raise_for_status()
+                _CACHED_ENGINE = Engine()
+                _CACHED_MODULE = Module(_CACHED_ENGINE, response.content)
+            engine = _CACHED_ENGINE
+            module = _CACHED_MODULE
+        self._engine = engine
+        self._store = Store(engine)
         instance = Instance(self._store, module, [])
         self._exports = instance.exports(self._store)
 
@@ -134,13 +148,22 @@ class CineJoyResolver:
         return data
 
     def _servers(self) -> list[dict[str, Any]]:
-        response = self.session.get(f"{API_BASE}/servers", timeout=20)
+        global _SERVER_CACHE
+        now = time.time()
+        with _CACHE_LOCK:
+            cached_at, cached = _SERVER_CACHE
+            if cached and now - cached_at < 60:
+                return [dict(x) for x in cached]
+        response = self.session.get(f"{API_BASE}/servers", timeout=12)
         response.raise_for_status()
         data = response.json()
         servers = data.get("servers") if isinstance(data, dict) else None
         if not isinstance(servers, list):
             raise RuntimeError("CineJoy server list response changed")
-        return [x for x in servers if isinstance(x, dict) and x.get("status") == "ok"]
+        live = [x for x in servers if isinstance(x, dict) and x.get("status") == "ok"]
+        with _CACHE_LOCK:
+            _SERVER_CACHE = (now, [dict(x) for x in live])
+        return live
 
     @staticmethod
     def _absolute_url(value: Any) -> str | None:
@@ -164,6 +187,33 @@ class CineJoyResolver:
         if ".mpd" in low or kind in {"dash", "mpd"}: return "dash"
         if ".mp4" in low or kind in {"file", "mp4"}: return "mp4"
         return kind or "hls"
+
+    def _hls_variants(self, url: str, headers: dict[str, str], wanted: tuple[int, ...] = (1080,)) -> list[tuple[int, str]]:
+        if ".m3u8" not in url.lower():
+            return []
+        try:
+            response = self.session.get(url, headers=headers, timeout=10)
+            response.raise_for_status()
+            lines = response.text.splitlines()
+        except Exception:
+            return []
+        variants: list[tuple[int, str]] = []
+        for index, line in enumerate(lines):
+            if "#EXT-X-STREAM-INF" not in line:
+                continue
+            match = re.search(r"RESOLUTION=\d+x(\d+)", line, re.I)
+            if not match:
+                continue
+            height = int(match.group(1))
+            if height not in wanted:
+                continue
+            for candidate in lines[index + 1:]:
+                candidate = candidate.strip()
+                if not candidate or candidate.startswith("#"):
+                    continue
+                variants.append((height, urljoin(url, candidate)))
+                break
+        return variants
 
     def _captions(self, captions: Any, provider: str) -> list[dict[str, Any]]:
         if not isinstance(captions, list): return []
@@ -197,18 +247,30 @@ class CineJoyResolver:
             headers = stream.get("headers") if isinstance(stream.get("headers"), dict) else {}
             direct = self._absolute_url(stream.get("playlist") or stream.get("url") or stream.get("file") or stream.get("src"))
             if direct:
+                normalized_headers = {
+                    "Referer": headers.get("Referer") or headers.get("referer") or f"{BASE_URL}/",
+                    "Origin": headers.get("Origin") or headers.get("origin") or BASE_URL,
+                    "User-Agent": headers.get("User-Agent") or headers.get("user-agent") or USER_AGENT,
+                }
+                direct_quality = self._quality(stream.get("quality") or stream.get("label"), direct)
                 playable.append({
                     "url": direct,
                     "type": self._kind(direct, stream.get("type")),
-                    "quality": self._quality(stream.get("quality") or stream.get("label"), direct),
-                    "headers": {
-                        "Referer": headers.get("Referer") or headers.get("referer") or f"{BASE_URL}/",
-                        "Origin": headers.get("Origin") or headers.get("origin") or BASE_URL,
-                        "User-Agent": headers.get("User-Agent") or headers.get("user-agent") or USER_AGENT,
-                    },
+                    "quality": direct_quality,
+                    "headers": normalized_headers,
                     "server": f"CineJoy · {provider}",
                     "captions": captions,
                 })
+                if self._kind(direct, stream.get("type")) == "hls" and not re.search(r"1080", str(direct_quality), re.I):
+                    for height, variant_url in self._hls_variants(direct, normalized_headers, (1080,)):
+                        playable.append({
+                            "url": variant_url,
+                            "type": "hls",
+                            "quality": f"{height}p",
+                            "headers": normalized_headers,
+                            "server": f"CineJoy · {provider}",
+                            "captions": captions,
+                        })
             qualities = stream.get("qualities")
             if isinstance(qualities, dict):
                 for quality, item in qualities.items():

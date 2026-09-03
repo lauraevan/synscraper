@@ -9,6 +9,7 @@ algorithm used by the public player.
 
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import argparse
 import base64
 import json
@@ -19,7 +20,7 @@ import urllib.parse
 import urllib.request
 from typing import Any
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"
 
 BASE_URL = "https://www.vidy.st"
 DB_BASE = "https://db.wecollege.net/3"
@@ -323,11 +324,12 @@ class VidyResolver:
         provider: str,
         media_id: int,
         params: dict[str, Any],
+        seed: str | None = None,
     ) -> dict[str, Any]:
         query = dict(params)
         query["title"] = urllib.parse.quote(str(query.get("title") or ""), safe="")
 
-        seed = self._seed(media_id)
+        seed = str(seed or self._seed(media_id))
         query.update({"enc": "2", "seed": seed})
         response = self._request(f"{API_BASE}/{provider}/sources", params=query)
         encrypted = self._encrypted_payload(response)
@@ -452,20 +454,36 @@ class VidyResolver:
             playable: list[dict[str, Any]] = []
             subtitles: list[dict[str, Any]] = []
             errors: dict[str, str] = {}
+            shared_seed = self._seed(numeric_id)
 
-            for name in providers:
+            def load_provider(name: str):
+                decoded = self._provider(name, numeric_id, params, seed=shared_seed)
+                return name, decoded, self._playables(decoded, name, page_url)
+
+            results = []
+            if len(providers) == 1:
                 try:
-                    decoded = self._provider(name, numeric_id, params)
-                    current = self._playables(decoded, name, page_url)
-                    if current:
-                        playable.extend(current)
-                        if isinstance(decoded.get("subtitles"), list):
-                            subtitles.extend(x for x in decoded["subtitles"] if isinstance(x, dict))
-                        if provider != "all":
-                            break
+                    results.append(load_provider(providers[0]))
                 except Exception as exc:
-                    errors[name] = str(exc)
-                    self.log(f"{name}: {exc}")
+                    errors[providers[0]] = str(exc)
+            else:
+                with ThreadPoolExecutor(max_workers=min(5, len(providers))) as pool:
+                    futures = {pool.submit(load_provider, name): name for name in providers}
+                    for future in as_completed(futures):
+                        name = futures[future]
+                        try:
+                            results.append(future.result())
+                        except Exception as exc:
+                            errors[name] = str(exc)
+                            self.log(f"{name}: {exc}")
+
+            order = {name: idx for idx, name in enumerate(providers)}
+            results.sort(key=lambda item: order.get(item[0], 999))
+            for name, decoded, current in results:
+                if current:
+                    playable.extend(current)
+                    if isinstance(decoded.get("subtitles"), list):
+                        subtitles.extend(x for x in decoded["subtitles"] if isinstance(x, dict))
 
             unique: list[dict[str, Any]] = []
             seen: set[str] = set()
@@ -479,6 +497,12 @@ class VidyResolver:
                     except Exception:
                         continue
                 unique.append(source)
+
+            def quality_rank(source: dict[str, Any]) -> int:
+                match = re.search(r"(2160|1440|1080|720|480|360)", str(source.get("quality") or ""), re.I)
+                return int(match.group(1)) if match else 0
+
+            unique.sort(key=lambda source: (-quality_rank(source), str(source.get("server") or "")))
 
             if not unique:
                 message = "No playable Vidy sources were returned by the current providers."

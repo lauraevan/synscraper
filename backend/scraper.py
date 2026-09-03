@@ -177,14 +177,19 @@ async def scrape_streams(media_type: str, tmdb_id, season=None, episode=None) ->
         name, pid, streams = res
         for idx, s in enumerate(streams):
             subserver = str(s.get("subserver") or "").strip()
-            if pid == "vidzee" and subserver:
-                pretty = {
-                    "dcloud": "DCloud",
-                    "tik": "Tik",
-                    "ipcloud": "IPCloud",
-                    "v6:hindi": "V6 Hindi",
-                }.get(subserver.lower(), subserver)
-                display_name = f"{name} · {pretty}"
+            if subserver:
+                if pid == "vidzee":
+                    pretty = {
+                        "dcloud": "DCloud",
+                        "tik": "Tik",
+                        "ipcloud": "IPCloud",
+                        "v6:hindi": "V6 Hindi",
+                    }.get(subserver.lower(), subserver)
+                    display_name = f"{name} · {pretty}"
+                elif subserver.lower().startswith(name.lower()):
+                    display_name = subserver
+                else:
+                    display_name = f"{name} · {subserver}"
             else:
                 display_name = name if idx == 0 else f"{name} {idx + 1}"
             servers.append({
