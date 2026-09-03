@@ -221,10 +221,10 @@ const parseWebVtt = (value) => {
 };
 
 const CaptionSlider = ({ label, value, min, max, step = 1, suffix = "", onChange }) => (
-    <label className="block px-3 py-2.5">
+    <label className="block py-2.5">
         <div className="mb-2 flex items-center justify-between gap-4 text-xs">
-            <span className="text-white/70">{label}</span>
-            <span className="tabular-nums text-white/45">{Number(value).toFixed(step < 1 ? 2 : 0)}{suffix}</span>
+            <span className="font-medium text-white/72">{label}</span>
+            <span className="rounded-md bg-white/[0.055] px-1.5 py-0.5 tabular-nums text-white/48">{Number(value).toFixed(step < 1 ? 2 : 0)}{suffix}</span>
         </div>
         <input
             type="range"
@@ -233,14 +233,14 @@ const CaptionSlider = ({ label, value, min, max, step = 1, suffix = "", onChange
             step={step}
             value={value}
             onChange={(e) => onChange(Number(e.target.value))}
-            className="h-1.5 w-full cursor-pointer accent-white"
+            className="h-1.5 w-full cursor-pointer accent-[#eadb8a]"
         />
     </label>
 );
 
 const Popover = ({ open, children, wide = false }) =>
     open ? (
-        <div className={`absolute bottom-14 right-0 overflow-y-auto scrollbar-none rounded-2xl bg-black/88 backdrop-blur-2xl border border-white/15 p-2 shadow-2xl z-30 ${wide ? "w-[370px] max-w-[calc(100vw-2rem)] max-h-[min(72vh,590px)]" : "min-w-[220px] max-h-80"}`}>
+        <div className={`absolute bottom-14 right-0 z-30 overflow-y-auto rounded-[14px] border border-white/[0.09] bg-[#0d0c0a]/[0.97] p-1.5 shadow-[0_18px_55px_rgba(0,0,0,0.58)] backdrop-blur-xl scrollbar-none ${wide ? "w-[330px] max-w-[calc(100vw-2rem)] max-h-[min(70vh,540px)]" : "min-w-[205px] max-h-80"}`}>
             {children}
         </div>
     ) : null;
@@ -251,7 +251,7 @@ const MenuItem = ({ active, onClick, children, testId, disabled = false }) => (
         onClick={onClick}
         disabled={disabled}
         className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors flex items-center justify-between ${
-            disabled ? "cursor-not-allowed text-white/20" : active ? "bg-white text-black" : "hover:bg-white/10 text-zinc-200"
+            disabled ? "cursor-not-allowed text-white/20" : active ? "bg-[#eadb8a] text-[#17140c]" : "text-white/72 hover:bg-white/[0.055] hover:text-white"
         }`}
     >
         {children}
@@ -1274,7 +1274,7 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
             onMouseMove={wake}
             onTouchStart={wake}
             onClick={() => menu && setMenu(null)}
-            className="relative w-full aspect-video bg-black rounded-[20px] overflow-hidden border border-white/[0.08] select-none text-white shadow-[0_20px_65px_rgba(0,0,0,0.38)]"
+            className="relative w-full aspect-video overflow-hidden rounded-[14px] border border-white/[0.06] bg-black text-white shadow-[0_16px_48px_rgba(0,0,0,0.34)] select-none"
         >
             <video
                 ref={videoRef}
@@ -1390,7 +1390,7 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
                                     e.stopPropagation();
                                     setMenu(menu === "sources" ? null : "sources");
                                 }}
-                                className={`grid h-11 w-11 place-items-center transition-all duration-200 active:scale-95 md:h-12 md:w-12 ${menu === "sources" ? "scale-105 text-white" : "text-white/80 hover:scale-105 hover:text-white"}`}
+                                className={`grid h-11 w-11 place-items-center transition-all duration-200 active:scale-95 md:h-12 md:w-12 ${menu === "sources" ? "scale-105 text-[#eadb8a]" : "text-white/75 hover:scale-105 hover:text-white"}`}
                                 aria-label="Choose source"
                                 title="Servers"
                             >
@@ -1409,7 +1409,7 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
                         <div
                             data-testid="synapse-source-popout"
                             data-source-layout="player-modal"
-                            className="absolute inset-0 z-[95] flex items-center justify-center bg-black/55 px-4 py-6 backdrop-blur-[5px] pointer-events-auto"
+                            className="absolute inset-0 z-[95] flex items-center justify-center bg-black/68 px-4 py-6 backdrop-blur-[3px] pointer-events-auto"
                             onClick={(e) => {
                                 e.stopPropagation();
                                 setMenu(null);
@@ -1417,21 +1417,21 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
                         >
                             <div
                                 onClick={(e) => e.stopPropagation()}
-                                className="w-[min(92vw,600px)] max-h-[min(82vh,680px)] overflow-hidden rounded-[24px] border border-white/[0.10] bg-[#242424] shadow-[0_28px_95px_rgba(0,0,0,0.72)]"
+                                className="w-[min(90vw,480px)] max-h-[min(72vh,580px)] overflow-hidden rounded-[18px] border border-white/[0.08] bg-[#10100f] shadow-[0_24px_80px_rgba(0,0,0,0.74)]"
                             >
-                                <div className="flex h-[74px] items-center border-b border-white/[0.15] px-6 md:px-7">
-                                    <h3 className="flex-1 text-[20px] font-medium tracking-[-0.02em] text-white/95 md:text-[22px]">Servers</h3>
+                                <div className="flex h-[58px] items-center border-b border-white/[0.08] px-4.5 md:px-5">
+                                    <h3 className="flex-1 text-[15px] font-semibold tracking-[-0.02em] text-white/92 md:text-[16px]">Servers</h3>
                                     <button
                                         type="button"
                                         onClick={() => setMenu(null)}
-                                        className="grid h-11 w-11 place-items-center rounded-full text-white/72 transition hover:bg-white/[0.06] hover:text-white"
+                                        className="grid h-8 w-8 place-items-center rounded-full text-white/48 transition hover:bg-white/[0.05] hover:text-white"
                                         aria-label="Close servers"
                                     >
-                                        <X className="h-8 w-8" strokeWidth={1.55} />
+                                        <X className="h-5 w-5" strokeWidth={1.7} />
                                     </button>
                                 </div>
 
-                                <div className="max-h-[min(67vh,570px)] overflow-y-auto px-3 py-2 scrollbar-none md:px-4 md:py-3">
+                                <div className="max-h-[min(59vh,490px)] overflow-y-auto px-2.5 py-2 scrollbar-none md:px-3">
                                     {sourceSlots.map((s) => {
                                         const selected = sourcePreferenceKey(activeServer) === sourcePreferenceKey(s);
                                         const favorite = preferredSourceKey === sourcePreferenceKey(s);
@@ -1450,7 +1450,7 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
                                             <div
                                                 key={s.id}
                                                 data-source-favorite={favorite ? "true" : "false"}
-                                                className={`group flex min-h-[76px] items-center rounded-[16px] px-2 transition ${s.available ? "hover:bg-white/[0.045]" : "opacity-40"}`}
+                                                className={`group flex min-h-[60px] items-center rounded-[12px] px-1 transition ${s.available ? "hover:bg-white/[0.045]" : "opacity-35"}`}
                                             >
                                                 <button
                                                     type="button"
@@ -1460,31 +1460,31 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
                                                         selectServer(s);
                                                         setMenu(null);
                                                     }}
-                                                    className={`flex min-w-0 flex-1 items-center gap-4 px-2 py-3 text-left ${s.available ? "cursor-pointer" : "cursor-not-allowed"}`}
+                                                    className={`flex min-w-0 flex-1 items-center gap-3 px-2 py-2 text-left ${s.available ? "cursor-pointer" : "cursor-not-allowed"}`}
                                                 >
-                                                    <div className="flex h-9 w-10 shrink-0 items-center justify-center">
+                                                    <div className="flex h-7 w-8 shrink-0 items-center justify-center">
                                                         {show4K ? (
                                                             <img
                                                                 src={SOURCE_4K_BADGE}
                                                                 alt="4K"
                                                                 title="4K source"
-                                                                className="h-8 w-10 object-contain"
+                                                                className="h-6 w-8 object-contain"
                                                             />
                                                         ) : (
                                                             <img
                                                                 src={hindi ? SOURCE_INDIA_FLAG : sourceFlag(s)}
                                                                 alt={hindi ? "India" : "US"}
                                                                 title={hindi ? "Hindi v6 source" : "Original audio source"}
-                                                                className="h-6 w-8 rounded-[2px] object-cover"
+                                                                className="h-5 w-7 rounded-[2px] object-cover"
                                                                 loading="lazy"
                                                             />
                                                         )}
                                                     </div>
                                                     <div className="min-w-0 flex-1">
-                                                        <p className={`truncate text-[17px] font-medium tracking-[-0.015em] md:text-[19px] ${selected ? "text-[#ecd36d]" : "text-white/95"}`}>
+                                                        <p className={`truncate text-[14px] font-semibold tracking-[-0.015em] md:text-[15px] ${selected ? "text-[#eadb8a]" : "text-white/88"}`}>
                                                             {s.displayName || s.name}
                                                         </p>
-                                                        <p className="mt-0.5 truncate text-[12px] text-white/38 md:text-[13px]">{subtitle}</p>
+                                                        <p className="mt-0.5 truncate text-[10px] text-white/34 md:text-[11px]">{subtitle}</p>
                                                     </div>
                                                 </button>
 
@@ -1495,16 +1495,16 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
                                                         e.stopPropagation();
                                                         toggleFavoriteSource(s);
                                                     }}
-                                                    className={`grid h-11 w-11 shrink-0 place-items-center rounded-full transition ${favorite ? "text-[#efd268]" : "text-[#e2c45f] hover:bg-white/[0.05] hover:text-[#ffe28a]"}`}
+                                                    className={`grid h-8 w-8 shrink-0 place-items-center rounded-full transition ${favorite ? "text-[#eadb8a]" : "text-white/24 hover:bg-white/[0.05] hover:text-[#eadb8a]"}`}
                                                     aria-label={favorite ? `Remove ${s.displayName || s.name} as default source` : `Make ${s.displayName || s.name} the default source`}
                                                     title={favorite ? "Default source" : "Make default source"}
                                                 >
-                                                    <Star className={`h-7 w-7 ${favorite ? "fill-current" : ""}`} strokeWidth={1.65} />
+                                                    <Star className={`h-[18px] w-[18px] ${favorite ? "fill-current" : ""}`} strokeWidth={1.7} />
                                                 </button>
 
                                                 {selected && (
-                                                    <div className="mr-1 grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#0b6f62] text-white shadow-[0_4px_18px_rgba(0,0,0,0.24)]" title="Currently playing">
-                                                        <Play className="ml-0.5 h-4 w-4 fill-current" strokeWidth={1.4} />
+                                                    <div className="mr-1 grid h-7 w-7 shrink-0 place-items-center rounded-full bg-[#332e18] text-[#eadb8a]" title="Currently playing">
+                                                        <Play className="ml-0.5 h-3.5 w-3.5 fill-current" strokeWidth={1.5} />
                                                     </div>
                                                 )}
                                             </div>
@@ -1552,7 +1552,7 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
                         <div className="group/seek relative mb-5 md:mb-6 h-4 flex items-center">
                             <div className="absolute left-0 right-0 h-[4px] rounded-full bg-white/20 overflow-hidden">
                                 <div className="absolute inset-y-0 left-0 bg-white/22" style={{ width: `${bufPct}%` }} />
-                                <div className="absolute inset-y-0 left-0 bg-white" style={{ width: `${seekPct}%` }} />
+                                <div className="absolute inset-y-0 left-0 bg-[#eadb8a]" style={{ width: `${seekPct}%` }} />
                             </div>
                             <input
                                 data-testid="synapse-seek-bar"
@@ -1570,7 +1570,7 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
                                     {fmtTime((seekPct / 100) * duration)}
                                 </div>
                             )}
-                            <div className="absolute w-3.5 h-3.5 rounded-full bg-white -translate-x-1/2 pointer-events-none shadow-[0_1px_6px_rgba(0,0,0,0.35)]" style={{ left: `${seekPct}%` }} />
+                            <div className="absolute h-3.5 w-3.5 -translate-x-1/2 rounded-full bg-[#eadb8a] shadow-[0_1px_6px_rgba(0,0,0,0.35)] pointer-events-none" style={{ left: `${seekPct}%` }} />
                         </div>
 
                         <div className="flex items-center gap-3 md:gap-4">
@@ -1581,8 +1581,12 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
                             <span data-testid="synapse-time" className="text-sm md:text-lg font-medium tabular-nums text-white/95 whitespace-nowrap">
                                 {fmtTime(current)} <span className="text-white/65 px-1">/</span> {fmtTime(duration)}
                             </span>
-                            <span className="hidden sm:inline text-[11px] md:text-[13px] font-semibold tracking-[0.04em] text-white/38 whitespace-nowrap" data-testid="synplayer-label">
-                                <span className="mr-2 text-white/18">·</span>SynPlayer
+                            <span
+                                className="hidden whitespace-nowrap text-[15px] font-bold tracking-[-0.04em] sm:inline-flex md:text-[18px]"
+                                data-testid="synplayer-label"
+                                style={{ fontFamily: "'Avenir Next', 'SF Pro Display', Inter, ui-sans-serif, system-ui, sans-serif" }}
+                            >
+                                <span className="text-white/95">Syn</span><span className="text-[#eadb8a]">Player</span>
                             </span>
 
                             <div className="ml-auto flex items-center gap-1 md:gap-1.5">
@@ -1596,47 +1600,52 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
                                     <button
                                         data-testid="synapse-subtitles-menu"
                                         onClick={() => setMenu(menu === "subs" ? null : "subs")}
-                                        className={`grid h-10 w-10 md:h-11 md:w-11 place-items-center transition active:scale-95 hover:scale-105 ${sub >= 0 || externalCaptionId ? "text-white" : "text-white/85 hover:text-white"}`}
+                                        className={`grid h-10 w-10 md:h-11 md:w-11 place-items-center transition active:scale-95 hover:scale-105 ${sub >= 0 || externalCaptionId ? "text-[#eadb8a]" : "text-white/82 hover:text-white"}`}
                                         title="Captions (C)"
                                         aria-label="Captions"
                                     >
                                         <Subtitles className="h-[25px] w-[25px] stroke-[1.8]" />
                                     </button>
                                     <Popover open={menu === "subs"} wide>
-                                        <div className="px-4 pb-3 pt-2">
-                                            <p className="text-sm font-semibold text-white">Captions</p>
-                                            <p className="mt-1 text-[11px] text-white/40">The cleanest complete track is picked automatically for each language.</p>
+                                        <div className="px-3 pb-2 pt-2.5">
+                                            <div className="flex items-center justify-between gap-3">
+                                                <div>
+                                                    <p className="text-[14px] font-semibold tracking-[-0.02em] text-white/95">Subtitles</p>
+                                                    <p className="mt-0.5 text-[10px] text-white/34">Pick a language and SynPlayer handles the source.</p>
+                                                </div>
+                                                <span className={`rounded-full px-2 py-1 text-[9px] font-semibold ${captionsEnabled ? "bg-[#eadb8a]/[0.12] text-[#eadb8a]" : "bg-white/[0.05] text-white/35"}`}>
+                                                    {captionsEnabled ? "ON" : "OFF"}
+                                                </span>
+                                            </div>
                                         </div>
-                                        <div className="max-h-56 overflow-y-auto border-y border-white/10 py-1 scrollbar-none">
-                                            <MenuItem active={!captionsEnabled} onClick={turnOffCaptions} testId="sub-off">
-                                                <span>Off</span><span className="text-[10px] opacity-40">No captions</span>
-                                            </MenuItem>
+                                        <button
+                                            type="button"
+                                            onClick={toggleCaptionsPreference}
+                                            className="mx-1.5 mb-1 flex w-[calc(100%-0.75rem)] items-center gap-3 rounded-xl px-3 py-2.5 text-left text-[12px] text-white/74 transition hover:bg-white/[0.045]"
+                                        >
+                                            <Subtitles className="h-4 w-4 text-white/50" />
+                                            <span className="flex-1 font-medium">Enable subtitles</span>
+                                            <span className={`relative h-5 w-9 rounded-full transition ${captionsEnabled ? "bg-[#eadb8a]" : "bg-white/[0.12]"}`}>
+                                                <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${captionsEnabled ? "translate-x-[18px]" : "translate-x-0.5"}`} />
+                                            </span>
+                                        </button>
+                                        <div className="max-h-52 overflow-y-auto border-y border-white/[0.07] py-1 scrollbar-none">
                                             {captionLanguageOptions.map((option) => (
                                                 <MenuItem key={`caption-language-${option.code}`} active={captionsEnabled && preferredCaptionLang === option.code} onClick={() => selectCaptionLanguage(option.code)}>
                                                     <span className="min-w-0 truncate">{option.name}</span>
-                                                    <span className="ml-3 text-[10px] uppercase opacity-40">{option.best ? `Best · ${option.best.serverName}` : option.pending ? "Checking…" : "HLS"}</span>
+                                                    <span className="ml-3 text-[9px] font-medium opacity-45">{option.pending ? "Checking" : "Ready"}</span>
                                                 </MenuItem>
                                             ))}
-                                            {!captionLanguageOptions.length && <p className="px-3 py-4 text-xs text-white/40">No healthy caption tracks are available yet.</p>}
+                                            {!captionLanguageOptions.length && <p className="px-3 py-4 text-[11px] text-white/35">No subtitle languages are ready yet.</p>}
                                         </div>
-                                        {(externalCaptionLoading || sourcesLoading || captionLanguageOptions.some((option) => option.pending)) && <p className="px-3 py-2 text-[11px] text-white/35">Checking caption sources for the most complete track…</p>}
-                                        {externalCaptionError && <p className="px-3 py-2 text-[11px] text-red-300/75">{externalCaptionError}</p>}
-                                        <div className="flex items-center justify-between px-3 pb-1 pt-3">
-                                            <p className="text-[10px] uppercase tracking-[0.16em] text-white/40">Appearance</p>
-                                            <button onClick={resetCaptionStyle} className="text-[11px] text-white/45 hover:text-white">Reset</button>
-                                        </div>
-                                        <div className="grid grid-cols-3 gap-1 px-3 py-2">
-                                            {[80, 100, 125].map((size) => (
-                                                <button key={size} onClick={() => updateCaptionStyle("size", size)} className={`rounded-lg px-2 py-2 text-xs ${captionStyle.size === size ? "bg-white text-black" : "bg-white/[0.05] text-white/60 hover:text-white"}`}>{size === 80 ? "Small" : size === 100 ? "Medium" : "Large"}</button>
-                                            ))}
-                                        </div>
-                                        <CaptionSlider label="Background" value={captionStyle.background} min={0} max={80} step={10} suffix="%" onChange={(v) => updateCaptionStyle("background", v)} />
-                                        <CaptionSlider label="Sync" value={captionStyle.delay} min={-3} max={3} step={0.1} suffix="s" onChange={(v) => updateCaptionStyle("delay", v)} />
-                                        <div className="flex items-center gap-2 px-3 pb-2 pt-1">
-                                            {["#ffffff", "#ffe66d", "#77e0ff", "#9cff8f"].map((color) => (
-                                                <button key={color} onClick={() => updateCaptionStyle("color", color)} className={`h-7 w-7 rounded-full border-2 ${captionStyle.color.toLowerCase() === color ? "border-white" : "border-white/15"}`} style={{ backgroundColor: color }} aria-label={`Caption color ${color}`} />
-                                            ))}
-                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => { setSettingsPage("subtitles"); setMenu("settings"); }}
+                                            className="mt-1 flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-[12px] font-medium text-white/58 transition hover:bg-white/[0.045] hover:text-white"
+                                        >
+                                            <span className="flex-1">Subtitle settings</span>
+                                            <ChevronRight className="h-4 w-4 text-white/30" />
+                                        </button>
                                     </Popover>
                                 </div>
 
@@ -1644,7 +1653,7 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
                                     <button
                                         data-testid="synapse-quality-menu"
                                         onClick={() => setMenu(menu === "quality" ? null : "quality")}
-                                        className={`h-10 min-w-[52px] px-1 text-xs font-semibold tracking-[-0.02em] transition hover:scale-105 active:scale-95 ${menu === "quality" ? "text-white" : "text-white/85 hover:text-white"}`}
+                                        className={`h-10 min-w-[52px] px-1 text-xs font-semibold tracking-[-0.02em] transition hover:scale-105 active:scale-95 ${menu === "quality" ? "text-[#eadb8a]" : "text-white/82 hover:text-white"}`}
                                         title="Quality"
                                         aria-label="Quality"
                                     >
@@ -1666,7 +1675,7 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
                                 <div className="relative">
                                     <button
                                         onClick={() => { setSettingsPage("root"); setMenu(menu === "settings" ? null : "settings"); }}
-                                        className={`grid h-10 w-10 md:h-11 md:w-11 place-items-center transition active:scale-95 hover:scale-105 ${menu === "settings" ? "text-white" : "text-white/85 hover:text-white"}`}
+                                        className={`grid h-10 w-10 md:h-11 md:w-11 place-items-center transition active:scale-95 hover:scale-105 ${menu === "settings" ? "text-[#eadb8a]" : "text-white/82 hover:text-white"}`}
                                         title="Settings"
                                         aria-label="Settings"
                                     >
@@ -1696,10 +1705,10 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
                 >
                     <div
                         data-testid="synapse-settings-panel"
-                        className="absolute bottom-[76px] right-3 flex max-h-[72%] w-[430px] max-w-[calc(100vw-1.5rem)] flex-col overflow-hidden rounded-[18px] border border-white/[0.10] bg-[#090909]/[0.98] shadow-[0_24px_70px_rgba(0,0,0,0.62)] backdrop-blur-xl md:bottom-[92px] md:right-7"
+                        className="absolute bottom-[70px] right-3 flex max-h-[78%] w-[372px] max-w-[calc(100vw-1.25rem)] flex-col overflow-hidden rounded-[16px] border border-white/[0.085] bg-[#0d0c0a]/[0.985] shadow-[0_22px_68px_rgba(0,0,0,0.68)] backdrop-blur-xl md:bottom-[84px] md:right-6"
                         onClick={(e) => e.stopPropagation()}
                     >
-                        <div className="flex h-[58px] shrink-0 items-center border-b border-white/[0.08] px-3.5">
+                        <div className="flex h-[50px] shrink-0 items-center border-b border-white/[0.07] px-3">
                             {settingsPage !== "root" ? (
                                 <button
                                     type="button"
@@ -1709,16 +1718,16 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
                                 >
                                     <ArrowLeft className="h-[19px] w-[19px]" strokeWidth={1.8} />
                                 </button>
-                            ) : <div className="w-9" />}
+                            ) : <div className="w-1" />}
                             <div className="min-w-0 flex-1 px-1.5">
-                                <h2 className="truncate text-[15px] font-semibold tracking-[-0.015em] text-white">
+                                <h2 className="truncate text-[14px] font-semibold tracking-[-0.02em] text-white/94">
                                     {({
                                         root: "Settings",
-                                        server: "Source",
+                                        server: "Server",
                                         quality: "Quality",
                                         download: "Download",
                                         speed: "Playback speed",
-                                        subtitles: "Captions",
+                                        subtitles: "Subtitle settings",
                                         auto: "Autoplay",
                                         volume: "Volume",
                                         boost: "Volume boost",
@@ -1727,7 +1736,7 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
                                         upscaler: "Upscaler",
                                     }[settingsPage] || "Settings")}
                                 </h2>
-                                {settingsPage === "root" && <p className="mt-0.5 text-[10px] text-white/32">Playback preferences</p>}
+                                {settingsPage === "root" && <p className="mt-0.5 text-[9px] font-medium text-[#eadb8a]/60">SynPlayer</p>}
                             </div>
                             <button
                                 type="button"
@@ -1741,80 +1750,80 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
 
                         <div className="overflow-y-auto scrollbar-none">
                             {settingsPage === "root" && (
-                                <div className="py-1.5">
-                                    <div className="px-4 pb-1.5 pt-2 text-[9px] font-semibold uppercase tracking-[0.18em] text-white/28">Playback</div>
-                                    <button onClick={() => setSettingsPage("server")} className="group flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-white/[0.045]">
-                                        <Cloud className="h-[19px] w-[19px] shrink-0 text-white/55" strokeWidth={1.7} />
-                                        <span className="flex-1 text-[14px] font-medium text-white/86">Source</span>
-                                        <span className="max-w-[42%] truncate text-[12px] text-white/40">{activeServer?.name || "Auto"}</span>
-                                        <ChevronRight className="h-4 w-4 text-white/25 transition group-hover:text-white/50" />
-                                    </button>
-                                    <button onClick={() => setSettingsPage("quality")} className="group flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-white/[0.045]">
-                                        <Gauge className="h-[19px] w-[19px] shrink-0 text-white/55" strokeWidth={1.7} />
-                                        <span className="flex-1 text-[14px] font-medium text-white/86">Quality</span>
-                                        <span className="text-[12px] text-white/40">{settingsQualityLabel}</span>
-                                        <ChevronRight className="h-4 w-4 text-white/25 transition group-hover:text-white/50" />
-                                    </button>
-                                    <button onClick={() => setSettingsPage("download")} className="group flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-white/[0.045]" data-testid="synapse-download-settings-row">
-                                        <Download className="h-[19px] w-[19px] shrink-0 text-white/55" strokeWidth={1.7} />
-                                        <span className="flex-1 text-[14px] font-medium text-white/86">Download</span>
-                                        <span className="text-[12px] text-white/40">MP4 · 1080p max</span>
-                                        <ChevronRight className="h-4 w-4 text-white/25 transition group-hover:text-white/50" />
-                                    </button>
-                                    <button onClick={() => setSettingsPage("speed")} className="group flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-white/[0.045]">
-                                        <RefreshCw className="h-[19px] w-[19px] shrink-0 text-white/55" strokeWidth={1.7} />
-                                        <span className="flex-1 text-[14px] font-medium text-white/86">Playback speed</span>
-                                        <span className="text-[12px] text-white/40">{rate}x</span>
-                                        <ChevronRight className="h-4 w-4 text-white/25 transition group-hover:text-white/50" />
-                                    </button>
-                                    <button onClick={() => setSettingsPage("auto")} className="group flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-white/[0.045]">
-                                        <Play className="h-[19px] w-[19px] shrink-0 text-white/55" strokeWidth={1.7} />
-                                        <span className="flex-1 text-[14px] font-medium text-white/86">Autoplay</span>
-                                        <span className="text-[12px] text-white/40">{autoPlay ? "On" : "Off"}</span>
-                                        <ChevronRight className="h-4 w-4 text-white/25 transition group-hover:text-white/50" />
-                                    </button>
+                                <div className="p-3">
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <button onClick={() => setSettingsPage("quality")} className="rounded-[12px] border border-white/[0.065] bg-white/[0.035] p-3 text-left transition hover:bg-white/[0.055]">
+                                            <div className="flex items-center gap-1.5 text-[9px] font-semibold uppercase tracking-[0.08em] text-white/35"><Gauge className="h-3.5 w-3.5" />Quality</div>
+                                            <p className="mt-1.5 truncate text-[14px] font-semibold text-white/90">{settingsQualityLabel}</p>
+                                        </button>
+                                        <button onClick={() => setSettingsPage("server")} className="rounded-[12px] border border-white/[0.065] bg-white/[0.035] p-3 text-left transition hover:bg-white/[0.055]">
+                                            <div className="flex items-center gap-1.5 text-[9px] font-semibold uppercase tracking-[0.08em] text-white/35"><Cloud className="h-3.5 w-3.5" />Server</div>
+                                            <p className="mt-1.5 truncate text-[14px] font-semibold text-white/90">{activeServer?.name || "Auto"}</p>
+                                        </button>
+                                        <button onClick={() => setSettingsPage("subtitles")} className="rounded-[12px] border border-white/[0.065] bg-white/[0.035] p-3 text-left transition hover:bg-white/[0.055]">
+                                            <div className="flex items-center gap-1.5 text-[9px] font-semibold uppercase tracking-[0.08em] text-white/35"><Subtitles className="h-3.5 w-3.5" />Subtitles</div>
+                                            <p className="mt-1.5 truncate text-[14px] font-semibold text-white/90">{captionsEnabled ? captionLanguageName(preferredCaptionLang) : "Off"}</p>
+                                        </button>
+                                        <button onClick={() => setSettingsPage("volume")} className="rounded-[12px] border border-white/[0.065] bg-white/[0.035] p-3 text-left transition hover:bg-white/[0.055]" data-testid="synapse-volume-settings-row">
+                                            <div className="flex items-center gap-1.5 text-[9px] font-semibold uppercase tracking-[0.08em] text-white/35"><Volume2 className="h-3.5 w-3.5" />Audio</div>
+                                            <p className="mt-1.5 truncate text-[14px] font-semibold text-white/90">{Math.round((muted ? 0 : volume) * 100)}%</p>
+                                        </button>
+                                    </div>
 
-                                    <div className="mx-4 my-1 h-px bg-white/[0.07]" />
-                                    <div className="px-4 pb-1.5 pt-2 text-[9px] font-semibold uppercase tracking-[0.18em] text-white/28">Audio & captions</div>
-                                    <button onClick={() => setSettingsPage("volume")} className="group flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-white/[0.045]" data-testid="synapse-volume-settings-row">
-                                        <Volume2 className="h-[19px] w-[19px] shrink-0 text-white/55" strokeWidth={1.7} />
-                                        <span className="flex-1 text-[14px] font-medium text-white/86">Volume</span>
-                                        <span className="text-[12px] text-white/40">{Math.round((muted ? 0 : volume) * 100)}%</span>
-                                        <ChevronRight className="h-4 w-4 text-white/25 transition group-hover:text-white/50" />
-                                    </button>
-                                    <button onClick={() => setSettingsPage("subtitles")} className="group flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-white/[0.045]">
-                                        <Subtitles className="h-[19px] w-[19px] shrink-0 text-white/55" strokeWidth={1.7} />
-                                        <span className="flex-1 text-[14px] font-medium text-white/86">Captions</span>
-                                        <span className="max-w-[42%] truncate text-[12px] text-white/40">{subtitleSettingsLabel}</span>
-                                        <ChevronRight className="h-4 w-4 text-white/25 transition group-hover:text-white/50" />
-                                    </button>
-                                    <button onClick={() => setSettingsPage("boost")} className="group flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-white/[0.045]">
-                                        <Volume2 className="h-[19px] w-[19px] shrink-0 text-white/55" strokeWidth={1.7} />
-                                        <span className="flex-1 text-[14px] font-medium text-white/86">Volume boost</span>
-                                        <span className="text-[12px] text-white/40">{volumeBoost}%</span>
-                                        <ChevronRight className="h-4 w-4 text-white/25 transition group-hover:text-white/50" />
-                                    </button>
-                                    <button onClick={() => setSettingsPage("spatial")} className="group flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-white/[0.045]">
-                                        <AudioWaveform className="h-[19px] w-[19px] shrink-0 text-white/55" strokeWidth={1.7} />
-                                        <span className="flex-1 text-[14px] font-medium text-white/86">Spatial audio</span>
-                                        <span className="text-[12px] text-white/40">{spatialAudio ? "On" : "Off"}</span>
-                                        <ChevronRight className="h-4 w-4 text-white/25 transition group-hover:text-white/50" />
-                                    </button>
-
-                                    <div className="mx-4 my-1 h-px bg-white/[0.07]" />
-                                    <div className="px-4 pb-1.5 pt-2 text-[9px] font-semibold uppercase tracking-[0.18em] text-white/28">Picture</div>
-                                    <button onClick={() => setSettingsPage("video")} className="group flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-white/[0.045]">
-                                        <CirclePlus className="h-[19px] w-[19px] shrink-0 text-white/55" strokeWidth={1.7} />
-                                        <span className="flex-1 text-[14px] font-medium text-white/86">Video size</span>
-                                        <span className="text-[12px] text-white/40">{videoScale}%</span>
-                                        <ChevronRight className="h-4 w-4 text-white/25 transition group-hover:text-white/50" />
-                                    </button>
-                                    <button onClick={() => setSettingsPage("upscaler")} className="group flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-white/[0.045]">
-                                        <WandSparkles className="h-[19px] w-[19px] shrink-0 text-white/55" strokeWidth={1.7} />
-                                        <span className="flex-1 text-[14px] font-medium text-white/86">Upscaler</span>
-                                        <span className="text-[12px] text-white/40">{upscaler ? "On" : "Off"}</span>
-                                        <ChevronRight className="h-4 w-4 text-white/25 transition group-hover:text-white/50" />
-                                    </button>
+                                    <div className="mt-2 overflow-hidden rounded-[12px] border border-white/[0.065] bg-black/20">
+                                        <button onClick={() => setSettingsPage("download")} className="group flex w-full items-center gap-3 px-3.5 py-3 text-left transition hover:bg-white/[0.04]" data-testid="synapse-download-settings-row">
+                                            <Download className="h-4 w-4 shrink-0 text-white/48" strokeWidth={1.7} />
+                                            <span className="flex-1 text-[12px] font-medium text-white/78">Download</span>
+                                            <ChevronRight className="h-3.5 w-3.5 text-white/24" />
+                                        </button>
+                                        <div className="mx-3.5 h-px bg-white/[0.055]" />
+                                        <button onClick={toggleCaptionsPreference} className="flex w-full items-center gap-3 px-3.5 py-3 text-left transition hover:bg-white/[0.04]">
+                                            <Subtitles className="h-4 w-4 shrink-0 text-white/48" strokeWidth={1.7} />
+                                            <span className="flex-1 text-[12px] font-medium text-white/78">Enable subtitles</span>
+                                            <span className={`relative h-5 w-9 rounded-full transition ${captionsEnabled ? "bg-[#eadb8a]" : "bg-white/[0.12]"}`}>
+                                                <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${captionsEnabled ? "translate-x-[18px]" : "translate-x-0.5"}`} />
+                                            </span>
+                                        </button>
+                                        <div className="mx-3.5 h-px bg-white/[0.055]" />
+                                        <button onClick={() => setSettingsPage("speed")} className="group flex w-full items-center gap-3 px-3.5 py-3 text-left transition hover:bg-white/[0.04]">
+                                            <RefreshCw className="h-4 w-4 shrink-0 text-white/48" strokeWidth={1.7} />
+                                            <span className="flex-1 text-[12px] font-medium text-white/78">Playback settings</span>
+                                            <span className="text-[10px] text-white/30">{rate}x</span>
+                                            <ChevronRight className="h-3.5 w-3.5 text-white/24" />
+                                        </button>
+                                        <div className="mx-3.5 h-px bg-white/[0.055]" />
+                                        <button onClick={() => setSettingsPage("subtitles")} className="group flex w-full items-center gap-3 px-3.5 py-3 text-left transition hover:bg-white/[0.04]">
+                                            <Subtitles className="h-4 w-4 shrink-0 text-white/48" strokeWidth={1.7} />
+                                            <span className="flex-1 text-[12px] font-medium text-white/78">Subtitle settings</span>
+                                            <ChevronRight className="h-3.5 w-3.5 text-white/24" />
+                                        </button>
+                                        <div className="mx-3.5 h-px bg-white/[0.055]" />
+                                        <button onClick={() => setSettingsPage("boost")} className="group flex w-full items-center gap-3 px-3.5 py-3 text-left transition hover:bg-white/[0.04]">
+                                            <Volume2 className="h-4 w-4 shrink-0 text-white/48" strokeWidth={1.7} />
+                                            <span className="flex-1 text-[12px] font-medium text-white/78">Volume boost</span>
+                                            <span className="text-[10px] text-white/30">{volumeBoost}%</span>
+                                            <ChevronRight className="h-3.5 w-3.5 text-white/24" />
+                                        </button>
+                                        <div className="mx-3.5 h-px bg-white/[0.055]" />
+                                        <button onClick={() => setSpatialAudio((value) => !value)} className="flex w-full items-center gap-3 px-3.5 py-3 text-left transition hover:bg-white/[0.04]">
+                                            <AudioWaveform className="h-4 w-4 shrink-0 text-white/48" strokeWidth={1.7} />
+                                            <span className="flex-1 text-[12px] font-medium text-white/78">Spatial audio</span>
+                                            <span className={`text-[10px] font-medium ${spatialAudio ? "text-[#eadb8a]" : "text-white/30"}`}>{spatialAudio ? "On" : "Off"}</span>
+                                        </button>
+                                        <div className="mx-3.5 h-px bg-white/[0.055]" />
+                                        <button onClick={() => setSettingsPage("video")} className="group flex w-full items-center gap-3 px-3.5 py-3 text-left transition hover:bg-white/[0.04]">
+                                            <CirclePlus className="h-4 w-4 shrink-0 text-white/48" strokeWidth={1.7} />
+                                            <span className="flex-1 text-[12px] font-medium text-white/78">Picture</span>
+                                            <ChevronRight className="h-3.5 w-3.5 text-white/24" />
+                                        </button>
+                                        <div className="mx-3.5 h-px bg-white/[0.055]" />
+                                        <button onClick={() => setSettingsPage("upscaler")} className="group flex w-full items-center gap-3 px-3.5 py-3 text-left transition hover:bg-white/[0.04]">
+                                            <WandSparkles className="h-4 w-4 shrink-0 text-white/48" strokeWidth={1.7} />
+                                            <span className="flex-1 text-[12px] font-medium text-white/78">Display enhancement</span>
+                                            <span className={`text-[10px] ${upscaler ? "text-[#eadb8a]" : "text-white/30"}`}>{upscaler ? "On" : "Off"}</span>
+                                            <ChevronRight className="h-3.5 w-3.5 text-white/24" />
+                                        </button>
+                                    </div>
                                 </div>
                             )}
 
@@ -1922,7 +1931,7 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
                                 <div className="p-3">
                                     <div className="grid grid-cols-3 overflow-hidden rounded-xl border border-white/[0.08]">
                                         {SPEEDS.map((r) => (
-                                            <button key={r} onClick={() => changeRateInSettings(r)} className={`border-b border-r border-white/[0.07] px-3 py-3.5 text-[13px] font-medium transition ${rate === r ? "bg-white text-black" : "bg-transparent text-white/64 hover:bg-white/[0.045] hover:text-white"}`}>{r}x</button>
+                                            <button key={r} onClick={() => changeRateInSettings(r)} className={`border-b border-r border-white/[0.07] px-3 py-3.5 text-[13px] font-medium transition ${rate === r ? "bg-[#eadb8a] text-[#17140c]" : "bg-transparent text-white/64 hover:bg-white/[0.045] hover:text-white"}`}>{r}x</button>
                                         ))}
                                     </div>
                                 </div>
@@ -1945,7 +1954,7 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
                                         step="1"
                                         value={muted ? 0 : Math.round(volume * 100)}
                                         onChange={(e) => setVol(Number(e.target.value) / 100)}
-                                        className="mt-6 w-full accent-white"
+                                        className="mt-6 w-full accent-[#eadb8a]"
                                         aria-label="Volume"
                                     />
                                     <div className="mt-2 flex justify-between text-[9px] tabular-nums text-white/25"><span>0%</span><span>50%</span><span>100%</span></div>
@@ -1961,37 +1970,93 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
                             )}
 
                             {settingsPage === "subtitles" && (
-                                <div className="py-1.5">
-                                    <div className="px-4 pb-1.5 pt-2 text-[9px] font-semibold uppercase tracking-[0.18em] text-white/28">Language</div>
-                                    <button onClick={turnOffCaptions} className={`flex w-full items-center gap-3 border-y border-white/[0.055] px-4 py-3 text-left transition ${!captionsEnabled ? "bg-white/[0.07] text-white" : "text-white/72 hover:bg-white/[0.045]"}`}>
-                                        <span className={`h-2 w-2 rounded-full ${!captionsEnabled ? "bg-white" : "bg-white/18"}`} />
-                                        <span className="flex-1 text-[14px] font-medium">Off</span>
+                                <div className="p-3" data-testid="synapse-friendly-subtitle-settings">
+                                    <button
+                                        type="button"
+                                        onClick={toggleCaptionsPreference}
+                                        className="flex w-full items-center gap-3 rounded-[13px] border border-white/[0.065] bg-white/[0.03] px-3.5 py-3 text-left transition hover:bg-white/[0.05]"
+                                    >
+                                        <div className="grid h-8 w-8 place-items-center rounded-[10px] bg-white/[0.045]"><Subtitles className="h-4 w-4 text-white/60" /></div>
+                                        <div className="min-w-0 flex-1">
+                                            <p className="text-[12px] font-semibold text-white/86">Subtitles</p>
+                                            <p className="mt-0.5 text-[9px] text-white/32">{captionsEnabled ? `${captionLanguageName(preferredCaptionLang)} is enabled` : "Currently turned off"}</p>
+                                        </div>
+                                        <span className={`relative h-5 w-9 rounded-full transition ${captionsEnabled ? "bg-[#eadb8a]" : "bg-white/[0.12]"}`}>
+                                            <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${captionsEnabled ? "translate-x-[18px]" : "translate-x-0.5"}`} />
+                                        </span>
                                     </button>
-                                    {captionLanguageOptions.map((option) => (
-                                        <button key={`settings-caption-${option.code}`} onClick={() => selectCaptionLanguage(option.code)} className={`flex w-full items-center gap-3 border-b border-white/[0.055] px-4 py-3 text-left transition ${captionsEnabled && preferredCaptionLang === option.code ? "bg-white/[0.07] text-white" : "text-white/72 hover:bg-white/[0.045]"}`}>
-                                            <span className={`h-2 w-2 rounded-full ${captionsEnabled && preferredCaptionLang === option.code ? "bg-white" : "bg-white/18"}`} />
-                                            <span className="min-w-0 flex-1 truncate text-[14px] font-medium">{option.name}</span>
-                                            <span className="max-w-[48%] truncate text-[9px] uppercase tracking-[0.08em] text-white/30">{option.best ? `Best · ${option.best.serverName}` : option.pending ? "Checking…" : "HLS"}</span>
-                                        </button>
-                                    ))}
-                                    {!captionLanguageOptions.length && <p className="px-4 py-4 text-[11px] text-white/32">No healthy caption track is available yet.</p>}
 
-                                    <div className="mx-4 my-2 h-px bg-white/[0.07]" />
-                                    <div className="flex items-center justify-between px-4 pb-1 pt-2">
-                                        <span className="text-[9px] font-semibold uppercase tracking-[0.18em] text-white/28">Appearance</span>
-                                        <button onClick={resetCaptionStyle} className="text-[10px] font-medium text-white/38 transition hover:text-white">Reset</button>
+                                    <div className="mt-3 text-[9px] font-semibold uppercase tracking-[0.14em] text-white/28">Language</div>
+                                    <div className="mt-1.5 overflow-hidden rounded-[12px] border border-white/[0.065] bg-black/20">
+                                        <button onClick={turnOffCaptions} className={`flex w-full items-center gap-3 px-3.5 py-2.5 text-left transition ${!captionsEnabled ? "bg-[#eadb8a]/[0.09]" : "hover:bg-white/[0.04]"}`}>
+                                            <span className={`h-2 w-2 rounded-full ${!captionsEnabled ? "bg-[#eadb8a]" : "bg-white/16"}`} />
+                                            <span className="flex-1 text-[12px] font-medium text-white/72">Off</span>
+                                        </button>
+                                        {captionLanguageOptions.map((option) => {
+                                            const selected = captionsEnabled && preferredCaptionLang === option.code;
+                                            return (
+                                                <button key={`settings-caption-${option.code}`} onClick={() => selectCaptionLanguage(option.code)} className={`flex w-full items-center gap-3 border-t border-white/[0.05] px-3.5 py-2.5 text-left transition ${selected ? "bg-[#eadb8a]/[0.09]" : "hover:bg-white/[0.04]"}`}>
+                                                    <span className={`h-2 w-2 rounded-full ${selected ? "bg-[#eadb8a]" : "bg-white/16"}`} />
+                                                    <span className="min-w-0 flex-1 truncate text-[12px] font-medium text-white/74">{option.name}</span>
+                                                    <span className="text-[9px] text-white/28">{option.pending ? "Checking" : "Ready"}</span>
+                                                </button>
+                                            );
+                                        })}
+                                        {!captionLanguageOptions.length && <p className="px-3.5 py-4 text-[10px] text-white/32">Subtitle languages are still loading.</p>}
                                     </div>
-                                    <CaptionSlider label="Size" value={captionStyle.size} min={60} max={180} suffix="%" onChange={(v) => updateCaptionStyle("size", v)} />
-                                    <CaptionSlider label="Background" value={captionStyle.background} min={0} max={90} suffix="%" onChange={(v) => updateCaptionStyle("background", v)} />
-                                    <CaptionSlider label="Position" value={captionStyle.position} min={60} max={92} suffix="%" onChange={(v) => updateCaptionStyle("position", v)} />
-                                    <CaptionSlider label="Sync" value={captionStyle.delay} min={-5} max={5} step={0.05} suffix="s" onChange={(v) => updateCaptionStyle("delay", v)} />
-                                    <div className="flex items-center gap-3 px-4 py-3">
-                                        <span className="flex-1 text-[13px] text-white/64">Text color</span>
-                                        {["#ffffff", "#ffe66d", "#77e0ff", "#9cff8f"].map((color) => (
-                                            <button key={color} onClick={() => updateCaptionStyle("color", color)} className={`h-6 w-6 rounded-full border ${captionStyle.color.toLowerCase() === color ? "border-white ring-1 ring-white/50" : "border-white/15"}`} style={{ backgroundColor: color }} aria-label={`Caption color ${color}`} />
-                                        ))}
+
+                                    <div className="mt-3 rounded-[13px] border border-white/[0.065] bg-white/[0.025] p-3">
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                <p className="text-[12px] font-semibold text-white/82">Appearance</p>
+                                                <p className="mt-0.5 text-[9px] text-white/30">Simple presets instead of tiny sliders.</p>
+                                            </div>
+                                            <button onClick={resetCaptionStyle} className="rounded-lg px-2 py-1.5 text-[9px] font-medium text-white/36 transition hover:bg-white/[0.05] hover:text-white">Reset</button>
+                                        </div>
+
+                                        <div className="mt-3">
+                                            <p className="mb-1.5 text-[10px] font-medium text-white/48">Text size</p>
+                                            <div className="grid grid-cols-3 gap-1.5">
+                                                {[["Small", 80], ["Medium", 100], ["Large", 125]].map(([label, value]) => {
+                                                    const active = label === "Small" ? captionStyle.size < 90 : label === "Medium" ? captionStyle.size >= 90 && captionStyle.size < 115 : captionStyle.size >= 115;
+                                                    return <button key={label} onClick={() => updateCaptionStyle("size", value)} className={`rounded-[9px] px-2 py-2 text-[10px] font-medium transition ${active ? "bg-[#eadb8a] text-[#17140c]" : "bg-white/[0.045] text-white/52 hover:bg-white/[0.07] hover:text-white"}`}>{label}</button>;
+                                                })}
+                                            </div>
+                                        </div>
+
+                                        <div className="mt-3">
+                                            <p className="mb-1.5 text-[10px] font-medium text-white/48">Background</p>
+                                            <div className="grid grid-cols-3 gap-1.5">
+                                                {[["None", 0], ["Soft", 45], ["Strong", 75]].map(([label, value]) => {
+                                                    const active = label === "None" ? captionStyle.background < 20 : label === "Soft" ? captionStyle.background >= 20 && captionStyle.background < 60 : captionStyle.background >= 60;
+                                                    return <button key={label} onClick={() => updateCaptionStyle("background", value)} className={`rounded-[9px] px-2 py-2 text-[10px] font-medium transition ${active ? "bg-[#eadb8a] text-[#17140c]" : "bg-white/[0.045] text-white/52 hover:bg-white/[0.07] hover:text-white"}`}>{label}</button>;
+                                                })}
+                                            </div>
+                                        </div>
+
+                                        <div className="mt-3">
+                                            <p className="mb-1.5 text-[10px] font-medium text-white/48">Position</p>
+                                            <div className="grid grid-cols-3 gap-1.5">
+                                                {[["Lower", 68], ["Default", 78], ["Higher", 88]].map(([label, value]) => {
+                                                    const active = label === "Lower" ? captionStyle.position < 73 : label === "Default" ? captionStyle.position >= 73 && captionStyle.position < 84 : captionStyle.position >= 84;
+                                                    return <button key={label} onClick={() => updateCaptionStyle("position", value)} className={`rounded-[9px] px-2 py-2 text-[10px] font-medium transition ${active ? "bg-[#eadb8a] text-[#17140c]" : "bg-white/[0.045] text-white/52 hover:bg-white/[0.07] hover:text-white"}`}>{label}</button>;
+                                                })}
+                                            </div>
+                                        </div>
+
+                                        <div className="mt-3 border-t border-white/[0.055] pt-1.5">
+                                            <CaptionSlider label="Subtitle timing" value={captionStyle.delay} min={-3} max={3} step={0.1} suffix="s" onChange={(v) => updateCaptionStyle("delay", v)} />
+                                            <div className="-mt-1 flex justify-between text-[8px] text-white/22"><span>Earlier</span><span>Later</span></div>
+                                        </div>
+
+                                        <div className="mt-3 flex items-center gap-2 border-t border-white/[0.055] pt-3">
+                                            <span className="flex-1 text-[10px] font-medium text-white/48">Text color</span>
+                                            {["#ffffff", "#ffe66d", "#77e0ff", "#9cff8f"].map((color) => (
+                                                <button key={color} onClick={() => updateCaptionStyle("color", color)} className={`h-6 w-6 rounded-full border ${captionStyle.color.toLowerCase() === color ? "border-[#eadb8a] ring-1 ring-[#eadb8a]/45" : "border-white/15"}`} style={{ backgroundColor: color }} aria-label={`Caption color ${color}`} />
+                                            ))}
+                                        </div>
                                     </div>
-                                    {externalCaptionError && <p className="px-4 pb-3 text-[10px] text-red-300/70">{externalCaptionError}</p>}
+                                    {externalCaptionError && <p className="px-1 pt-2 text-[9px] text-red-300/65">{externalCaptionError}</p>}
                                 </div>
                             )}
 
@@ -1999,8 +2064,8 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
                                 <div className="p-4">
                                     <p className="mb-3 text-[11px] leading-relaxed text-white/34">Automatically start playback when a source is ready.</p>
                                     <div className="grid grid-cols-2 overflow-hidden rounded-xl border border-white/[0.08]">
-                                        <button onClick={() => { setAutoPlay(true); setSettingsPage("root"); }} className={`px-4 py-3 text-[13px] font-medium transition ${autoPlay ? "bg-white text-black" : "text-white/60 hover:bg-white/[0.045]"}`}>On</button>
-                                        <button onClick={() => { setAutoPlay(false); setSettingsPage("root"); }} className={`border-l border-white/[0.08] px-4 py-3 text-[13px] font-medium transition ${!autoPlay ? "bg-white text-black" : "text-white/60 hover:bg-white/[0.045]"}`}>Off</button>
+                                        <button onClick={() => { setAutoPlay(true); setSettingsPage("root"); }} className={`px-4 py-3 text-[13px] font-medium transition ${autoPlay ? "bg-[#eadb8a] text-[#17140c]" : "text-white/60 hover:bg-white/[0.045]"}`}>On</button>
+                                        <button onClick={() => { setAutoPlay(false); setSettingsPage("root"); }} className={`border-l border-white/[0.08] px-4 py-3 text-[13px] font-medium transition ${!autoPlay ? "bg-[#eadb8a] text-[#17140c]" : "text-white/60 hover:bg-white/[0.045]"}`}>Off</button>
                                     </div>
                                 </div>
                             )}
@@ -2011,7 +2076,7 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
                                         <div><p className="text-[13px] font-medium text-white/76">Gain</p><p className="mt-1 text-[10px] text-white/30">100% keeps the original stream level</p></div>
                                         <p className="text-[24px] font-semibold tabular-nums tracking-[-0.03em] text-white">{volumeBoost}%</p>
                                     </div>
-                                    <input type="range" min="100" max="200" step="5" value={volumeBoost} onChange={(e) => setVolumeBoostValue(e.target.value)} className="mt-6 w-full accent-white" />
+                                    <input type="range" min="100" max="200" step="5" value={volumeBoost} onChange={(e) => setVolumeBoostValue(e.target.value)} className="mt-6 w-full accent-[#eadb8a]" />
                                     <div className="mt-2 flex justify-between text-[9px] tabular-nums text-white/25"><span>100%</span><span>150%</span><span>200%</span></div>
                                 </div>
                             )}
@@ -2020,8 +2085,8 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
                                 <div className="p-4">
                                     <p className="mb-3 text-[11px] leading-relaxed text-white/34">Adds a wider stereo presentation when the browser supports it.</p>
                                     <div className="grid grid-cols-2 overflow-hidden rounded-xl border border-white/[0.08]">
-                                        <button onClick={() => { setSpatialAudio(true); setSettingsPage("root"); }} className={`px-4 py-3 text-[13px] font-medium transition ${spatialAudio ? "bg-white text-black" : "text-white/60 hover:bg-white/[0.045]"}`}>On</button>
-                                        <button onClick={() => { setSpatialAudio(false); setSettingsPage("root"); }} className={`border-l border-white/[0.08] px-4 py-3 text-[13px] font-medium transition ${!spatialAudio ? "bg-white text-black" : "text-white/60 hover:bg-white/[0.045]"}`}>Off</button>
+                                        <button onClick={() => { setSpatialAudio(true); setSettingsPage("root"); }} className={`px-4 py-3 text-[13px] font-medium transition ${spatialAudio ? "bg-[#eadb8a] text-[#17140c]" : "text-white/60 hover:bg-white/[0.045]"}`}>On</button>
+                                        <button onClick={() => { setSpatialAudio(false); setSettingsPage("root"); }} className={`border-l border-white/[0.08] px-4 py-3 text-[13px] font-medium transition ${!spatialAudio ? "bg-[#eadb8a] text-[#17140c]" : "text-white/60 hover:bg-white/[0.045]"}`}>Off</button>
                                     </div>
                                 </div>
                             )}
@@ -2032,7 +2097,7 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
                                         <div><p className="text-[13px] font-medium text-white/76">Video size</p><p className="mt-1 text-[10px] text-white/30">Zoom without changing stream quality</p></div>
                                         <p className="text-[24px] font-semibold tabular-nums tracking-[-0.03em] text-white">{videoScale}%</p>
                                     </div>
-                                    <input type="range" min="75" max="125" step="1" value={videoScale} onChange={(e) => setVideoScale(Number(e.target.value))} className="mt-6 w-full accent-white" />
+                                    <input type="range" min="75" max="125" step="1" value={videoScale} onChange={(e) => setVideoScale(Number(e.target.value))} className="mt-6 w-full accent-[#eadb8a]" />
                                     <div className="mt-2 flex justify-between text-[9px] tabular-nums text-white/25"><span>75%</span><span>100%</span><span>125%</span></div>
                                 </div>
                             )}
@@ -2041,8 +2106,8 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
                                 <div className="p-4">
                                     <p className="mb-3 text-[11px] leading-relaxed text-white/34">A light display enhancement for softer sources. It does not create a native 4K stream.</p>
                                     <div className="grid grid-cols-2 overflow-hidden rounded-xl border border-white/[0.08]">
-                                        <button onClick={() => { setUpscaler(true); setSettingsPage("root"); }} className={`px-4 py-3 text-[13px] font-medium transition ${upscaler ? "bg-white text-black" : "text-white/60 hover:bg-white/[0.045]"}`}>Enhance</button>
-                                        <button onClick={() => { setUpscaler(false); setSettingsPage("root"); }} className={`border-l border-white/[0.08] px-4 py-3 text-[13px] font-medium transition ${!upscaler ? "bg-white text-black" : "text-white/60 hover:bg-white/[0.045]"}`}>Off</button>
+                                        <button onClick={() => { setUpscaler(true); setSettingsPage("root"); }} className={`px-4 py-3 text-[13px] font-medium transition ${upscaler ? "bg-[#eadb8a] text-[#17140c]" : "text-white/60 hover:bg-white/[0.045]"}`}>Enhance</button>
+                                        <button onClick={() => { setUpscaler(false); setSettingsPage("root"); }} className={`border-l border-white/[0.08] px-4 py-3 text-[13px] font-medium transition ${!upscaler ? "bg-[#eadb8a] text-[#17140c]" : "text-white/60 hover:bg-white/[0.045]"}`}>Off</button>
                                     </div>
                                 </div>
                             )}
