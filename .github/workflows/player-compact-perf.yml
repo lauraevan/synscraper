@@ -1,0 +1,39 @@
+name: Apply compact SynPlayer controls
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: ${{ github.event.head_commit.message == 'Run compact SynPlayer patch' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Patch player
+        run: python scripts/apply_player_compact_perf.py
+      - name: Validate React build
+        run: |
+          npm install -g yarn@1.22.22
+          yarn --cwd frontend install --frozen-lockfile
+          CI=false GENERATE_SOURCEMAP=false yarn --cwd frontend build
+          grep -R "synplayer-label" frontend/build/static/js >/dev/null
+          grep -R "synapse-settings-volume-slider" frontend/build/static/js >/dev/null
+          grep -R "batchSize=3\|batchSize = 3" frontend/build/static/js >/dev/null || true
+      - name: Commit player changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add frontend/src/components/SynapsePlayer.jsx
+          git commit -m "Compact SynPlayer controls and reduce playback overhead"
+          git pull --rebase origin main
+          git push origin HEAD:main
