@@ -1,9 +1,9 @@
-"""SynScraper HLS -> MP4 download worker.
+"""SynScraper HLS -> MP4 download routes.
 
-Run this service on a normal host/VPS/container with FFmpeg installed. It intentionally
-accepts only media resolved by SynScraper providers; callers cannot pass arbitrary
-upstream URLs. The worker resolves the selected provider/mirror/quality, pins an exact
-HLS variant when requested, then streams FFmpeg's remuxed MP4 to the client.
+The same routes can be mounted into the normal SynScraper API or run as a standalone
+FastAPI service. Downloads are deliberately capped at 1080p. The backend re-resolves
+provider media server-side, pins an HLS rendition at or below 1080p, and streams an
+FFmpeg remux to the client without re-encoding.
 """
 
 import asyncio
@@ -15,7 +15,7 @@ from pathlib import Path
 from urllib.parse import urljoin
 
 import httpx
-from fastapi import FastAPI, HTTPException, Query, Request
+from fastapi import APIRouter, FastAPI, HTTPException, Query, Request
 from fastapi.responses import StreamingResponse
 from starlette.middleware.cors import CORSMiddleware
 
@@ -24,18 +24,12 @@ import scraper
 logger = logging.getLogger("synscraper.download")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 
-app = FastAPI(title="SynScraper Download Worker")
-app.add_middleware(
-    CORSMiddleware,
-    allow_credentials=False,
-    allow_origins=[part.strip() for part in os.environ.get("DOWNLOAD_CORS_ORIGINS", "*").split(",") if part.strip()],
-    allow_methods=["GET", "OPTIONS"],
-    allow_headers=["*"],
-)
+router = APIRouter()
 
 UA = scraper.USER_AGENT
 HTTP_TIMEOUT = httpx.Timeout(35.0, connect=10.0)
 MAX_TITLE_LEN = 120
+MAX_DOWNLOAD_HEIGHT = 1080
 
 
 def _quality_height(value) -> int | None:
@@ -48,13 +42,20 @@ def _quality_height(value) -> int | None:
     return int(match.group(1)) if match else None
 
 
+def _requested_height(value) -> int | None:
+    height = _quality_height(value)
+    if height is not None and height > MAX_DOWNLOAD_HEIGHT:
+        raise HTTPException(400, f"Downloads are capped at {MAX_DOWNLOAD_HEIGHT}p")
+    return height
+
+
 def _safe_filename(title: str, media_type: str, season: int | None, episode: int | None, quality: str) -> str:
     base = str(title or "SynScraper download").strip()[:MAX_TITLE_LEN]
     if media_type == "tv" and season is not None and episode is not None:
         base += f" S{season:02d}E{episode:02d}"
     qh = _quality_height(quality)
-    if qh:
-        base += f" {('4K' if qh == 2160 else f'{qh}p')}"
+    if qh and qh <= MAX_DOWNLOAD_HEIGHT:
+        base += f" {qh}p"
     base = re.sub(r"[^A-Za-z0-9._()\- ]+", "", base).strip(" .") or "synscraper-download"
     return f"{base}.mp4"
 
@@ -104,6 +105,7 @@ async def _resolve_manifest_variant(server: dict, requested_quality: str) -> tup
     if not url.startswith(("http://", "https://")):
         raise HTTPException(502, "Resolved stream URL is invalid")
 
+    wanted = _requested_height(requested_quality)
     headers = _headers(server)
     async with httpx.AsyncClient(timeout=HTTP_TIMEOUT, follow_redirects=True) as client:
         try:
@@ -119,17 +121,34 @@ async def _resolve_manifest_variant(server: dict, requested_quality: str) -> tup
 
     variants = _parse_master_playlist(text, str(response.url))
     if not variants:
-        # Already a media playlist: the scraper resolved the exact playlist for us.
-        return str(response.url), []
+        # Already a media playlist. Reject a provider-labelled >1080p source.
+        source_height = _quality_height(server.get("quality"))
+        if source_height and source_height > MAX_DOWNLOAD_HEIGHT:
+            raise HTTPException(409, f"That source is above the {MAX_DOWNLOAD_HEIGHT}p download limit")
+        if wanted and source_height and source_height != wanted:
+            raise HTTPException(409, f"The resolved playlist is {source_height}p, not {wanted}p")
+        return str(response.url), ([source_height] if source_height else [])
 
-    available = sorted({item["height"] for item in variants if item["height"]}, reverse=True)
-    wanted = _quality_height(requested_quality)
+    available_all = sorted({item["height"] for item in variants if item["height"]}, reverse=True)
+    available = [height for height in available_all if height <= MAX_DOWNLOAD_HEIGHT]
+    allowed_variants = [
+        item for item in variants
+        if item["height"] and item["height"] <= MAX_DOWNLOAD_HEIGHT
+    ]
+
     if wanted is None:
-        # Auto downloads the highest-bandwidth variant, not every rendition in the master.
-        best = max(variants, key=lambda item: (item["height"], item["bandwidth"]))
+        if not allowed_variants:
+            raise HTTPException(
+                409,
+                detail={
+                    "message": f"No verifiable HLS rendition at or below {MAX_DOWNLOAD_HEIGHT}p is available",
+                    "available_qualities": available,
+                },
+            )
+        best = max(allowed_variants, key=lambda item: (item["height"], item["bandwidth"]))
         return best["url"], available
 
-    exact = [item for item in variants if item["height"] == wanted]
+    exact = [item for item in allowed_variants if item["height"] == wanted]
     if not exact:
         raise HTTPException(
             409,
@@ -146,12 +165,20 @@ def _pick_server(servers: list[dict], mirror: str, quality: str) -> dict:
     if not servers:
         raise HTTPException(404, "No streams were resolved for that source")
 
+    wanted = _requested_height(quality)
     mirror_norm = str(mirror or "").strip().lower()
     scoped = [s for s in servers if str(s.get("name") or "").strip().lower() == mirror_norm] if mirror_norm else []
     if not scoped:
         scoped = servers
 
-    wanted = _quality_height(quality)
+    # Never deliberately select a provider-labelled rendition above 1080p.
+    capped = [
+        s for s in scoped
+        if (_quality_height(s.get("quality")) or 0) <= MAX_DOWNLOAD_HEIGHT
+    ]
+    if capped:
+        scoped = capped
+
     if wanted is not None:
         exact = [s for s in scoped if _quality_height(s.get("quality")) == wanted]
         if exact:
@@ -162,10 +189,13 @@ def _pick_server(servers: list[dict], mirror: str, quality: str) -> dict:
         return auto[0]
 
     if wanted is None:
-        return max(scoped, key=lambda s: _quality_height(s.get("quality")) or 0)
+        known = [s for s in scoped if _quality_height(s.get("quality"))]
+        if known:
+            return max(known, key=lambda s: _quality_height(s.get("quality")) or 0)
+        return scoped[0]
 
-    # A provider may expose one master playlist labelled 1080p/unknown while that master
-    # still contains the requested rendition. Let the manifest resolver verify it exactly.
+    # A provider may expose one master playlist while the master contains the exact
+    # requested rendition. Let the manifest parser verify the resolution.
     return scoped[0]
 
 
@@ -178,6 +208,7 @@ async def _resolve_selection(
     mirror: str,
     quality: str,
 ) -> tuple[dict, str, list[int]]:
+    _requested_height(quality)
     provider_ids = {item[1] for item in scraper.PROVIDERS}
     if provider not in provider_ids:
         raise HTTPException(400, "Unknown provider")
@@ -201,17 +232,23 @@ async def _resolve_selection(
     return server, playlist_url, available
 
 
-@app.get("/")
-@app.get("/api")
-async def root():
-    return {
-        "message": "SynScraper download worker",
-        "ffmpeg": bool(shutil.which("ffmpeg")),
-        "download_endpoint": "/api/download",
-    }
+def _find_ffmpeg() -> str | None:
+    configured = os.environ.get("FFMPEG_BINARY", "ffmpeg").strip() or "ffmpeg"
+    found = shutil.which(configured)
+    if found:
+        return found
+    try:
+        import imageio_ffmpeg
+
+        candidate = imageio_ffmpeg.get_ffmpeg_exe()
+        if candidate and Path(candidate).is_file():
+            return candidate
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("bundled ffmpeg lookup failed: %s", exc)
+    return None
 
 
-@app.get("/api/download/options")
+@router.get("/download/options")
 async def download_options(
     type: str = Query("movie"),
     id: str = Query(...),
@@ -220,22 +257,23 @@ async def download_options(
     provider: str = Query(...),
     mirror: str = Query(""),
 ):
-    """Probe one selected source and report exact HLS rendition heights."""
+    """Probe one selected source and report HLS rendition heights up to 1080p."""
     server, _playlist_url, available = await _resolve_selection(
         type, id, season, episode, provider, mirror, "auto"
     )
     if not available:
         qh = _quality_height(server.get("quality"))
-        available = [qh] if qh else []
+        available = [qh] if qh and qh <= MAX_DOWNLOAD_HEIGHT else []
     return {
         "provider": provider,
         "mirror": server.get("name") or mirror,
-        "available_qualities": available,
+        "max_download_height": MAX_DOWNLOAD_HEIGHT,
+        "available_qualities": [q for q in available if q <= MAX_DOWNLOAD_HEIGHT],
         "source_quality": server.get("quality") or "Auto",
     }
 
 
-@app.get("/api/download")
+@router.get("/download")
 async def download(
     request: Request,
     type: str = Query("movie"),
@@ -244,14 +282,13 @@ async def download(
     episode: int | None = None,
     provider: str = Query(...),
     mirror: str = Query(""),
-    quality: str = Query("auto"),
+    quality: str = Query("1080"),
     title: str = Query("SynScraper download"),
 ):
-    if os.environ.get("VERCEL"):
-        raise HTTPException(503, "FFmpeg downloads must run on the SynScraper download worker, not Vercel serverless")
-    ffmpeg = shutil.which(os.environ.get("FFMPEG_BINARY", "ffmpeg"))
+    _requested_height(quality)
+    ffmpeg = _find_ffmpeg()
     if not ffmpeg:
-        raise HTTPException(503, "FFmpeg is not installed on this worker")
+        raise HTTPException(503, "FFmpeg is not available in this serverless function")
 
     server, playlist_url, _available = await _resolve_selection(
         type, id, season, episode, provider, mirror, quality
@@ -346,5 +383,31 @@ async def download(
             "Content-Disposition": f'attachment; filename="{filename}"',
             "Cache-Control": "no-store",
             "X-Content-Type-Options": "nosniff",
+            "X-SynScraper-Max-Download-Height": str(MAX_DOWNLOAD_HEIGHT),
         },
     )
+
+
+# Standalone app remains useful for local testing or a serverless-container deployment.
+app = FastAPI(title="SynScraper Download Worker")
+app.add_middleware(
+    CORSMiddleware,
+    allow_credentials=False,
+    allow_origins=[part.strip() for part in os.environ.get("DOWNLOAD_CORS_ORIGINS", "*").split(",") if part.strip()],
+    allow_methods=["GET", "OPTIONS"],
+    allow_headers=["*"],
+)
+
+
+@app.get("/")
+@app.get("/api")
+async def root():
+    return {
+        "message": "SynScraper download worker",
+        "ffmpeg": bool(_find_ffmpeg()),
+        "max_download_height": MAX_DOWNLOAD_HEIGHT,
+        "download_endpoint": "/api/download",
+    }
+
+
+app.include_router(router, prefix="/api")
