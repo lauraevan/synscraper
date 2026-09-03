@@ -13,7 +13,7 @@ import { saveProgress, getProgress } from "@/lib/storage";
 const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2];
 const SOURCE_CATALOG = [
     { provider: "vidy", name: "Miami" },
-    { provider: "castle", name: "Orbit" },
+    { provider: "castle", name: "Houston" },
     { provider: "vidlink", name: "Nova" },
     { provider: "vidnest", name: "Nest" },
     { provider: "vidzee", name: "Zen" },
@@ -32,6 +32,13 @@ const qualityHeight = (value) => {
     if (q.includes("4k") || q.includes("2160")) return 2160;
     const m = q.match(/(1440|1080|720|480|360|240|144)/);
     return m ? Number(m[1]) : 0;
+};
+const readPreferredQuality = () => {
+    if (typeof window === "undefined") return 1080;
+    const saved = window.localStorage.getItem("synscraper-quality-v1");
+    if (saved === "auto") return null;
+    const parsed = Number(saved);
+    return [2160, 1440, 1080, 720, 480, 360, 240, 144].includes(parsed) ? parsed : 1080;
 };
 const SHORTCUTS = [
     ["Space / K", "Play / Pause"], ["F", "Fullscreen"], ["M", "Mute"],
@@ -182,6 +189,7 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
     const audioContextRef = useRef(null);
     const audioSourceRef = useRef(null);
     const gainRef = useRef(null);
+    const preferredQualityRef = useRef(1080);
 
     const [servers, setServers] = useState([]);
     const [serverId, setServerId] = useState(null);
@@ -197,6 +205,8 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
     const [muted, setMuted] = useState(false);
     const [levels, setLevels] = useState([]);
     const [level, setLevel] = useState(-1);
+    const [preferredQuality, setPreferredQuality] = useState(readPreferredQuality);
+    const [sourcesLoading, setSourcesLoading] = useState(false);
     const [subs, setSubs] = useState([]);
     const [sub, setSub] = useState(-1);
     const [rate, setRate] = useState(1);
@@ -230,6 +240,12 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
 
     const activeServer = servers.find((s) => s.id === serverId);
     useEffect(() => { autoPlayRef.current = autoPlay; }, [autoPlay]);
+    useEffect(() => {
+        preferredQualityRef.current = preferredQuality;
+        if (typeof window !== "undefined") {
+            window.localStorage.setItem("synscraper-quality-v1", preferredQuality == null ? "auto" : String(preferredQuality));
+        }
+    }, [preferredQuality]);
 
     const playServer = useCallback((server) => {
         const video = videoRef.current;
@@ -259,7 +275,17 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
             hls.loadSource(url);
             hls.attachMedia(video);
             hls.on(Hls.Events.MANIFEST_PARSED, () => {
-                setLevels(hls.levels || []);
+                const parsedLevels = hls.levels || [];
+                setLevels(parsedLevels);
+                const wantedQuality = preferredQualityRef.current;
+                if (wantedQuality) {
+                    const wantedIndex = parsedLevels.findIndex((item) => Number(item.height || 0) === wantedQuality);
+                    if (wantedIndex >= 0) {
+                        hls.currentLevel = wantedIndex;
+                        hls.nextLevel = wantedIndex;
+                        setLevel(wantedIndex);
+                    }
+                }
                 const resumeAt = pendingSeekRef.current;
                 if (resumeAt != null && resumeAt > 0) {
                     if (typeof video.fastSeek === "function") video.fastSeek(resumeAt);
@@ -279,7 +305,9 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
                     autoCaptionRef.current = false;
                 }
             });
-            hls.on(Hls.Events.LEVEL_SWITCHED, (_e, d) => setLevel(hls.autoLevelEnabled ? -1 : d.level));
+            hls.on(Hls.Events.LEVEL_SWITCHED, (_e, d) => {
+                setLevel(preferredQualityRef.current == null && hls.autoLevelEnabled ? -1 : d.level);
+            });
             hls.on(Hls.Events.ERROR, (_e, data) => {
                 if (!data.fatal) return;
                 const retries = hlsRetryRef.current;
@@ -327,30 +355,69 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
         else setError("All scraped servers failed to play. Try another title.");
     }, [servers]);
 
-    // scrape servers
+    // Progressive source loading: start Miami immediately, fill the rest in the background.
     useEffect(() => {
         let alive = true;
-        setMode("loading"); setStepIdx(0); setError(null);
+        let started = false;
+        setMode("loading"); setStepIdx(0); setError(null); setServers([]);
+        setSourcesLoading(true);
         setExternalCaptionId(null); setExternalCues([]); setExternalCaptionError("");
-        const tick = setInterval(() => setStepIdx((i) => Math.min(i + 1, STEPS.length - 1)), 900);
-        getStreams(mediaType, id, season, episode)
+        const tick = setInterval(() => setStepIdx((i) => Math.min(i + 1, STEPS.length - 1)), 700);
+
+        const mergeServers = (current, incoming) => {
+            const map = new Map();
+            for (const item of current || []) map.set(`${item.provider}|${item.name}|${item.quality}`, item);
+            for (const item of incoming || []) {
+                const key = `${item.provider}|${item.name}|${item.quality}`;
+                if (!map.has(key)) map.set(key, item);
+            }
+            return Array.from(map.values());
+        };
+        const activate = (list) => {
+            if (!alive || started || !list.length) return;
+            const wanted = preferredQualityRef.current || 1080;
+            const preferred = list.find((s) => s.provider === "vidy" && /miami/i.test(String(s.name || "")) && qualityHeight(s.quality) === wanted)
+                || list.find((s) => s.provider === "vidy" && /miami/i.test(String(s.name || "")) && qualityHeight(s.quality) === 1080)
+                || list.find((s) => s.provider === "vidy" && /miami/i.test(String(s.name || "")))
+                || list[0];
+            started = true;
+            clearInterval(tick);
+            setServerId(preferred.id);
+            setMode("ready");
+        };
+
+        const quick = getStreams(mediaType, id, season, episode, { provider: "vidy", mirror: "miami", timeout: 12000 })
             .then((d) => {
                 if (!alive) return;
-                clearInterval(tick);
                 const list = d.servers || [];
-                setServers(list);
                 if (list.length) {
-                    const preferred = list.find((s) => s.provider === "vidy" && /miami/i.test(String(s.name || "")) && qualityHeight(s.quality) === 1080)
-                        || list.find((s) => s.provider === "vidy" && /miami/i.test(String(s.name || "")))
-                        || list[0];
-                    setServerId(preferred.id);
-                    setMode("ready");
-                } else {
-                    setMode("error");
-                    setError("No streams could be scraped for this title yet.");
+                    setServers((current) => mergeServers(current, list));
+                    activate(list);
                 }
             })
-            .catch(() => { if (alive) { clearInterval(tick); setMode("error"); setError("Scraper request failed."); } });
+            .catch(() => {});
+
+        const full = getStreams(mediaType, id, season, episode, { timeout: 90000 })
+            .then((d) => {
+                if (!alive) return;
+                const list = d.servers || [];
+                if (list.length) {
+                    setServers((current) => mergeServers(current, list));
+                    activate(list);
+                }
+                setSourcesLoading(false);
+            })
+            .catch(() => { if (alive) setSourcesLoading(false); });
+
+        Promise.allSettled([quick, full]).then(() => {
+            if (!alive) return;
+            clearInterval(tick);
+            if (!started) {
+                setMode("error");
+                setError("No streams could be scraped for this title yet.");
+            }
+        });
+
         return () => { alive = false; clearInterval(tick); };
     }, [mediaType, id, season, episode]);
 
@@ -358,11 +425,15 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
     useEffect(() => {
         if (mode === "ready" && activeServer && videoRef.current) playServer(activeServer);
         // eslint-disable-next-line
-    }, [mode, serverId, servers.length]);
+    }, [mode, serverId]);
 
     const selectServer = (s) => {
         pendingSeekRef.current = videoRef.current?.currentTime || current || 0;
-        setMenu(null); setServerId(s.id);
+        const wanted = preferredQualityRef.current;
+        const matching = wanted ? servers.find((candidate) =>
+            candidate.provider === s.provider && candidate.name === s.name && qualityHeight(candidate.quality) === wanted
+        ) : null;
+        setMenu(null); setServerId((matching || s).id);
     };
     const selectCaptionSource = (s) => {
         pendingSeekRef.current = videoRef.current?.currentTime || current || 0;
@@ -535,33 +606,46 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
     };
     const setVol = (val) => { const v = videoRef.current; if (v) { v.volume = val; v.muted = val === 0; } };
     const toggleMute = () => { const v = videoRef.current; if (v) v.muted = !v.muted; };
-    const changeLevel = (i) => { if (hlsRef.current) { hlsRef.current.currentLevel = i; } setLevel(i); setMenu(null); };
+    const changeLevel = (i) => { if (hlsRef.current) { hlsRef.current.currentLevel = i; hlsRef.current.nextLevel = i; } setLevel(i); };
     const chooseAutoQuality = () => {
-        if (hlsRef.current && levels.length) {
-            changeLevel(-1);
-            return;
-        }
+        setPreferredQuality(null);
+        preferredQualityRef.current = null;
         if (autoServer && autoServer.id !== serverId) {
             pendingSeekRef.current = videoRef.current?.currentTime || current || 0;
             setLevel(-1);
-            setMenu(null);
             setServerId(autoServer.id);
-            return;
+        } else if (hlsRef.current) {
+            hlsRef.current.currentLevel = -1;
+            hlsRef.current.nextLevel = -1;
+            setLevel(-1);
         }
         setMenu(null);
     };
     const chooseQuality = (choice) => {
-        if (!choice) return;
+        if (!choice?.available) return;
+        setPreferredQuality(choice.height);
+        preferredQualityRef.current = choice.height;
+        const sameMirror = servers.find((candidate) =>
+            candidate.provider === activeServer?.provider && candidate.name === activeServer?.name && qualityHeight(candidate.quality) === choice.height
+        );
+        if (sameMirror && sameMirror.id !== serverId) {
+            pendingSeekRef.current = videoRef.current?.currentTime || current || 0;
+            setLevel(-1);
+            setServerId(sameMirror.id);
+            setMenu(null);
+            return;
+        }
         if (choice.levelIndex >= 0 && hlsRef.current) {
             changeLevel(choice.levelIndex);
+            setMenu(null);
             return;
         }
         if (choice.server) {
             pendingSeekRef.current = videoRef.current?.currentTime || current || 0;
             setLevel(-1);
-            setMenu(null);
             setServerId(choice.server.id);
         }
+        setMenu(null);
     };
     const changeSub = (i) => {
         if (hlsRef.current) hlsRef.current.subtitleTrack = i;
@@ -574,7 +658,11 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
     const closeSettings = () => { setMenu(null); setSettingsPage("root"); };
     const selectServerInSettings = (s) => {
         pendingSeekRef.current = videoRef.current?.currentTime || current || 0;
-        setServerId(s.id);
+        const wanted = preferredQualityRef.current;
+        const matching = wanted ? servers.find((candidate) =>
+            candidate.provider === s.provider && candidate.name === s.name && qualityHeight(candidate.quality) === wanted
+        ) : null;
+        setServerId((matching || s).id);
         setSettingsPage("root");
     };
     const changeRateInSettings = (r) => {
@@ -591,31 +679,8 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
         setSub(-1);
         setServerId(s.id);
     };
-    const chooseAutoQualityInSettings = () => {
-        if (hlsRef.current && levels.length) {
-            hlsRef.current.currentLevel = -1;
-            setLevel(-1);
-            return;
-        }
-        if (autoServer && autoServer.id !== serverId) {
-            pendingSeekRef.current = videoRef.current?.currentTime || current || 0;
-            setLevel(-1);
-            setServerId(autoServer.id);
-        }
-    };
-    const chooseQualityInSettings = (choice) => {
-        if (!choice?.available) return;
-        if (choice.levelIndex >= 0 && hlsRef.current) {
-            hlsRef.current.currentLevel = choice.levelIndex;
-            setLevel(choice.levelIndex);
-            return;
-        }
-        if (choice.server) {
-            pendingSeekRef.current = videoRef.current?.currentTime || current || 0;
-            setLevel(-1);
-            setServerId(choice.server.id);
-        }
-    };
+    const chooseAutoQualityInSettings = () => { chooseAutoQuality(); setSettingsPage("root"); };
+    const chooseQualityInSettings = (choice) => { chooseQuality(choice); setSettingsPage("root"); };
     const setVolumeBoostValue = async (value) => {
         const next = Math.max(100, Math.min(200, Number(value) || 100));
         setVolumeBoost(next);
@@ -693,7 +758,15 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
             const existingScore = existing ? sourceScore(existing) : -1;
             if (!existing || score > existingScore) mirrors.set(mirrorName, server);
         }
-        return Array.from(mirrors.values()).map((server) => ({
+        const mirrorValues = Array.from(mirrors.values());
+        if (source.provider === "vidy") {
+            mirrorValues.sort((a, b) => {
+                const am = /miami/i.test(String(a.name || "")) ? 0 : 1;
+                const bm = /miami/i.test(String(b.name || "")) ? 0 : 1;
+                return am - bm || String(a.name || "").localeCompare(String(b.name || ""));
+            });
+        }
+        return mirrorValues.map((server) => ({
             ...server,
             displayName: server.name || source.name,
             available: true,
@@ -703,7 +776,7 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
     const externalCaptions = Array.from(new Map(
         servers.flatMap((s) => (s.captions || []).map((c) => [c.play_url || c.id, { ...c, serverName: s.name }]))
     ).values());
-    const activeQualityHeight = level >= 0 ? Number(levels[level]?.height || 0) : (levels.length ? 0 : qualityHeight(activeServer?.quality));
+    const activeQualityHeight = preferredQuality || (level >= 0 ? Number(levels[level]?.height || 0) : (levels.length ? 0 : qualityHeight(activeServer?.quality)));
     const autoServer = servers.find((s) => s.provider === activeServer?.provider && s.name === activeServer?.name && /^auto/i.test(String(s.quality || "")))
         || servers.find((s) => s.provider === activeServer?.provider && /^auto/i.test(String(s.quality || "")))
         || servers.find((s) => /^auto/i.test(String(s.quality || "")));
@@ -721,7 +794,7 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
     const resolvePct = ((stepIdx + 1) / STEPS.length) * 100;
     const activeExternalCaption = externalCaptions.find((track) => track.id === externalCaptionId);
     const subtitleSettingsLabel = activeExternalCaption ? (String(activeExternalCaption.source || "").toLowerCase() === "granite" ? "Granite" : "VTT") : sub >= 0 ? "HLS" : "Off";
-    const settingsQualityLabel = level >= 0 ? (levels[level]?.height ? `${levels[level].height}p` : "Manual") : (activeQualityHeight ? (activeQualityHeight === 2160 ? "4K" : `${activeQualityHeight}p`) : "Auto");
+    const settingsQualityLabel = preferredQuality ? (preferredQuality === 2160 ? "4K" : `${preferredQuality}p`) : "Auto";
 
     return (
         <div
@@ -881,6 +954,9 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
                                             </button>
                                         ))}
                                     </div>
+                                    {sourcesLoading && (
+                                        <div className="border-t border-white/10 px-3 py-2 text-[10px] text-white/35">Loading more sources…</div>
+                                    )}
                                 </div>
                             )}
                         </div>
@@ -980,102 +1056,47 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
                                         <Subtitles className="h-[25px] w-[25px] stroke-[1.8]" />
                                     </button>
                                     <Popover open={menu === "subs"} wide>
-                                        <div className="sticky top-0 z-10 -mx-2 -mt-2 mb-1 border-b border-white/10 bg-black/90 px-5 py-4 backdrop-blur-2xl">
-                                            <p className="text-sm font-semibold text-white">Subtitles</p>
-                                            <p className="mt-0.5 text-[11px] text-white/40">Full track controls, appearance and sync</p>
+                                        <div className="px-4 pb-3 pt-2">
+                                            <p className="text-sm font-semibold text-white">Captions</p>
+                                            <p className="mt-1 text-[11px] text-white/40">Pick a track first. Styling stays simple and live.</p>
                                         </div>
-
-                                        <p className="px-3 py-2 text-[10px] uppercase tracking-[0.18em] text-white/45">Caption source</p>
-                                        <div className="max-h-36 overflow-y-auto scrollbar-none">
-                                            {captionSources.map((s) => (
-                                                <MenuItem key={s.id} active={serverId === s.id} onClick={() => selectCaptionSource(s)}>
-                                                    <span>{s.name}</span>
+                                        <div className="max-h-56 overflow-y-auto border-y border-white/10 py-1 scrollbar-none">
+                                            <MenuItem active={sub === -1 && !externalCaptionId} onClick={turnOffCaptions} testId="sub-off">
+                                                <span>Off</span><span className="text-[10px] opacity-40">No captions</span>
+                                            </MenuItem>
+                                            {externalCaptions.map((track) => (
+                                                <MenuItem key={`caption-${track.play_url || track.id}`} active={externalCaptionId === track.id} onClick={() => selectExternalCaption(track)}>
+                                                    <span className="min-w-0 truncate">{track.name || track.lang || "WebVTT"}</span>
+                                                    <span className="ml-3 text-[10px] uppercase opacity-40">{track.lang || "CC"} · {track.serverName || "VTT"}</span>
                                                 </MenuItem>
                                             ))}
+                                            {subs.map((track, i) => (
+                                                <MenuItem key={`hls-caption-${i}`} active={sub === i && !externalCaptionId} onClick={() => { setExternalCaptionId(null); setExternalCues([]); changeSub(i); }}>
+                                                    <span className="min-w-0 truncate">{track.name || track.lang || `Track ${i + 1}`}</span>
+                                                    <span className="ml-3 text-[10px] uppercase opacity-40">{track.lang || track.language || "CC"} · HLS</span>
+                                                </MenuItem>
+                                            ))}
+                                            {!subs.length && !externalCaptions.length && (
+                                                <p className="px-3 py-4 text-xs text-white/40">No caption tracks are available yet. More may appear as sources finish loading.</p>
+                                            )}
                                         </div>
-
-                                        <div className="h-px bg-white/10 my-2" />
-                                        {externalCaptions.length > 0 && (
-                                            <>
-                                                <p className="px-3 py-2 text-[10px] uppercase tracking-[0.18em] text-white/45">VTT / Granite</p>
-                                                {externalCaptions.map((track) => (
-                                                    <MenuItem key={`vtt-${track.play_url || track.id}`} active={externalCaptionId === track.id} onClick={() => selectExternalCaption(track)}>
-                                                        <span className="min-w-0 truncate">{track.name || track.lang || "WebVTT"}</span>
-                                                        <span className={`ml-3 text-[9px] font-semibold uppercase tracking-[0.12em] ${String(track.source || "").toLowerCase() === "granite" ? "text-emerald-300" : "opacity-45"}`}>
-                                                            {String(track.source || "vtt").toLowerCase() === "granite" ? "GRANITE · VTT" : `${String(track.source || "VTT").toUpperCase()} · VTT`}
-                                                        </span>
-                                                    </MenuItem>
-                                                ))}
-                                                {externalCaptionLoading && <p className="px-3 py-2 text-[11px] text-white/40">Loading WebVTT…</p>}
-                                                {externalCaptionError && <p className="px-3 py-2 text-[11px] text-red-300/75">{externalCaptionError}</p>}
-                                                <div className="h-px bg-white/10 my-2" />
-                                            </>
-                                        )}
-                                        <p className="px-3 py-2 text-[10px] uppercase tracking-[0.18em] text-white/45">All tracks · {activeServer?.name || "Current source"}</p>
-                                        <MenuItem active={sub === -1 && !externalCaptionId} onClick={turnOffCaptions} testId="sub-off">Off</MenuItem>
-                                        {subs.map((track, i) => (
-                                            <MenuItem key={i} active={sub === i && !externalCaptionId} onClick={() => { setExternalCaptionId(null); setExternalCues([]); changeSub(i); }}>
-                                                <span>{track.name || track.lang || `Track ${i + 1}`}</span>
-                                                <span className="text-[10px] uppercase opacity-40">{track.lang || track.language || "CC"}</span>
-                                            </MenuItem>
-                                        ))}
-                                        {!subs.length && !externalCaptions.length && <p className="px-3 py-3 text-xs leading-relaxed text-white/45">This source exposes no caption track. Pick another source above; your movie position is kept while it switches.</p>}
-
-                                        <div className="h-px bg-white/10 my-3" />
-                                        <div className="flex items-center justify-between px-3 py-2">
-                                            <div>
-                                                <p className="text-[10px] uppercase tracking-[0.18em] text-white/45">Appearance & sync</p>
-                                                <p className="mt-1 text-[11px] text-white/30">Changes preview live on the movie.</p>
-                                            </div>
-                                            <button onClick={resetCaptionStyle} className="rounded-lg border border-white/10 px-2.5 py-1.5 text-[11px] text-white/55 hover:bg-white/10 hover:text-white">Reset</button>
+                                        {externalCaptionLoading && <p className="px-3 py-2 text-[11px] text-white/40">Loading captions…</p>}
+                                        {externalCaptionError && <p className="px-3 py-2 text-[11px] text-red-300/75">{externalCaptionError}</p>}
+                                        <div className="flex items-center justify-between px-3 pb-1 pt-3">
+                                            <p className="text-[10px] uppercase tracking-[0.16em] text-white/40">Appearance</p>
+                                            <button onClick={resetCaptionStyle} className="text-[11px] text-white/45 hover:text-white">Reset</button>
                                         </div>
-
-                                        <CaptionSlider label="Size" value={captionStyle.size} min={60} max={180} suffix="%" onChange={(v) => updateCaptionStyle("size", v)} />
-                                        <CaptionSlider label="Transparency" value={captionStyle.transparency} min={0} max={90} suffix="%" onChange={(v) => updateCaptionStyle("transparency", v)} />
-                                        <CaptionSlider label="Boldness" value={captionStyle.weight} min={300} max={900} step={100} onChange={(v) => updateCaptionStyle("weight", v)} />
-                                        <CaptionSlider label="Outline" value={captionStyle.outline} min={0} max={4} step={0.5} suffix="px" onChange={(v) => updateCaptionStyle("outline", v)} />
-                                        <CaptionSlider label="Background" value={captionStyle.background} min={0} max={90} suffix="%" onChange={(v) => updateCaptionStyle("background", v)} />
-                                        <CaptionSlider label="Vertical position" value={captionStyle.position} min={60} max={92} suffix="%" onChange={(v) => updateCaptionStyle("position", v)} />
-                                        <CaptionSlider label="Delay" value={captionStyle.delay} min={-5} max={5} step={0.05} suffix="s" onChange={(v) => updateCaptionStyle("delay", v)} />
-                                        <CaptionSlider label="Accuracy assist" value={captionStyle.accuracy} min={0} max={100} suffix="%" onChange={(v) => updateCaptionStyle("accuracy", v)} />
-
-                                        <div className="px-3 py-3">
-                                            <div className="mb-2 flex items-center justify-between">
-                                                <span className="text-xs text-white/70">Color</span>
-                                                <input
-                                                    type="color"
-                                                    value={captionStyle.color}
-                                                    onChange={(e) => updateCaptionStyle("color", e.target.value)}
-                                                    className="h-8 w-11 cursor-pointer rounded-md border border-white/10 bg-transparent p-0.5"
-                                                    aria-label="Subtitle color"
-                                                />
-                                            </div>
-                                            <div className="flex gap-2">
-                                                {["#ffffff", "#ffe66d", "#77e0ff", "#9cff8f", "#ff9edb"].map((color) => (
-                                                    <button
-                                                        key={color}
-                                                        onClick={() => updateCaptionStyle("color", color)}
-                                                        className={`h-7 w-7 rounded-full border-2 transition-transform hover:scale-110 ${captionStyle.color.toLowerCase() === color ? "border-white" : "border-white/15"}`}
-                                                        style={{ backgroundColor: color }}
-                                                        aria-label={`Use ${color} subtitles`}
-                                                    />
-                                                ))}
-                                            </div>
+                                        <div className="grid grid-cols-3 gap-1 px-3 py-2">
+                                            {[80, 100, 125].map((size) => (
+                                                <button key={size} onClick={() => updateCaptionStyle("size", size)} className={`rounded-lg px-2 py-2 text-xs ${captionStyle.size === size ? "bg-white text-black" : "bg-white/[0.05] text-white/60 hover:text-white"}`}>{size === 80 ? "Small" : size === 100 ? "Medium" : "Large"}</button>
+                                            ))}
                                         </div>
-
-                                        <div className="mx-3 mb-2 flex items-center justify-between gap-4 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-3">
-                                            <div>
-                                                <p className="text-xs font-medium text-white/80">Auto-correct subtitles</p>
-                                                <p className="mt-1 text-[10px] leading-relaxed text-white/35">Fix spacing, repeated words, casing and obvious caption formatting errors.</p>
-                                            </div>
-                                            <button
-                                                role="switch"
-                                                aria-checked={captionStyle.autoCorrect}
-                                                onClick={() => updateCaptionStyle("autoCorrect", !captionStyle.autoCorrect)}
-                                                className={`relative h-6 w-11 shrink-0 rounded-full transition ${captionStyle.autoCorrect ? "bg-white" : "bg-white/15"}`}
-                                            >
-                                                <span className={`absolute top-1 h-4 w-4 rounded-full transition-all ${captionStyle.autoCorrect ? "left-6 bg-black" : "left-1 bg-white/60"}`} />
-                                            </button>
+                                        <CaptionSlider label="Background" value={captionStyle.background} min={0} max={80} step={10} suffix="%" onChange={(v) => updateCaptionStyle("background", v)} />
+                                        <CaptionSlider label="Sync" value={captionStyle.delay} min={-3} max={3} step={0.1} suffix="s" onChange={(v) => updateCaptionStyle("delay", v)} />
+                                        <div className="flex items-center gap-2 px-3 pb-2 pt-1">
+                                            {["#ffffff", "#ffe66d", "#77e0ff", "#9cff8f"].map((color) => (
+                                                <button key={color} onClick={() => updateCaptionStyle("color", color)} className={`h-7 w-7 rounded-full border-2 ${captionStyle.color.toLowerCase() === color ? "border-white" : "border-white/15"}`} style={{ backgroundColor: color }} aria-label={`Caption color ${color}`} />
+                                            ))}
                                         </div>
                                     </Popover>
                                 </div>
@@ -1083,6 +1104,28 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
                                 <div className="relative">
                                     <button
                                         data-testid="synapse-quality-menu"
+                                        onClick={() => setMenu(menu === "quality" ? null : "quality")}
+                                        className={`h-10 min-w-[52px] px-1 text-xs font-semibold tracking-[-0.02em] transition hover:scale-105 active:scale-95 ${menu === "quality" ? "text-white" : "text-white/85 hover:text-white"}`}
+                                        title="Quality"
+                                        aria-label="Quality"
+                                    >
+                                        {settingsQualityLabel}
+                                    </button>
+                                    <Popover open={menu === "quality"}>
+                                        <div className="px-3 pb-2 pt-1 text-xs font-semibold text-white/70">Quality</div>
+                                        <MenuItem active={preferredQuality == null} onClick={chooseAutoQuality} disabled={!autoQualityAvailable}>
+                                            <span>Auto</span><span className="text-[10px] opacity-40">Adaptive</span>
+                                        </MenuItem>
+                                        {qualityChoices.filter((choice) => choice.available).map((choice) => (
+                                            <MenuItem key={`quick-quality-${choice.height}`} active={preferredQuality === choice.height} onClick={() => chooseQuality(choice)}>
+                                                <span>{choice.label}</span><span className="text-[10px] opacity-40">{choice.levelIndex >= 0 ? "HLS" : choice.server?.name || "Stream"}</span>
+                                            </MenuItem>
+                                        ))}
+                                    </Popover>
+                                </div>
+
+                                <div className="relative">
+                                    <button
                                         onClick={() => { setSettingsPage("root"); setMenu(menu === "settings" ? null : "settings"); }}
                                         className={`grid h-10 w-10 md:h-11 md:w-11 place-items-center transition active:scale-95 hover:scale-105 ${menu === "settings" ? "text-white" : "text-white/85 hover:text-white"}`}
                                         title="Settings"

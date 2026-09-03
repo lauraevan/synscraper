@@ -29,7 +29,7 @@ USER_AGENT = os.environ.get(
 
 # Friendly Synflix server names -> resolver classes, in priority order.
 PROVIDERS = [
-    ("Orbit", "castle", CastleResolver),      # primary
+    ("Houston", "castle", CastleResolver),      # primary
     ("Nova", "vidlink", VidlinkResolver),
     ("Nest", "vidnest", VidNestResolver),
     ("Zen", "vidzee", VidzeeResolver),
@@ -40,11 +40,11 @@ PROVIDERS = [
 ]
 
 _cache: dict[str, tuple[float, list]] = {}
-_TTL = 480
+_TTL = 120
 
 
-def _key(t, i, s, e):
-    return f"{t}:{i}:{s}:{e}"
+def _key(t, i, s, e, provider_id=None, mirror=None):
+    return f"{t}:{i}:{s}:{e}:{provider_id or 'all'}:{mirror or 'all'}"
 
 
 def _stream_type(url: str) -> str:
@@ -115,10 +115,16 @@ def _caption_items(obj, default_source: str) -> list:
         result.append(caption)
     return result
 
-def _run_one(cls, media_type, tmdb_id, season, episode):
+def _run_one(cls, media_type, tmdb_id, season, episode, provider_hint=None, all_mirrors=False):
     try:
         r = cls()
-        out = r.resolve(str(tmdb_id), media_type=media_type, season=season, episode=episode)
+        resolve_kwargs = {}
+        if cls is VidyResolver:
+            if provider_hint:
+                resolve_kwargs["provider"] = provider_hint
+            elif all_mirrors:
+                resolve_kwargs["provider"] = "all"
+        out = r.resolve(str(tmdb_id), media_type=media_type, season=season, episode=episode, **resolve_kwargs)
         data = json.loads(out) if isinstance(out, str) else out
         if data.get("status") != "success":
             return []
@@ -155,17 +161,25 @@ def _run_one(cls, media_type, tmdb_id, season, episode):
         return []
 
 
-async def scrape_streams(media_type: str, tmdb_id, season=None, episode=None) -> list:
-    """Return a normalized, ranked list of playable servers scraped from all providers."""
-    ck = _key(media_type, tmdb_id, season, episode)
+async def scrape_streams(media_type: str, tmdb_id, season=None, episode=None, provider_id=None, mirror=None) -> list:
+    """Return normalized playable servers, optionally scoped to one provider/mirror."""
+    ck = _key(media_type, tmdb_id, season, episode, provider_id, mirror)
     hit = _cache.get(ck)
     if hit and time.time() - hit[0] < _TTL:
         return hit[1]
 
+    selected_providers = [item for item in PROVIDERS if item[1] == provider_id] if provider_id else PROVIDERS
+    if provider_id and not selected_providers:
+        return []
+
     async def run(name, pid, cls):
         try:
+            provider_hint = mirror if pid == "vidy" and mirror else None
             streams = await asyncio.wait_for(
-                asyncio.to_thread(_run_one, cls, media_type, tmdb_id, season, episode),
+                asyncio.to_thread(
+                    _run_one, cls, media_type, tmdb_id, season, episode,
+                    provider_hint, provider_id is None,
+                ),
                 timeout=10.0,
             )
         except (asyncio.TimeoutError, TimeoutError):
@@ -173,7 +187,7 @@ async def scrape_streams(media_type: str, tmdb_id, season=None, episode=None) ->
         return name, pid, streams
 
     results = await asyncio.gather(
-        *[run(n, p, c) for n, p, c in PROVIDERS], return_exceptions=True
+        *[run(n, p, c) for n, p, c in selected_providers], return_exceptions=True
     )
 
     servers = []

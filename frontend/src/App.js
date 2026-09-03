@@ -33,12 +33,12 @@ function Shell() {
                 <footer className="border-t border-white/10 bg-black px-5 py-10 md:px-10">
                     <div className="mx-auto flex max-w-7xl flex-col gap-5 text-sm text-white/45 md:flex-row md:items-end md:justify-between">
                         <div>
-                            <p className="text-lg font-semibold tracking-tight text-white">Synapse Player</p>
+                            <p className="text-lg font-semibold tracking-tight text-white">SynScraper</p>
                             <p className="mt-1 max-w-xl">A multi-source HLS player with adaptive quality, captions, source failover, PiP and a custom playback interface.</p>
                         </div>
                         <div className="text-left md:text-right">
                             <p>Metadata by TMDB.</p>
-                            <p className="mt-1">Built for the Synapse player stack.</p>
+                            <p className="mt-1">Built for the SynScraper stack.</p>
                         </div>
                     </div>
                 </footer>

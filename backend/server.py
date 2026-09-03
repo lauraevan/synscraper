@@ -117,8 +117,9 @@ def _play_url(url, ref, origin):
 
 @api_router.get("/streams")
 async def streams(type: str = "movie", id: str = Query(...),
-                  season: int | None = None, episode: int | None = None):
-    servers = await scraper.scrape_streams(type, id, season, episode)
+                  season: int | None = None, episode: int | None = None,
+                  provider: str | None = None, mirror: str | None = None):
+    servers = await scraper.scrape_streams(type, id, season, episode, provider_id=provider, mirror=mirror)
     out = []
     for s in servers:
         captions = []

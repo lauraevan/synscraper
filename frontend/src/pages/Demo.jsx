@@ -1,18 +1,43 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { ArrowRight, Cloud, Film, LoaderCircle, Tv2 } from "lucide-react";
 import { getDetails } from "@/lib/api";
 import { titleOf } from "@/lib/format";
 import { SynapsePlayer } from "@/components/SynapsePlayer";
 
+const DEFAULT_DEMO = {
+    id: "1083381",
+    mediaType: "movie",
+    season: undefined,
+    episode: undefined,
+    meta: { title: "Backrooms", release_date: "2026-05-27" },
+};
+
 export default function Demo() {
     const [mediaType, setMediaType] = useState("movie");
-    const [tmdbId, setTmdbId] = useState("");
+    const [tmdbId, setTmdbId] = useState(DEFAULT_DEMO.id);
     const [season, setSeason] = useState("1");
     const [episode, setEpisode] = useState("1");
-    const [active, setActive] = useState(null);
+    const [active, setActive] = useState(DEFAULT_DEMO);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
+
+    useEffect(() => {
+        let alive = true;
+        getDetails("movie", DEFAULT_DEMO.id).then((details) => {
+            if (!alive) return;
+            setActive((current) => current?.id === DEFAULT_DEMO.id ? {
+                ...current,
+                meta: {
+                    title: titleOf(details) || "Backrooms",
+                    poster_path: details.poster_path,
+                    backdrop_path: details.backdrop_path,
+                    release_date: details.release_date || "2026-05-27",
+                },
+            } : current);
+        }).catch(() => {});
+        return () => { alive = false; };
+    }, []);
 
     const canLaunch = tmdbId.trim().length > 0 && !loading;
 
@@ -53,8 +78,8 @@ export default function Demo() {
                     <div className="mx-auto inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs text-white/50">
                         <Cloud className="h-3.5 w-3.5" /> Live player demo
                     </div>
-                    <h1 className="mt-6 text-4xl font-semibold tracking-[-0.045em] sm:text-5xl md:text-6xl">Put a TMDB ID straight into Synapse.</h1>
-                    <p className="mx-auto mt-4 max-w-2xl text-sm leading-6 text-white/45 md:text-base">This page uses the same provider resolver, HLS handling and Synapse Player component as the watch route. Nothing is mocked once you launch a title.</p>
+                    <h1 className="mt-6 text-4xl font-semibold tracking-[-0.045em] sm:text-5xl md:text-6xl">Backrooms is ready to play.</h1>
+                    <p className="mx-auto mt-4 max-w-2xl text-sm leading-6 text-white/45 md:text-base">The licensed Backrooms demo starts here by default. Enter any other TMDB ID to test another title with the same live resolver and player.</p>
                 </div>
 
                 <form onSubmit={launch} className="mx-auto mt-10 max-w-4xl rounded-[26px] border border-white/10 bg-white/[0.035] p-4 md:p-5">
@@ -79,7 +104,7 @@ export default function Demo() {
                     </div>
 
                     <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                        <p className="text-xs text-white/30">Use the numeric TMDB ID from a movie or series page.</p>
+                        <p className="text-xs text-white/30">Backrooms (2026) is loaded by default. Enter another TMDB ID anytime.</p>
                         <button disabled={!canLaunch} className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-white px-5 text-sm font-semibold text-black transition hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-35">
                             {loading ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />} {loading ? "Loading metadata" : "Launch player"}
                         </button>

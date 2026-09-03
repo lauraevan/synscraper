@@ -16,8 +16,11 @@ export const getGenres = (mediaType) =>
     http.get(`/genre/${mediaType}`).then((r) => r.data);
 export const discover = (mediaType, params) =>
     http.get(`/discover/${mediaType}`, { params }).then((r) => r.data);
-export const getStreams = (type, id, season, episode) =>
-    http.get("/streams", { params: { type, id, season, episode }, timeout: 90000 }).then((r) => r.data);
+export const getStreams = (type, id, season, episode, options = {}) =>
+    http.get("/streams", {
+        params: { type, id, season, episode, provider: options.provider, mirror: options.mirror },
+        timeout: options.timeout || 90000,
+    }).then((r) => r.data);
 
 // image helpers
 const IMG = "https://image.tmdb.org/t/p";
