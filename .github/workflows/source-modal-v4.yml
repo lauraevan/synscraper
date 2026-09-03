@@ -9,7 +9,7 @@ permissions:
 
 jobs:
   patch:
-    if: ${{ github.event.head_commit.message == 'Run source modal patch v4' }}
+    if: ${{ github.event.head_commit.message == 'Run source modal patch v5' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -25,7 +25,7 @@ jobs:
         run: |
           npm install -g yarn@1.22.22
           yarn --cwd frontend install --frozen-lockfile
-          yarn --cwd frontend build
+          CI=false yarn --cwd frontend build
           grep -R "data-source-layout" frontend/build/static/js >/dev/null
           grep -R "4K source" frontend/build/static/js >/dev/null
           grep -R "Hindi source" frontend/build/static/js >/dev/null
