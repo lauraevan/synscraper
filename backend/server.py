@@ -19,10 +19,10 @@ TMDB_API_KEY = os.environ.get("TMDB_API_KEY", "68e094699525b18a70bab2f86b1fa706"
 TMDB_BASE = "https://api.themoviedb.org/3"
 UA = scraper.USER_AGENT
 
-app = FastAPI(title="Synapse Player API")
+app = FastAPI(title="SynScraper API")
 api_router = APIRouter(prefix="/api")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-logger = logging.getLogger("synapse-player")
+logger = logging.getLogger("synscraper")
 
 
 async def tmdb_get(path: str, params: dict | None = None) -> dict:
@@ -46,7 +46,7 @@ async def tmdb_get(path: str, params: dict | None = None) -> dict:
 
 @api_router.get("/")
 async def root():
-    return {"message": "Synapse Player API", "sources": [p[0] for p in scraper.PROVIDERS]}
+    return {"message": "SynScraper API", "sources": [p[0] for p in scraper.PROVIDERS]}
 
 
 # ----------------------- TMDB -----------------------

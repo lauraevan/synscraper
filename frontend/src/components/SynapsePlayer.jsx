@@ -12,13 +12,13 @@ import { saveProgress, getProgress } from "@/lib/storage";
 
 const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2];
 const SOURCE_CATALOG = [
+    { provider: "vidy", name: "Miami" },
     { provider: "castle", name: "Orbit" },
     { provider: "vidlink", name: "Nova" },
     { provider: "vidnest", name: "Nest" },
     { provider: "vidzee", name: "Zen" },
     { provider: "vidrock", name: "Rock" },
-    { provider: "vidy", name: "Vidy" },
-    { provider: "cinejoy", name: "CineJoy" },
+    { provider: "cinejoy", name: "Lisbon" },
     { provider: "vixsrc", name: "Vix" },
 ];
 const QUALITY_LADDER = [
@@ -210,7 +210,6 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
     const [spatialAudio, setSpatialAudio] = useState(false);
     const [videoScale, setVideoScale] = useState(100);
     const [upscaler, setUpscaler] = useState(false);
-    const [brandExpanded, setBrandExpanded] = useState(false);
     const [help, setHelp] = useState(false);
     const [ripple, setRipple] = useState(null);
     const [scrubPct, setScrubPct] = useState(null);
@@ -341,7 +340,10 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
                 const list = d.servers || [];
                 setServers(list);
                 if (list.length) {
-                    setServerId(list[0].id);
+                    const preferred = list.find((s) => s.provider === "vidy" && /miami/i.test(String(s.name || "")) && qualityHeight(s.quality) === 1080)
+                        || list.find((s) => s.provider === "vidy" && /miami/i.test(String(s.name || "")))
+                        || list[0];
+                    setServerId(preferred.id);
                     setMode("ready");
                 } else {
                     setMode("error");
@@ -674,6 +676,7 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
     const sourceSlots = SOURCE_CATALOG.flatMap((source) => {
         const matches = servers.filter((s) => s.provider === source.provider);
         if (!matches.length) {
+            if (source.provider === "vidy" || source.provider === "cinejoy") return [];
             return [{ id: `unavailable-${source.provider}`, provider: source.provider, name: source.name, displayName: source.name, available: false }];
         }
         const mirrors = new Map();
@@ -794,7 +797,6 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
                             <Cloud className="h-9 w-9 text-white/85 md:h-11 md:w-11" strokeWidth={1.4} />
                         </div>
 
-                        <p className="text-[11px] font-medium uppercase tracking-[0.24em] text-white/35">Synapse Player</p>
                         <h2 className="mt-3 text-2xl font-semibold tracking-[-0.035em] text-white md:text-4xl">Finding the best source</h2>
                         <p className="mt-2 max-w-lg truncate text-sm text-white/48 md:text-base">{displayTitle}</p>
                         <p className="mt-3 text-xs text-white/28">This usually only takes a few seconds.</p>
@@ -888,17 +890,6 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
                             <p className="mt-1.5 text-sm md:text-lg font-medium tracking-[-0.02em] text-white/92 truncate">{displayTitle}</p>
                         </div>
 
-                        <button
-                            data-testid="synplayer-brand-pill"
-                            onClick={(e) => { e.stopPropagation(); setBrandExpanded((v) => !v); }}
-                            className={`absolute right-5 top-5 md:right-7 md:top-7 flex h-9 items-center overflow-hidden rounded-full border border-white/[0.09] bg-black/20 text-white/90 backdrop-blur-xl transition-[width,background-color,border-color] duration-300 ease-out hover:bg-white/[0.08] hover:border-white/15 ${brandExpanded ? "w-[112px] px-3" : "w-9 px-0 justify-center"}`}
-                            aria-label={brandExpanded ? "Collapse SynPlayer branding" : "Show SynPlayer branding"}
-                            aria-expanded={brandExpanded}
-                            title="SynPlayer"
-                        >
-                            <span className="shrink-0 text-sm font-semibold tracking-[-0.03em]">S</span>
-                            <span className={`overflow-hidden whitespace-nowrap text-sm font-medium tracking-[-0.03em] transition-all duration-300 ${brandExpanded ? "ml-0.5 max-w-[78px] opacity-100" : "ml-0 max-w-0 opacity-0"}`}>ynPlayer</span>
-                        </button>
                     </div>
 
                     <div
@@ -998,7 +989,7 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
                                         <div className="max-h-36 overflow-y-auto scrollbar-none">
                                             {captionSources.map((s) => (
                                                 <MenuItem key={s.id} active={serverId === s.id} onClick={() => selectCaptionSource(s)}>
-                                                    <span>{s.name}</span><span className="text-[10px] opacity-45">{s.provider}</span>
+                                                    <span>{s.name}</span>
                                                 </MenuItem>
                                             ))}
                                         </div>
@@ -1028,7 +1019,7 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
                                                 <span className="text-[10px] uppercase opacity-40">{track.lang || track.language || "CC"}</span>
                                             </MenuItem>
                                         ))}
-                                        {!subs.length && !externalCaptions.length && <p className="px-3 py-3 text-xs leading-relaxed text-white/45">This source exposes no caption track. Pick another source above; Synapse keeps your movie position while it switches.</p>}
+                                        {!subs.length && !externalCaptions.length && <p className="px-3 py-3 text-xs leading-relaxed text-white/45">This source exposes no caption track. Pick another source above; your movie position is kept while it switches.</p>}
 
                                         <div className="h-px bg-white/10 my-3" />
                                         <div className="flex items-center justify-between px-3 py-2">

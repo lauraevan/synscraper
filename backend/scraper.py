@@ -185,17 +185,17 @@ async def scrape_streams(media_type: str, tmdb_id, season=None, episode=None) ->
             subserver = str(s.get("subserver") or "").strip()
             if subserver:
                 if pid == "vidzee":
-                    pretty = {
+                    display_name = {
                         "dcloud": "DCloud",
                         "tik": "Tik",
                         "ipcloud": "IPCloud",
                         "v6:hindi": "V6 Hindi",
                     }.get(subserver.lower(), subserver)
-                    display_name = f"{name} · {pretty}"
-                elif subserver.lower().startswith(name.lower()):
-                    display_name = subserver
                 else:
-                    display_name = f"{name} · {subserver}"
+                    display_name = subserver
+                    if display_name.lower().startswith(name.lower()):
+                        display_name = display_name[len(name):].lstrip(" ·:-")
+                    display_name = display_name or name
             else:
                 display_name = name if idx == 0 else f"{name} {idx + 1}"
             servers.append({
@@ -206,8 +206,15 @@ async def scrape_streams(media_type: str, tmdb_id, season=None, episode=None) ->
                 **s,
             })
 
-    # rank: primary first, then hls before mp4
-    servers.sort(key=lambda s: (0 if s["primary"] else 1, 0 if s["type"] == "hls" else 1))
+    # Miami is the default playback source. Start at 1080p for faster loading.
+    def _server_rank(server):
+        if server.get("provider") == "vidy" and str(server.get("name") or "").lower() == "miami":
+            quality = str(server.get("quality") or "").lower()
+            qrank = 0 if "1080" in quality else 1 if "720" in quality else 2 if "480" in quality else 3 if ("2160" in quality or "4k" in quality) else 4
+            return (0, qrank, 0 if server.get("type") == "hls" else 1)
+        return (1 if server.get("primary") else 2, 0, 0 if server.get("type") == "hls" else 1)
+
+    servers.sort(key=_server_rank)
     _cache[ck] = (time.time(), servers)
     return servers
 
