@@ -14,6 +14,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - name: Install diagnostic dependency
+        run: python -m pip install -q requests
       - name: Inspect current public player assets
         run: |
           python - <<'PY'
@@ -41,19 +43,19 @@ jobs:
                 full=urljoin(r.url,src)
                 if full not in scripts: scripts.append(full)
               print('SCRIPTS',len(scripts))
-              for x in scripts[:30]: print('SCRIPT',x)
-              for x in scripts[:30]:
+              for x in scripts[:40]: print('SCRIPT',x)
+              for x in scripts[:40]:
                 try:
                   js=s.get(x,timeout=10).text
                 except Exception: continue
                 low=js.lower()
-                keys=['/ja/','e9ac6-y0mng','untucgorjge','x-requested-with','1000018218870967','premiere 4k','serverlist','decrypt']
+                keys=['/ja/','e9ac6-y0mng','untucgorjge','x-requested-with','1000018218870967','premiere 4k','serverlist','decrypt','/api/','catalog','server']
                 found=[k for k in keys if k in low]
                 if found:
                   print('MATCH',x,'KEYS',found,'LEN',len(js))
                   for k in found:
                     i=low.find(k)
-                    print('CTX',k,js[max(0,i-240):i+420].replace('\n',' ')[:700])
+                    print('CTX',k,js[max(0,i-300):i+520].replace('\n',' ')[:850])
             except Exception as e:
               print('PAGE_ERROR',u,repr(e))
           PY
