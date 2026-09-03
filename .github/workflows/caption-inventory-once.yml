@@ -1,0 +1,47 @@
+name: Caption source inventory once
+
+on:
+  push:
+    paths:
+      - '.github/workflows/caption-inventory-once.yml'
+
+jobs:
+  inventory:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install -q -r requirements.txt
+      - name: Inspect caption metadata
+        run: |
+          python - <<'PY'
+          import asyncio, json, sys
+          sys.path.insert(0, 'backend')
+          import scraper
+
+          async def main():
+              streams = await scraper.scrape_streams('movie', '1083381')
+              seen = set()
+              rows = []
+              for stream in streams:
+                  for cap in stream.get('captions') or []:
+                      key = (cap.get('url'), cap.get('lang'), cap.get('name'), cap.get('source'))
+                      if key in seen:
+                          continue
+                      seen.add(key)
+                      rows.append({
+                          'video_server': stream.get('name'),
+                          'provider': stream.get('provider'),
+                          'video_quality': stream.get('quality'),
+                          'caption_name': cap.get('name'),
+                          'caption_lang': cap.get('lang'),
+                          'caption_source': cap.get('source'),
+                          'caption_type': cap.get('type'),
+                      })
+              print('CAPTION_COUNT', len(rows))
+              print(json.dumps(rows, indent=2, ensure_ascii=False))
+
+          asyncio.run(main())
+          PY
