@@ -277,6 +277,7 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
     const hlsRef = useRef(null);
     const hlsRetryRef = useRef({ serverId: null, network: 0, media: 0 });
     const hideTimer = useRef(null);
+    const wakeThrottleRef = useRef(0);
     const pendingSeekRef = useRef(null);
     const autoCaptionRef = useRef(false);
     const autoPlayRef = useRef(true);
@@ -648,30 +649,40 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
                     .filter(Boolean),
             );
             const providers = ["castle", "vidlink", "vidnest", "vidzee", "vidrock", "vidy", "cinejoy", "vidcore", "vixsrc"];
-            const requests = providers
-                .filter((provider) => !excluded.has(provider))
-                .map((provider) => getStreams(mediaType, id, season, episode, {
-                    provider,
-                    mirror: provider === "vidy" ? "fast" : undefined,
-                    timeout: provider === "cinejoy" ? 12000 : 9500,
-                    ...streamResolveHints,
-                })
-                    .then((data) => mergePayload(data, true))
-                    .catch(() => []));
+            const providerQueue = providers.filter((provider) => !excluded.has(provider));
 
-            if (!requests.length) {
+            if (!providerQueue.length) {
                 backgroundPromise = Promise.resolve([]);
                 if (alive) setSourcesLoading(false);
                 return backgroundPromise;
             }
 
-            backgroundPromise = Promise.allSettled(requests)
-                .then((results) => results.flatMap((result) =>
-                    result.status === "fulfilled" && Array.isArray(result.value) ? result.value : []
-                ))
-                .finally(() => {
-                    if (alive) setSourcesLoading(false);
-                });
+            const loadProvider = (provider) => getStreams(mediaType, id, season, episode, {
+                provider,
+                mirror: provider === "vidy" ? "fast" : undefined,
+                timeout: provider === "cinejoy" ? 12000 : 9500,
+                ...streamResolveHints,
+            })
+                .then((data) => mergePayload(data, true))
+                .catch(() => []);
+
+            // Keep provider discovery progressive instead of hammering every resolver at once.
+            // Three concurrent lookups keeps backup sources arriving quickly without competing
+            // with the active HLS stream for CPU/network during startup.
+            backgroundPromise = (async () => {
+                const collected = [];
+                const batchSize = 3;
+                for (let index = 0; alive && index < providerQueue.length; index += batchSize) {
+                    const batch = providerQueue.slice(index, index + batchSize);
+                    const results = await Promise.allSettled(batch.map(loadProvider));
+                    for (const result of results) {
+                        if (result.status === "fulfilled" && Array.isArray(result.value)) collected.push(...result.value);
+                    }
+                }
+                return collected;
+            })().finally(() => {
+                if (alive) setSourcesLoading(false);
+            });
             return backgroundPromise;
         };
 
@@ -704,9 +715,9 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
                 // Give Miami a clean startup lane when there is no different starred default.
                 backgroundTimer = window.setTimeout(
                     () => startBackground(hasMiamiCaptions ? "vidy,cinejoy" : "cinejoy"),
-                    700,
+                    1800,
                 );
-                heavyTimer = window.setTimeout(() => startHeavyCineJoy(), 6500);
+                heavyTimer = window.setTimeout(() => startHeavyCineJoy(), 7000);
                 return list;
             })
             .catch(() => startBackground(undefined));
@@ -928,7 +939,7 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
             setCaptionText((old) => old === next ? old : next);
         };
         updateCaption();
-        const timer = window.setInterval(updateCaption, 80);
+        const timer = window.setInterval(updateCaption, 160);
         return () => window.clearInterval(timer);
     }, [mode, sub, subs, serverId, externalCaptionId, captionStyle.delay, captionStyle.accuracy, captionStyle.autoCorrect]);
 
@@ -1070,6 +1081,9 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
     const showRipple = (dir) => { setRipple(dir); setTimeout(() => setRipple(null), 500); };
 
     const wake = useCallback(() => {
+        const now = typeof performance !== "undefined" ? performance.now() : Date.now();
+        if (now - wakeThrottleRef.current < 120) return;
+        wakeThrottleRef.current = now;
         setShowControls(true);
         clearTimeout(hideTimer.current);
         hideTimer.current = setTimeout(() => { if (playing) { setShowControls(false); setMenu(null); } }, 3200);
@@ -1157,13 +1171,13 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
             }
         };
 
-        const primaryDelay = captionsEnabled ? 0 : 1400;
+        const primaryDelay = captionsEnabled ? 0 : 2500;
         const primaryTimer = window.setTimeout(async () => {
             await loadBatch(firstBatch);
             if (!alive) return;
             secondaryTimer = window.setTimeout(
                 () => loadBatch([...english.filter((track) => !firstBatch.includes(track)), ...rest]),
-                captionsEnabled ? 500 : 1800,
+                captionsEnabled ? 2500 : 8000,
             );
         }, primaryDelay);
 
@@ -1509,25 +1523,25 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
 
                     <div
                         onClick={(e) => e.stopPropagation()}
-                        className={`absolute inset-0 z-20 flex items-center justify-center gap-[11vw] max-md:gap-16 transition-opacity duration-300 ${showControls ? "opacity-100" : "opacity-0 pointer-events-none"}`}
+                        className={`absolute inset-0 z-20 flex items-center justify-center gap-[8vw] max-md:gap-10 transition-opacity duration-200 ${showControls ? "opacity-100" : "opacity-0 pointer-events-none"}`}
                     >
-                        <button onClick={() => seekBy(-10)} className="relative w-20 h-20 md:w-24 md:h-24 text-white/90 hover:text-white active:scale-95 transition" aria-label="Back 10 seconds">
+                        <button onClick={() => seekBy(-10)} className="relative w-14 h-14 md:w-16 md:h-16 text-white/90 hover:text-white active:scale-95 transition" aria-label="Back 10 seconds">
                             <RotateCcw className="absolute inset-0 w-full h-full stroke-[1.7]" />
-                            <span className="absolute inset-0 flex items-center justify-center text-xl md:text-2xl font-semibold pt-1">10</span>
+                            <span className="absolute inset-0 flex items-center justify-center text-sm md:text-base font-semibold pt-0.5">10</span>
                         </button>
 
                         <button
                             data-testid="synapse-play-pause-btn"
                             onClick={togglePlay}
-                            className="w-20 h-20 md:w-28 md:h-28 flex items-center justify-center text-white hover:scale-105 active:scale-95 transition-transform drop-shadow-[0_5px_20px_rgba(0,0,0,0.45)]"
+                            className="w-16 h-16 md:w-20 md:h-20 flex items-center justify-center text-white hover:scale-105 active:scale-95 transition-transform drop-shadow-[0_4px_14px_rgba(0,0,0,0.38)]"
                             aria-label={playing ? "Pause" : "Play"}
                         >
-                            {playing ? <Pause className="w-16 h-16 md:w-20 md:h-20 fill-current stroke-[1.2]" /> : <Play className="w-20 h-20 md:w-24 md:h-24 fill-current stroke-[1.2] ml-2" />}
+                            {playing ? <Pause className="w-11 h-11 md:w-14 md:h-14 fill-current stroke-[1.2]" /> : <Play className="w-14 h-14 md:w-16 md:h-16 fill-current stroke-[1.2] ml-1.5" />}
                         </button>
 
-                        <button onClick={() => seekBy(10)} className="relative w-20 h-20 md:w-24 md:h-24 text-white/90 hover:text-white active:scale-95 transition" aria-label="Forward 10 seconds">
+                        <button onClick={() => seekBy(10)} className="relative w-14 h-14 md:w-16 md:h-16 text-white/90 hover:text-white active:scale-95 transition" aria-label="Forward 10 seconds">
                             <RotateCw className="absolute inset-0 w-full h-full stroke-[1.7]" />
-                            <span className="absolute inset-0 flex items-center justify-center text-xl md:text-2xl font-semibold pt-1">10</span>
+                            <span className="absolute inset-0 flex items-center justify-center text-sm md:text-base font-semibold pt-0.5">10</span>
                         </button>
                     </div>
 
@@ -1560,21 +1574,15 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
                         </div>
 
                         <div className="flex items-center gap-3 md:gap-4">
-                            <div className="flex min-w-[118px] items-center gap-2 md:min-w-[168px] md:gap-3">
-                                <button data-testid="synapse-mute-btn" onClick={toggleMute} className="grid h-9 w-9 shrink-0 place-items-center text-white/90 hover:text-white hover:scale-105 active:scale-95 transition" aria-label="Mute">
-                                    {muted || volume === 0 ? <VolumeX className="h-5 w-5 md:h-[22px] md:w-[22px] stroke-[1.9]" /> : <Volume2 className="h-5 w-5 md:h-[22px] md:w-[22px] stroke-[1.9]" />}
-                                </button>
-                                <input
-                                    data-testid="synapse-volume-slider"
-                                    type="range" min="0" max="1" step="0.02" value={muted ? 0 : volume}
-                                    onChange={(e) => setVol(parseFloat(e.target.value))}
-                                    className="h-1.5 w-16 min-w-0 cursor-pointer accent-white md:w-24"
-                                    aria-label="Volume"
-                                />
-                            </div>
+                            <button data-testid="synapse-mute-btn" onClick={toggleMute} className="grid h-9 w-9 shrink-0 place-items-center text-white/90 hover:text-white hover:scale-105 active:scale-95 transition" aria-label="Mute">
+                                {muted || volume === 0 ? <VolumeX className="h-5 w-5 md:h-[22px] md:w-[22px] stroke-[1.9]" /> : <Volume2 className="h-5 w-5 md:h-[22px] md:w-[22px] stroke-[1.9]" />}
+                            </button>
 
                             <span data-testid="synapse-time" className="text-sm md:text-lg font-medium tabular-nums text-white/95 whitespace-nowrap">
                                 {fmtTime(current)} <span className="text-white/65 px-1">/</span> {fmtTime(duration)}
+                            </span>
+                            <span className="hidden sm:inline text-[11px] md:text-[13px] font-semibold tracking-[0.04em] text-white/38 whitespace-nowrap" data-testid="synplayer-label">
+                                <span className="mr-2 text-white/18">·</span>SynPlayer
                             </span>
 
                             <div className="ml-auto flex items-center gap-1 md:gap-1.5">
@@ -1712,6 +1720,7 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
                                         speed: "Playback speed",
                                         subtitles: "Captions",
                                         auto: "Autoplay",
+                                        volume: "Volume",
                                         boost: "Volume boost",
                                         spatial: "Spatial audio",
                                         video: "Picture",
@@ -1767,6 +1776,12 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
 
                                     <div className="mx-4 my-1 h-px bg-white/[0.07]" />
                                     <div className="px-4 pb-1.5 pt-2 text-[9px] font-semibold uppercase tracking-[0.18em] text-white/28">Audio & captions</div>
+                                    <button onClick={() => setSettingsPage("volume")} className="group flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-white/[0.045]" data-testid="synapse-volume-settings-row">
+                                        <Volume2 className="h-[19px] w-[19px] shrink-0 text-white/55" strokeWidth={1.7} />
+                                        <span className="flex-1 text-[14px] font-medium text-white/86">Volume</span>
+                                        <span className="text-[12px] text-white/40">{Math.round((muted ? 0 : volume) * 100)}%</span>
+                                        <ChevronRight className="h-4 w-4 text-white/25 transition group-hover:text-white/50" />
+                                    </button>
                                     <button onClick={() => setSettingsPage("subtitles")} className="group flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-white/[0.045]">
                                         <Subtitles className="h-[19px] w-[19px] shrink-0 text-white/55" strokeWidth={1.7} />
                                         <span className="flex-1 text-[14px] font-medium text-white/86">Captions</span>
@@ -1910,6 +1925,38 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
                                             <button key={r} onClick={() => changeRateInSettings(r)} className={`border-b border-r border-white/[0.07] px-3 py-3.5 text-[13px] font-medium transition ${rate === r ? "bg-white text-black" : "bg-transparent text-white/64 hover:bg-white/[0.045] hover:text-white"}`}>{r}x</button>
                                         ))}
                                     </div>
+                                </div>
+                            )}
+
+                            {settingsPage === "volume" && (
+                                <div className="p-4" data-testid="synapse-volume-settings-page">
+                                    <div className="flex items-end justify-between">
+                                        <div>
+                                            <p className="text-[13px] font-medium text-white/76">Volume</p>
+                                            <p className="mt-1 text-[10px] text-white/30">Player volume</p>
+                                        </div>
+                                        <p className="text-[24px] font-semibold tabular-nums tracking-[-0.03em] text-white">{Math.round((muted ? 0 : volume) * 100)}%</p>
+                                    </div>
+                                    <input
+                                        data-testid="synapse-settings-volume-slider"
+                                        type="range"
+                                        min="0"
+                                        max="100"
+                                        step="1"
+                                        value={muted ? 0 : Math.round(volume * 100)}
+                                        onChange={(e) => setVol(Number(e.target.value) / 100)}
+                                        className="mt-6 w-full accent-white"
+                                        aria-label="Volume"
+                                    />
+                                    <div className="mt-2 flex justify-between text-[9px] tabular-nums text-white/25"><span>0%</span><span>50%</span><span>100%</span></div>
+                                    <button
+                                        type="button"
+                                        onClick={toggleMute}
+                                        className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.035] px-4 py-3 text-[12px] font-medium text-white/68 transition hover:bg-white/[0.06] hover:text-white"
+                                    >
+                                        {muted || volume === 0 ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+                                        {muted ? "Unmute" : "Mute"}
+                                    </button>
                                 </div>
                             )}
 
