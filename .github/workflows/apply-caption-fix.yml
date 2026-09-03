@@ -53,7 +53,7 @@ jobs:
       - name: Build frontend
         run: |
           grep -q 'captionLanguageOptions' frontend/src/components/SynapsePlayer.jsx
-          grep -q 'Best ·' frontend/src/components/SynapsePlayer.jsx
+          grep -q 'captionMap' frontend/src/components/SynapsePlayer.jsx
           grep -q '/api/caption' backend/server.py
           yarn --cwd frontend install
           CI=false GENERATE_SOURCEMAP=false yarn --cwd frontend build
@@ -64,8 +64,8 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add backend/server.py frontend/src/components/SynapsePlayer.jsx public backend/public
-          git commit -m "Fix captions and automatically choose the best track"
+          git add frontend/src/components/SynapsePlayer.jsx public backend/public
+          git commit -m "Preserve best captions during progressive source loading"
           git push
 
-# one-time runner retry
+# final one-time run
