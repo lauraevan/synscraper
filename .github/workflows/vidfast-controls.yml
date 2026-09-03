@@ -1,0 +1,95 @@
+name: Apply VidFast-style player controls
+
+on:
+  push:
+    paths:
+      - '.github/workflows/vidfast-controls.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Flatten player controls
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('frontend/src/components/SynapsePlayer.jsx')
+          t = p.read_text()
+
+          replacements = {
+              'className={`grid h-11 w-11 md:h-12 md:w-12 place-items-center rounded-full border backdrop-blur-xl transition-all duration-200 active:scale-95 ${menu === "sources" ? "border-white/25 bg-white/14 text-white" : "border-white/[0.08] bg-black/18 text-white/85 hover:bg-white/[0.08] hover:text-white"}`}':
+              'className={`grid h-11 w-11 md:h-12 md:w-12 place-items-center transition-all duration-200 active:scale-95 ${menu === "sources" ? "text-white scale-105" : "text-white/85 hover:text-white hover:scale-105"}`}',
+
+              'className="flex min-w-[118px] items-center gap-2 rounded-full border border-white/10 bg-white/[0.045] px-1.5 py-1 md:min-w-[168px] md:gap-3 md:px-2"':
+              'className="flex min-w-[118px] items-center gap-2 md:min-w-[168px] md:gap-3"',
+
+              'className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-white/90 hover:bg-white/10 hover:text-white active:scale-95 transition"':
+              'className="grid h-9 w-9 shrink-0 place-items-center text-white/90 hover:text-white hover:scale-105 active:scale-95 transition"',
+
+              'className="hidden sm:grid h-10 w-10 md:h-11 md:w-11 place-items-center rounded-full border border-white/10 bg-white/[0.04] text-white/85 hover:bg-white/10 hover:text-white active:scale-95 transition"':
+              'className="hidden sm:grid h-10 w-10 md:h-11 md:w-11 place-items-center text-white/85 hover:text-white hover:scale-105 active:scale-95 transition"',
+
+              'className={`grid h-10 w-10 md:h-11 md:w-11 place-items-center rounded-full border transition active:scale-95 ${sub >= 0 || externalCaptionId ? "bg-white text-black border-white" : "bg-white/[0.04] text-white/90 border-white/10 hover:bg-white/10 hover:text-white"}`}':
+              'className={`grid h-10 w-10 md:h-11 md:w-11 place-items-center transition active:scale-95 hover:scale-105 ${sub >= 0 || externalCaptionId ? "text-white" : "text-white/85 hover:text-white"}`}',
+
+              'className={`grid h-10 w-10 md:h-11 md:w-11 place-items-center rounded-full border transition active:scale-95 ${menu === "settings" ? "border-white/20 bg-white/14 text-white" : "border-white/10 bg-white/[0.04] text-white/90 hover:bg-white/10 hover:text-white"}`}':
+              'className={`grid h-10 w-10 md:h-11 md:w-11 place-items-center transition active:scale-95 hover:scale-105 ${menu === "settings" ? "text-white" : "text-white/85 hover:text-white"}`}',
+
+              'className="hidden sm:grid h-10 w-10 md:h-11 md:w-11 place-items-center rounded-full border border-white/10 bg-white/[0.04] text-white/90 hover:bg-white/10 hover:text-white active:scale-95 transition"':
+              'className="hidden sm:grid h-10 w-10 md:h-11 md:w-11 place-items-center text-white/85 hover:text-white hover:scale-105 active:scale-95 transition"',
+
+              'className="grid h-10 w-10 md:h-11 md:w-11 place-items-center rounded-full border border-white/10 bg-white/[0.04] text-white/90 hover:bg-white/10 hover:text-white active:scale-95 transition"':
+              'className="grid h-10 w-10 md:h-11 md:w-11 place-items-center text-white/85 hover:text-white hover:scale-105 active:scale-95 transition"',
+
+              '>Now playing</p>':
+              '>You\'re Watching</p>',
+          }
+
+          for old, new in replacements.items():
+              if old not in t:
+                  raise SystemExit(f'missing expected control style: {old[:90]}')
+              t = t.replace(old, new)
+
+          # Give the bottom control strip a little more of the open VidFast spacing.
+          old = 'className={`absolute bottom-0 left-0 right-0 z-30 px-4 md:px-7 pb-4 md:pb-6 pt-10 transition-opacity duration-300 ${showControls ? "opacity-100" : "opacity-0 pointer-events-none"}`}'
+          new = 'className={`absolute bottom-0 left-0 right-0 z-30 px-5 md:px-8 pb-5 md:pb-7 pt-12 transition-opacity duration-300 ${showControls ? "opacity-100" : "opacity-0 pointer-events-none"}`}'
+          if old not in t:
+              raise SystemExit('bottom controls wrapper not found')
+          t = t.replace(old, new, 1)
+
+          # Slightly enlarge right-side icons to match the visual weight in the reference.
+          t = t.replace('<Settings className="h-[22px] w-[22px] stroke-[1.9]" />', '<Settings className="h-[25px] w-[25px] stroke-[1.8]" />')
+          t = t.replace('<PictureInPicture2 className="h-[21px] w-[21px] stroke-[1.9]" />', '<PictureInPicture2 className="h-[24px] w-[24px] stroke-[1.8]" />')
+          t = t.replace('<Subtitles className="h-[22px] w-[22px] stroke-[1.9]" />', '<Subtitles className="h-[25px] w-[25px] stroke-[1.8]" />')
+          t = t.replace('{fs ? <Minimize className="h-[22px] w-[22px] stroke-[1.9]" /> : <Maximize className="h-[22px] w-[22px] stroke-[1.9]" />}', '{fs ? <Minimize className="h-[26px] w-[26px] stroke-[1.8]" /> : <Maximize className="h-[26px] w-[26px] stroke-[1.8]" />}')
+
+          p.write_text(t)
+          PY
+
+      - name: Validate and build
+        run: |
+          ! grep -q 'rounded-full border border-white/10 bg-white/\[0.04\]' frontend/src/components/SynapsePlayer.jsx
+          grep -q "You're Watching" frontend/src/components/SynapsePlayer.jsx
+          yarn --cwd frontend install
+          CI=false GENERATE_SOURCEMAP=false yarn --cwd frontend build
+          rm -rf public backend/public
+          cp -R frontend/build public
+          cp -R frontend/build backend/public
+
+      - name: Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add frontend/src/components/SynapsePlayer.jsx public backend/public
+          git commit -m "Flatten player controls for a VidFast-style UI"
+          git push
