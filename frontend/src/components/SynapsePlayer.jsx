@@ -174,6 +174,7 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
     const containerRef = useRef(null);
     const videoRef = useRef(null);
     const hlsRef = useRef(null);
+    const hlsRetryRef = useRef({ serverId: null, network: 0, media: 0 });
     const hideTimer = useRef(null);
     const pendingSeekRef = useRef(null);
     const autoCaptionRef = useRef(false);
@@ -235,11 +236,26 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
         const video = videoRef.current;
         if (!video || !server) return;
         setBuffering(true);
+        hlsRetryRef.current = { serverId: server.id, network: 0, media: 0 };
         setLevels([]); setLevel(-1); setSubs([]); setSub(-1);
         if (hlsRef.current) { hlsRef.current.destroy(); hlsRef.current = null; }
         const url = hlsProxyUrl(server.play_url);
         if (server.type === "hls" && Hls.isSupported()) {
-            const hls = new Hls({ enableWorker: true, maxBufferLength: 30 });
+            const hls = new Hls({
+                enableWorker: true,
+                startFragPrefetch: true,
+                maxBufferLength: 45,
+                maxMaxBufferLength: 90,
+                manifestLoadingTimeOut: 10000,
+                manifestLoadingMaxRetry: 3,
+                manifestLoadingRetryDelay: 350,
+                levelLoadingTimeOut: 10000,
+                levelLoadingMaxRetry: 3,
+                levelLoadingRetryDelay: 350,
+                fragLoadingTimeOut: 20000,
+                fragLoadingMaxRetry: 4,
+                fragLoadingRetryDelay: 350,
+            });
             hlsRef.current = hls;
             hls.loadSource(url);
             hls.attachMedia(video);
@@ -265,7 +281,30 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
                 }
             });
             hls.on(Hls.Events.LEVEL_SWITCHED, (_e, d) => setLevel(hls.autoLevelEnabled ? -1 : d.level));
-            hls.on(Hls.Events.ERROR, (_e, data) => { if (data.fatal) tryNext(server.id); });
+            hls.on(Hls.Events.ERROR, (_e, data) => {
+                if (!data.fatal) return;
+                const retries = hlsRetryRef.current;
+                if (retries.serverId !== server.id) return;
+                if (data.type === Hls.ErrorTypes.NETWORK_ERROR && retries.network < 2) {
+                    retries.network += 1;
+                    const delay = 300 * retries.network;
+                    window.setTimeout(() => {
+                        if (hlsRef.current !== hls) return;
+                        if (data.details === Hls.ErrorDetails.MANIFEST_LOAD_ERROR || data.details === Hls.ErrorDetails.MANIFEST_LOAD_TIMEOUT) {
+                            hls.loadSource(url);
+                        } else {
+                            hls.startLoad();
+                        }
+                    }, delay);
+                    return;
+                }
+                if (data.type === Hls.ErrorTypes.MEDIA_ERROR && retries.media < 1) {
+                    retries.media += 1;
+                    hls.recoverMediaError();
+                    return;
+                }
+                tryNext(server.id);
+            });
         } else {
             const resumeAt = pendingSeekRef.current;
             const restore = () => {
@@ -641,8 +680,14 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
         for (const server of matches) {
             const mirrorName = server.name || source.name;
             const existing = mirrors.get(mirrorName);
-            const score = /^auto/i.test(String(server.quality || "")) ? 100000 : qualityHeight(server.quality);
-            const existingScore = existing ? (/^auto/i.test(String(existing.quality || "")) ? 100000 : qualityHeight(existing.quality)) : -1;
+            const sourceScore = (candidate) => {
+                if (/^auto/i.test(String(candidate?.quality || ""))) return 100000;
+                const height = qualityHeight(candidate?.quality);
+                if (source.provider === "vidy" && height === 1080) return 90000;
+                return height;
+            };
+            const score = sourceScore(server);
+            const existingScore = existing ? sourceScore(existing) : -1;
             if (!existing || score > existingScore) mirrors.set(mirrorName, server);
         }
         return Array.from(mirrors.values()).map((server) => ({

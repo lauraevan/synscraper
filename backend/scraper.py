@@ -163,7 +163,13 @@ async def scrape_streams(media_type: str, tmdb_id, season=None, episode=None) ->
         return hit[1]
 
     async def run(name, pid, cls):
-        streams = await asyncio.to_thread(_run_one, cls, media_type, tmdb_id, season, episode)
+        try:
+            streams = await asyncio.wait_for(
+                asyncio.to_thread(_run_one, cls, media_type, tmdb_id, season, episode),
+                timeout=10.0,
+            )
+        except (asyncio.TimeoutError, TimeoutError):
+            streams = []
         return name, pid, streams
 
     results = await asyncio.gather(

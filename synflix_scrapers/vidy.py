@@ -20,7 +20,7 @@ import urllib.parse
 import urllib.request
 from typing import Any
 
-__version__ = "0.3.0"
+__version__ = "0.3.1"
 
 BASE_URL = "https://www.vidy.st"
 DB_BASE = "https://db.wecollege.net/3"
@@ -155,6 +155,7 @@ class VidyResolver:
         params: dict[str, Any] | None = None,
         referer: str | None = None,
         accept: str = "application/json,text/plain,*/*",
+        timeout: float = 25.0,
     ) -> Any:
         if params:
             query = urllib.parse.urlencode(
@@ -172,7 +173,7 @@ class VidyResolver:
         req = urllib.request.Request(url, headers=headers, method="GET")
         self.log(f"GET {url}")
         try:
-            with urllib.request.urlopen(req, timeout=25, context=self.ssl_context) as response:
+            with urllib.request.urlopen(req, timeout=timeout, context=self.ssl_context) as response:
                 raw = response.read().decode("utf-8", errors="strict")
                 content_type = response.headers.get("Content-Type", "").lower()
         except urllib.error.HTTPError as exc:
@@ -304,7 +305,7 @@ class VidyResolver:
         return data
 
     def _seed(self, media_id: int) -> str:
-        data = self._request(f"{API_BASE}/seed", params={"mediaId": int(media_id)})
+        data = self._request(f"{API_BASE}/seed", params={"mediaId": int(media_id)}, timeout=6.0)
         if not isinstance(data, dict) or data.get("seed") is None:
             raise RuntimeError(f"Unexpected Vidy seed response: {data!r}")
         return str(data["seed"])
@@ -331,7 +332,7 @@ class VidyResolver:
 
         seed = str(seed or self._seed(media_id))
         query.update({"enc": "2", "seed": seed})
-        response = self._request(f"{API_BASE}/{provider}/sources", params=query)
+        response = self._request(f"{API_BASE}/{provider}/sources", params=query, timeout=6.5)
         encrypted = self._encrypted_payload(response)
         clear = decode_envelope(encrypted, seed, media_id)
         data = json.loads(clear)
@@ -467,7 +468,7 @@ class VidyResolver:
                 except Exception as exc:
                     errors[providers[0]] = str(exc)
             else:
-                with ThreadPoolExecutor(max_workers=min(5, len(providers))) as pool:
+                with ThreadPoolExecutor(max_workers=len(providers)) as pool:
                     futures = {pool.submit(load_provider, name): name for name in providers}
                     for future in as_completed(futures):
                         name = futures[future]
