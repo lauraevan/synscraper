@@ -7,7 +7,8 @@ import {
     getStreams,
 } from "@/lib/api";
 
-const QUALITY_ORDER = [2160, 1440, 1080, 720, 480, 360, 240, 144];
+const MAX_DOWNLOAD_HEIGHT = 1080;
+const QUALITY_ORDER = [1080, 720, 480, 360, 240, 144];
 
 const qualityHeight = (value) => {
     const text = String(value || "").toLowerCase();
@@ -16,7 +17,7 @@ const qualityHeight = (value) => {
     return match ? Number(match[1]) : 0;
 };
 
-const qualityLabel = (height) => height === 2160 ? "4K" : `${height}p`;
+const qualityLabel = (height) => `${height}p`;
 const sourceKey = (server) => `${server.provider}|${server.name}`;
 
 const mergeServers = (current, incoming) => {
@@ -116,7 +117,11 @@ export const DownloadPanel = ({ mediaType, id, season, episode, title }) => {
         })
             .then((data) => {
                 if (!alive) return;
-                setProbedQualities((data?.available_qualities || []).map(Number).filter(Boolean));
+                setProbedQualities(
+                    (data?.available_qualities || [])
+                        .map(Number)
+                        .filter((height) => height > 0 && height <= MAX_DOWNLOAD_HEIGHT)
+                );
             })
             .catch((err) => {
                 if (alive) {
@@ -134,7 +139,7 @@ export const DownloadPanel = ({ mediaType, id, season, episode, title }) => {
         const set = new Set(probedQualities);
         selectedServers.forEach((server) => {
             const height = qualityHeight(server.quality);
-            if (height) set.add(height);
+            if (height && height <= MAX_DOWNLOAD_HEIGHT) set.add(height);
         });
         return QUALITY_ORDER.filter((height) => set.has(height));
     }, [selectedServers, probedQualities]);
@@ -164,7 +169,7 @@ export const DownloadPanel = ({ mediaType, id, season, episode, title }) => {
             title,
         });
         if (!url) {
-            setError("Download worker is not configured.");
+            setError("Download API is not configured.");
             return;
         }
         const anchor = document.createElement("a");
@@ -190,7 +195,7 @@ export const DownloadPanel = ({ mediaType, id, season, episode, title }) => {
                         </div>
                         <div>
                             <p className="text-sm font-semibold text-white/86">Download MP4</p>
-                            <p className="mt-0.5 text-[11px] text-white/36">Pick a source and exact HLS quality, then remux with FFmpeg.</p>
+                            <p className="mt-0.5 text-[11px] text-white/36">Serverless HLS remux · 1080p maximum.</p>
                         </div>
                     </div>
                     <ChevronDown className="h-4 w-4 text-white/35" />
@@ -204,7 +209,7 @@ export const DownloadPanel = ({ mediaType, id, season, episode, title }) => {
                             </div>
                             <div>
                                 <h3 className="text-sm font-semibold text-white/90">Download MP4</h3>
-                                <p className="mt-0.5 text-[11px] text-white/35">The worker pins one HLS rendition and remuxes it without re-encoding.</p>
+                                <p className="mt-0.5 text-[11px] text-white/35">Pick a source and quality up to 1080p. FFmpeg remuxes without re-encoding.</p>
                             </div>
                         </div>
                         <button onClick={() => setOpen(false)} className="grid h-8 w-8 place-items-center text-white/40 transition hover:text-white" aria-label="Close download panel">
@@ -212,61 +217,53 @@ export const DownloadPanel = ({ mediaType, id, season, episode, title }) => {
                         </button>
                     </div>
 
-                    {!DOWNLOADS_CONFIGURED ? (
-                        <div className="mt-4 rounded-xl border border-white/10 bg-white/[0.035] px-3 py-3 text-xs leading-5 text-white/50">
-                            Downloads are added, but this build has no worker URL yet. Set <span className="font-mono text-white/75">REACT_APP_DOWNLOAD_WORKER_URL</span> to the VPS/container running <span className="font-mono text-white/75">backend/download_worker.py</span>.
-                        </div>
-                    ) : (
-                        <>
-                            <div className="mt-4 grid gap-3 md:grid-cols-2">
-                                <label className="block">
-                                    <span className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.16em] text-white/28">Source</span>
-                                    <select
-                                        value={source}
-                                        onChange={(event) => setSource(event.target.value)}
-                                        disabled={loading && !sources.length}
-                                        className="h-11 w-full rounded-xl border border-white/10 bg-white/[0.045] px-3 text-sm text-white outline-none"
-                                    >
-                                        {!sources.length && <option value="">{loading ? "Finding sources…" : "No HLS sources"}</option>}
-                                        {sources.map((item) => (
-                                            <option key={item.key} value={item.key} className="bg-black">{item.name}</option>
-                                        ))}
-                                    </select>
-                                </label>
+                    <div className="mt-4 grid gap-3 md:grid-cols-2">
+                        <label className="block">
+                            <span className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.16em] text-white/28">Source</span>
+                            <select
+                                value={source}
+                                onChange={(event) => setSource(event.target.value)}
+                                disabled={loading && !sources.length}
+                                className="h-11 w-full rounded-xl border border-white/10 bg-white/[0.045] px-3 text-sm text-white outline-none"
+                            >
+                                {!sources.length && <option value="">{loading ? "Finding sources…" : "No HLS sources"}</option>}
+                                {sources.map((item) => (
+                                    <option key={item.key} value={item.key} className="bg-black">{item.name}</option>
+                                ))}
+                            </select>
+                        </label>
 
-                                <label className="block">
-                                    <span className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.16em] text-white/28">Quality</span>
-                                    <select
-                                        value={quality}
-                                        onChange={(event) => setQuality(event.target.value)}
-                                        disabled={!selectedSource || probing}
-                                        className="h-11 w-full rounded-xl border border-white/10 bg-white/[0.045] px-3 text-sm text-white outline-none"
-                                    >
-                                        {qualities.length ? qualities.map((height) => (
-                                            <option key={height} value={height} className="bg-black">{qualityLabel(height)}</option>
-                                        )) : <option value="auto" className="bg-black">{probing ? "Inspecting…" : "Auto / highest"}</option>}
-                                    </select>
-                                </label>
-                            </div>
+                        <label className="block">
+                            <span className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.16em] text-white/28">Quality · max 1080p</span>
+                            <select
+                                value={quality}
+                                onChange={(event) => setQuality(event.target.value)}
+                                disabled={!selectedSource || probing}
+                                className="h-11 w-full rounded-xl border border-white/10 bg-white/[0.045] px-3 text-sm text-white outline-none"
+                            >
+                                {qualities.length ? qualities.map((height) => (
+                                    <option key={height} value={height} className="bg-black">{qualityLabel(height)}</option>
+                                )) : <option value="auto" className="bg-black">{probing ? "Inspecting…" : "Auto · capped at 1080p"}</option>}
+                            </select>
+                        </label>
+                    </div>
 
-                            {error && <p className="mt-3 text-xs text-red-300/80">{error}</p>}
+                    {error && <p className="mt-3 text-xs text-red-300/80">{error}</p>}
 
-                            <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-white/[0.07] pt-4">
-                                <p className="text-[11px] text-white/32">
-                                    {selectedSource ? `${selectedSource.name} · ${quality === "auto" ? "Auto" : qualityLabel(Number(quality))}` : "Choose a source"}
-                                </p>
-                                <button
-                                    type="button"
-                                    onClick={startDownload}
-                                    disabled={!selectedSource || loading || probing}
-                                    className="inline-flex h-10 items-center gap-2 rounded-xl bg-white px-4 text-sm font-semibold text-black transition hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-35"
-                                >
-                                    {(loading || probing) ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-                                    Download MP4
-                                </button>
-                            </div>
-                        </>
-                    )}
+                    <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-white/[0.07] pt-4">
+                        <p className="text-[11px] text-white/32">
+                            {selectedSource ? `${selectedSource.name} · ${quality === "auto" ? "Auto ≤1080p" : qualityLabel(Number(quality))}` : "Choose a source"}
+                        </p>
+                        <button
+                            type="button"
+                            onClick={startDownload}
+                            disabled={!selectedSource || loading || probing}
+                            className="inline-flex h-10 items-center gap-2 rounded-xl bg-white px-4 text-sm font-semibold text-black transition hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-35"
+                        >
+                            {(loading || probing) ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                            Download MP4
+                        </button>
+                    </div>
                 </div>
             )}
         </div>
