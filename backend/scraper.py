@@ -28,6 +28,7 @@ PROVIDERS = [
     ("Rock", "vidrock", ("providers.vidrock", "VidrockResolver")),
     ("Vidy", "vidy", ("providers.vidy", "VidyResolver")),
     ("CineJoy", "cinejoy", ("providers.cinejoy", "CineJoyResolver")),
+    ("VidCore", "vidcore", ("providers.vidcore", "VidCoreResolver")),
     ("Vix", "vixsrc", ("providers.vixsrc", "VixSrcResolver")),
 ]
 

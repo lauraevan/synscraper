@@ -19,6 +19,7 @@ const SOURCE_CATALOG = [
     { provider: "vidzee", name: "Zen" },
     { provider: "vidrock", name: "Rock" },
     { provider: "cinejoy", name: "Lisbon" },
+    { provider: "vidcore", name: "VidCore" },
     { provider: "vixsrc", name: "Vix" },
 ];
 const QUALITY_LADDER = [
