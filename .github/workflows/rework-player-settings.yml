@@ -34,3 +34,5 @@ jobs:
           git add frontend/src/components/SynapsePlayer.jsx public
           git commit -m "Redesign movie player settings"
           git push
+
+# trigger: 1
