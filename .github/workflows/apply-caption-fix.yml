@@ -61,3 +61,5 @@ jobs:
           git add backend/server.py frontend/src/components/SynapsePlayer.jsx public backend/public
           git commit -m "Fix captions and automatically choose the best track"
           git push
+
+# one-time runner
