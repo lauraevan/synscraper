@@ -6,19 +6,11 @@ that replays the provider's own API/handshake and returns direct CDN URLs, which
 then relay through our own HLS/segment proxy (referer-aware).
 """
 import asyncio
+import importlib
 import json
 import os
 import re
 import time
-
-from providers.vidlink import VidlinkResolver
-from providers.vidnest import VidNestResolver
-from providers.castle import CastleResolver
-from providers.vidrock import VidrockResolver
-from providers.vidzee import VidzeeResolver
-from providers.vixsrc import VixSrcResolver
-from providers.vidy import VidyResolver
-from providers.cinejoy import CineJoyResolver
 
 VIDUP_ORIGIN = os.environ.get("VIDUP_ORIGIN", "https://vidup.to")
 USER_AGENT = os.environ.get(
@@ -29,22 +21,22 @@ USER_AGENT = os.environ.get(
 
 # Friendly Synflix server names -> resolver classes, in priority order.
 PROVIDERS = [
-    ("Houston", "castle", CastleResolver),      # primary
-    ("Nova", "vidlink", VidlinkResolver),
-    ("Nest", "vidnest", VidNestResolver),
-    ("Zen", "vidzee", VidzeeResolver),
-    ("Rock", "vidrock", VidrockResolver),
-    ("Vidy", "vidy", VidyResolver),
-    ("CineJoy", "cinejoy", CineJoyResolver),
-    ("Vix", "vixsrc", VixSrcResolver),
+    ("Houston", "castle", ("providers.castle", "CastleResolver")),
+    ("Nova", "vidlink", ("providers.vidlink", "VidlinkResolver")),
+    ("Nest", "vidnest", ("providers.vidnest", "VidNestResolver")),
+    ("Zen", "vidzee", ("providers.vidzee", "VidzeeResolver")),
+    ("Rock", "vidrock", ("providers.vidrock", "VidrockResolver")),
+    ("Vidy", "vidy", ("providers.vidy", "VidyResolver")),
+    ("CineJoy", "cinejoy", ("providers.cinejoy", "CineJoyResolver")),
+    ("Vix", "vixsrc", ("providers.vixsrc", "VixSrcResolver")),
 ]
 
 _cache: dict[str, tuple[float, list]] = {}
-_TTL = 120
+_TTL = 180
 
 
-def _key(t, i, s, e, provider_id=None, mirror=None):
-    return f"{t}:{i}:{s}:{e}:{provider_id or 'all'}:{mirror or 'all'}"
+def _key(t, i, s, e, provider_id=None, mirror=None, exclude=None):
+    return f"{t}:{i}:{s}:{e}:{provider_id or 'all'}:{mirror or 'all'}:{exclude or 'none'}"
 
 
 def _stream_type(url: str) -> str:
@@ -115,20 +107,27 @@ def _caption_items(obj, default_source: str) -> list:
         result.append(caption)
     return result
 
-def _run_one(cls, media_type, tmdb_id, season, episode, provider_hint=None, all_mirrors=False):
+def _resolver_class(spec):
+    module_name, class_name = spec
+    module = importlib.import_module(module_name)
+    return getattr(module, class_name)
+
+
+def _run_one(spec, provider_id, media_type, tmdb_id, season, episode, provider_hint=None, fast_mirrors=False):
     try:
+        cls = _resolver_class(spec)
         r = cls()
         resolve_kwargs = {}
-        if cls is VidyResolver:
+        if provider_id == "vidy":
             if provider_hint:
                 resolve_kwargs["provider"] = provider_hint
-            elif all_mirrors:
-                resolve_kwargs["provider"] = "all"
+            elif fast_mirrors:
+                resolve_kwargs["provider"] = "fast"
         out = r.resolve(str(tmdb_id), media_type=media_type, season=season, episode=episode, **resolve_kwargs)
         data = json.loads(out) if isinstance(out, str) else out
         if data.get("status") != "success":
             return []
-        default_caption_source = cls.__name__.replace("Resolver", "").lower()
+        default_caption_source = provider_id
         root_captions = _caption_items(data, default_caption_source)
         streams = []
         for pu in data.get("playable_urls", []):
@@ -161,9 +160,11 @@ def _run_one(cls, media_type, tmdb_id, season, episode, provider_hint=None, all_
         return []
 
 
-async def scrape_streams(media_type: str, tmdb_id, season=None, episode=None, provider_id=None, mirror=None) -> list:
-    """Return normalized playable servers, optionally scoped to one provider/mirror."""
-    ck = _key(media_type, tmdb_id, season, episode, provider_id, mirror)
+async def scrape_streams(media_type: str, tmdb_id, season=None, episode=None, provider_id=None, mirror=None, exclude=None) -> list:
+    """Return normalized playable servers, optionally scoped/excluding providers."""
+    excluded = {part.strip().lower() for part in str(exclude or "").split(",") if part.strip()}
+    normalized_exclude = ",".join(sorted(excluded))
+    ck = _key(media_type, tmdb_id, season, episode, provider_id, mirror, normalized_exclude)
     hit = _cache.get(ck)
     if hit and time.time() - hit[0] < _TTL:
         return hit[1]
@@ -171,23 +172,28 @@ async def scrape_streams(media_type: str, tmdb_id, season=None, episode=None, pr
     selected_providers = [item for item in PROVIDERS if item[1] == provider_id] if provider_id else PROVIDERS
     if provider_id and not selected_providers:
         return []
+    if excluded:
+        selected_providers = [item for item in selected_providers if item[1] not in excluded]
+    if not selected_providers:
+        return []
 
-    async def run(name, pid, cls):
+    async def run(name, pid, spec):
         try:
             provider_hint = mirror if pid == "vidy" and mirror else None
+            per_provider_timeout = 8.5 if provider_id else 9.0
             streams = await asyncio.wait_for(
                 asyncio.to_thread(
-                    _run_one, cls, media_type, tmdb_id, season, episode,
-                    provider_hint, provider_id is None,
+                    _run_one, spec, pid, media_type, tmdb_id, season, episode,
+                    provider_hint, provider_id is None and not mirror,
                 ),
-                timeout=10.0,
+                timeout=per_provider_timeout,
             )
         except (asyncio.TimeoutError, TimeoutError):
             streams = []
         return name, pid, streams
 
     results = await asyncio.gather(
-        *[run(n, p, c) for n, p, c in selected_providers], return_exceptions=True
+        *[run(n, p, spec) for n, p, spec in selected_providers], return_exceptions=True
     )
 
     servers = []
@@ -214,15 +220,17 @@ async def scrape_streams(media_type: str, tmdb_id, season=None, episode=None, pr
                     display_name = display_name or name
             else:
                 display_name = name if idx == 0 else f"{name} {idx + 1}"
+            is_miami = pid == "vidy" and display_name.lower() == "miami"
             servers.append({
                 "id": f"{pid}-{idx}",
                 "name": display_name,
                 "provider": pid,
-                "primary": pid == "castle",
+                "primary": is_miami,
                 **s,
             })
 
-    # Miami is the default playback source. Start at 1080p for faster loading.
+    # Miami is the fast/default playback source. Prefer 1080p for startup,
+    # while preserving 4K/Auto as selectable qualities once the manifest is ready.
     def _server_rank(server):
         if server.get("provider") == "vidy" and str(server.get("name") or "").lower() == "miami":
             quality = str(server.get("quality") or "").lower()
@@ -232,6 +240,10 @@ async def scrape_streams(media_type: str, tmdb_id, season=None, episode=None, pr
 
     servers.sort(key=_server_rank)
     _cache[ck] = (time.time(), servers)
+    if len(_cache) > 512:
+        oldest = sorted(_cache.items(), key=lambda item: item[1][0])[:128]
+        for key, _ in oldest:
+            _cache.pop(key, None)
     return servers
 
 

@@ -1,5 +1,7 @@
+import copy
 import logging
 import os
+import time
 from pathlib import Path
 from urllib.parse import quote
 
@@ -24,6 +26,22 @@ api_router = APIRouter(prefix="/api")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger("synscraper")
 
+_HTTP_LIMITS = httpx.Limits(max_connections=100, max_keepalive_connections=40, keepalive_expiry=30.0)
+_HTTP_TIMEOUT = httpx.Timeout(30.0, connect=8.0)
+_http_client: httpx.AsyncClient | None = None
+_tmdb_cache: dict[tuple, tuple[float, dict]] = {}
+
+
+def _http() -> httpx.AsyncClient:
+    global _http_client
+    if _http_client is None or _http_client.is_closed:
+        _http_client = httpx.AsyncClient(
+            timeout=_HTTP_TIMEOUT,
+            follow_redirects=True,
+            limits=_HTTP_LIMITS,
+        )
+    return _http_client
+
 
 async def tmdb_get(path: str, params: dict | None = None) -> dict:
     params = dict(params or {})
@@ -37,11 +55,22 @@ async def tmdb_get(path: str, params: dict | None = None) -> dict:
     else:
         raise HTTPException(status_code=503, detail="TMDB credentials are not configured")
 
-    async with httpx.AsyncClient(timeout=20) as c:
-        r = await c.get(f"{TMDB_BASE}/{path.lstrip('/')}", params=params, headers=headers)
+    cache_key = (path, tuple(sorted((str(k), str(v)) for k, v in params.items())))
+    now = time.monotonic()
+    hit = _tmdb_cache.get(cache_key)
+    if hit and now - hit[0] < 180:
+        return copy.deepcopy(hit[1])
+
+    r = await _http().get(f"{TMDB_BASE}/{path.lstrip('/')}", params=params, headers=headers, timeout=20)
     if r.status_code != 200:
         raise HTTPException(status_code=r.status_code, detail=f"TMDB error: {r.text[:200]}")
-    return r.json()
+    data = r.json()
+    _tmdb_cache[cache_key] = (now, data)
+    if len(_tmdb_cache) > 512:
+        oldest = sorted(_tmdb_cache.items(), key=lambda item: item[1][0])[:128]
+        for key, _ in oldest:
+            _tmdb_cache.pop(key, None)
+    return copy.deepcopy(data)
 
 
 @api_router.get("/")
@@ -127,8 +156,11 @@ def _caption_url(url, ref, origin):
 @api_router.get("/streams")
 async def streams(type: str = "movie", id: str = Query(...),
                   season: int | None = None, episode: int | None = None,
-                  provider: str | None = None, mirror: str | None = None):
-    servers = await scraper.scrape_streams(type, id, season, episode, provider_id=provider, mirror=mirror)
+                  provider: str | None = None, mirror: str | None = None,
+                  exclude: str | None = None):
+    servers = await scraper.scrape_streams(
+        type, id, season, episode, provider_id=provider, mirror=mirror, exclude=exclude
+    )
     out = []
     for s in servers:
         captions = []
@@ -165,9 +197,8 @@ async def caption(url: str = Query(...), ref: str | None = None,
     if origin:
         headers["Origin"] = origin
     try:
-        async with httpx.AsyncClient(timeout=20, follow_redirects=True) as c:
-            r = await c.get(url, headers=headers)
-            r.raise_for_status()
+        r = await _http().get(url, headers=headers, timeout=20)
+        r.raise_for_status()
         if len(r.content) > 5 * 1024 * 1024:
             raise HTTPException(413, "caption file is too large")
         text = r.content.decode("utf-8-sig", errors="replace")
@@ -191,54 +222,84 @@ async def caption(url: str = Query(...), ref: str | None = None,
 @api_router.get("/hls")
 async def hls(url: str = Query(...), ref: str | None = None,
               origin: str | None = None, request: Request = None):
-    path = url.split("?")[0].lower()
+    if not url.startswith(("http://", "https://")):
+        raise HTTPException(400, "HLS URL must be http(s)")
+
+    path = url.split("?", 1)[0].lower()
     headers = {"User-Agent": UA, "Accept": "*/*"}
     if ref:
         headers["Referer"] = ref
     if origin:
         headers["Origin"] = origin
-    is_m3u8 = path.endswith(".m3u8")
-    is_media = any(path.endswith(e) for e in (".mp4", ".mkv", ".webm"))
+    if request and request.headers.get("range"):
+        headers["Range"] = request.headers["range"]
 
     cors = {"Access-Control-Allow-Origin": "*"}
+    client = _http()
+    upstream = None
+    try:
+        req = client.build_request("GET", url, headers=headers)
+        upstream = await client.send(req, stream=True)
+        if upstream.status_code >= 400:
+            status = upstream.status_code
+            await upstream.aclose()
+            upstream = None
+            raise HTTPException(502, f"upstream returned {status}")
 
-    if is_media:
-        rng = request.headers.get("range") if request else None
-        if rng:
-            headers["Range"] = rng
-        aclient = httpx.AsyncClient(timeout=None, follow_redirects=True)
-        req = aclient.build_request("GET", url, headers=headers)
-        r = await aclient.send(req, stream=True)
-        resp_headers = {**cors, "Accept-Ranges": "bytes"}
-        for h in ("content-length", "content-range", "content-type"):
-            if h in r.headers:
-                resp_headers[h] = r.headers[h]
+        ct = upstream.headers.get("content-type", "").lower()
+        is_manifest = path.endswith(".m3u8") or "mpegurl" in ct
+        if is_manifest:
+            raw = await upstream.aread()
+            await upstream.aclose()
+            upstream = None
+            text = raw.decode("utf-8", errors="replace")
+            body = scraper.rewrite_m3u8(text, url, ref or "", origin or "")
+            return Response(
+                body,
+                media_type="application/vnd.apple.mpegurl",
+                headers={**cors, "Cache-Control": "no-cache"},
+            )
+
+        response_headers = {
+            **cors,
+            "Cache-Control": "public, max-age=3600",
+        }
+        for header_name in ("accept-ranges", "content-range", "etag", "last-modified"):
+            if header_name in upstream.headers:
+                response_headers[header_name] = upstream.headers[header_name]
+
+        sanitize_first_chunk = path.endswith(".ts") or "video/mp2t" in ct
 
         async def gen():
+            first = True
             try:
-                async for chunk in r.aiter_bytes(65536):
-                    yield chunk
+                async for chunk in upstream.aiter_bytes(65536):
+                    if not chunk:
+                        continue
+                    if first:
+                        first = False
+                        if sanitize_first_chunk:
+                            chunk = scraper.strip_png_ts(chunk)
+                    if chunk:
+                        yield chunk
             finally:
-                await r.aclose()
-                await aclient.aclose()
+                await upstream.aclose()
 
-        return StreamingResponse(gen(), status_code=r.status_code, headers=resp_headers,
-                                 media_type=r.headers.get("content-type", "video/mp4"))
-
-    try:
-        async with httpx.AsyncClient(timeout=30, follow_redirects=True) as c:
-            r = await c.get(url, headers=headers)
-            r.raise_for_status()
-            ct = r.headers.get("content-type", "").lower()
-            if is_m3u8 or "mpegurl" in ct:
-                body = scraper.rewrite_m3u8(r.text, url, ref or "", origin or "")
-                return Response(body, media_type="application/vnd.apple.mpegurl",
-                                headers={**cors, "Cache-Control": "no-cache"})
-            data = scraper.strip_png_ts(r.content)
-            return Response(data, media_type=ct or "video/mp2t",
-                            headers={**cors, "Cache-Control": "public, max-age=3600"})
-    except Exception as e:  # noqa: BLE001
-        logger.warning("hls proxy failed %s: %s", url[:80], e)
+        return StreamingResponse(
+            gen(),
+            status_code=upstream.status_code,
+            headers=response_headers,
+            media_type=ct.split(";", 1)[0] or "application/octet-stream",
+        )
+    except HTTPException:
+        raise
+    except Exception as exc:  # noqa: BLE001
+        if upstream is not None:
+            try:
+                await upstream.aclose()
+            except Exception:
+                pass
+        logger.warning("hls proxy failed %s: %s", url[:80], exc)
         raise HTTPException(502, "upstream error")
 
 

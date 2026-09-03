@@ -15,6 +15,8 @@ import base64
 import json
 import re
 import ssl
+import threading
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -41,6 +43,11 @@ DEFAULT_PROVIDERS = (
     "portland",
     "dallas",
 )
+FAST_PROVIDERS = (
+    "miami",
+    "atlanta",
+    "seattle",
+)
 ALL_PROVIDERS = DEFAULT_PROVIDERS + (
     "austin",
     "munich",
@@ -53,6 +60,13 @@ ALL_PROVIDERS = DEFAULT_PROVIDERS + (
 MAGIC = b"mvm1"
 MASK32 = 0xFFFFFFFF
 PHI32 = 0x9E3779B9
+
+_META_CACHE: dict[tuple[str, int], tuple[float, dict[str, Any]]] = {}
+_SEED_CACHE: dict[int, tuple[float, str]] = {}
+_META_CACHE_LOCK = threading.Lock()
+_SEED_CACHE_LOCK = threading.Lock()
+_META_TTL = 900.0
+_SEED_TTL = 35.0
 
 
 def _u32(value: int) -> int:
@@ -155,7 +169,7 @@ class VidyResolver:
         params: dict[str, Any] | None = None,
         referer: str | None = None,
         accept: str = "application/json,text/plain,*/*",
-        timeout: float = 25.0,
+        timeout: float = 7.5,
     ) -> Any:
         if params:
             query = urllib.parse.urlencode(
@@ -196,6 +210,18 @@ class VidyResolver:
         return raw
 
     def _metadata(self, media_id: int, media_type: str) -> dict[str, Any]:
+        key = (str(media_type), int(media_id))
+        now = time.monotonic()
+        with _META_CACHE_LOCK:
+            hit = _META_CACHE.get(key)
+            if hit and now - hit[0] < _META_TTL:
+                return dict(hit[1])
+        value = self._metadata_uncached(media_id, media_type)
+        with _META_CACHE_LOCK:
+            _META_CACHE[key] = (time.monotonic(), dict(value))
+        return dict(value)
+
+    def _metadata_uncached(self, media_id: int, media_type: str) -> dict[str, Any]:
         if media_type == "movie":
             data = self._request(
                 f"{DB_BASE}/movie/{media_id}",
@@ -305,10 +331,19 @@ class VidyResolver:
         return data
 
     def _seed(self, media_id: int) -> str:
-        data = self._request(f"{API_BASE}/seed", params={"mediaId": int(media_id)}, timeout=6.0)
+        numeric_id = int(media_id)
+        now = time.monotonic()
+        with _SEED_CACHE_LOCK:
+            hit = _SEED_CACHE.get(numeric_id)
+            if hit and now - hit[0] < _SEED_TTL:
+                return hit[1]
+        data = self._request(f"{API_BASE}/seed", params={"mediaId": numeric_id}, timeout=5.0)
         if not isinstance(data, dict) or data.get("seed") is None:
             raise RuntimeError(f"Unexpected Vidy seed response: {data!r}")
-        return str(data["seed"])
+        value = str(data["seed"])
+        with _SEED_CACHE_LOCK:
+            _SEED_CACHE[numeric_id] = (time.monotonic(), value)
+        return value
 
     @staticmethod
     def _encrypted_payload(value: Any) -> str:
@@ -332,7 +367,7 @@ class VidyResolver:
 
         seed = str(seed or self._seed(media_id))
         query.update({"enc": "2", "seed": seed})
-        response = self._request(f"{API_BASE}/{provider}/sources", params=query, timeout=6.5)
+        response = self._request(f"{API_BASE}/{provider}/sources", params=query, timeout=6.0)
         encrypted = self._encrypted_payload(response)
         clear = decode_envelope(encrypted, seed, media_id)
         data = json.loads(clear)
@@ -446,16 +481,26 @@ class VidyResolver:
             page_url = f"{BASE_URL}/tv/{numeric_id}/{int(season)}/{int(episode)}"
 
         try:
-            params = self._metadata(numeric_id, media_type)
+            # Metadata and the short-lived seed are independent network calls.
+            # Resolve them in parallel so Miami only waits on the slower one.
+            with ThreadPoolExecutor(max_workers=2) as prep_pool:
+                metadata_future = prep_pool.submit(self._metadata, numeric_id, media_type)
+                seed_future = prep_pool.submit(self._seed, numeric_id)
+                params = metadata_future.result()
+                shared_seed = seed_future.result()
+
             if media_type == "tv":
                 params["seasonId"] = int(season)
                 params["episodeId"] = int(episode)
 
-            providers = ALL_PROVIDERS if provider == "all" else ((provider,) if provider not in {"auto", ""} else DEFAULT_PROVIDERS)
+            providers = (
+                ALL_PROVIDERS if provider == "all"
+                else FAST_PROVIDERS if provider == "fast"
+                else ((provider,) if provider not in {"auto", ""} else DEFAULT_PROVIDERS)
+            )
             playable: list[dict[str, Any]] = []
             subtitles: list[dict[str, Any]] = []
             errors: dict[str, str] = {}
-            shared_seed = self._seed(numeric_id)
 
             def load_provider(name: str):
                 decoded = self._provider(name, numeric_id, params, seed=shared_seed)
@@ -534,7 +579,7 @@ def main() -> None:
     parser.add_argument("--type", choices=["movie", "tv", "anime"], default="movie")
     parser.add_argument("--season", type=int)
     parser.add_argument("--episode", type=int)
-    parser.add_argument("--provider", choices=["auto", "all", *ALL_PROVIDERS], default="auto")
+    parser.add_argument("--provider", choices=["auto", "fast", "all", *ALL_PROVIDERS], default="auto")
     parser.add_argument("--verify", action="store_true")
     parser.add_argument("--dub", action="store_true", help="Use dubbed anime sources when available")
     parser.add_argument("--debug", action="store_true")

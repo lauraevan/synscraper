@@ -328,20 +328,23 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
         if (hlsRef.current) { hlsRef.current.destroy(); hlsRef.current = null; }
         const url = hlsProxyUrl(server.play_url);
         if (server.type === "hls" && Hls.isSupported()) {
+            const isMiami = server.provider === "vidy" && /miami/i.test(String(server.name || ""));
             const hls = new Hls({
                 enableWorker: true,
                 startFragPrefetch: true,
-                maxBufferLength: 45,
-                maxMaxBufferLength: 90,
-                manifestLoadingTimeOut: 10000,
-                manifestLoadingMaxRetry: 3,
-                manifestLoadingRetryDelay: 350,
-                levelLoadingTimeOut: 10000,
-                levelLoadingMaxRetry: 3,
-                levelLoadingRetryDelay: 350,
-                fragLoadingTimeOut: 20000,
-                fragLoadingMaxRetry: 4,
-                fragLoadingRetryDelay: 350,
+                maxBufferLength: 30,
+                maxMaxBufferLength: 60,
+                backBufferLength: 30,
+                abrEwmaDefaultEstimate: isMiami ? 8_000_000 : 5_000_000,
+                manifestLoadingTimeOut: 7000,
+                manifestLoadingMaxRetry: 2,
+                manifestLoadingRetryDelay: 250,
+                levelLoadingTimeOut: 8000,
+                levelLoadingMaxRetry: 2,
+                levelLoadingRetryDelay: 250,
+                fragLoadingTimeOut: 15000,
+                fragLoadingMaxRetry: 3,
+                fragLoadingRetryDelay: 250,
             });
             hlsRef.current = hls;
             hls.loadSource(url);
@@ -462,8 +465,9 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
         };
         const activate = (list) => {
             if (!alive || started || !list.length) return;
-            const wanted = preferredQualityRef.current || 1080;
-            const preferred = list.find((s) => s.provider === "vidy" && /miami/i.test(String(s.name || "")) && qualityHeight(s.quality) === wanted)
+            const wanted = preferredQualityRef.current;
+            const preferred = (wanted ? list.find((s) => s.provider === "vidy" && /miami/i.test(String(s.name || "")) && qualityHeight(s.quality) === wanted) : null)
+                || (!wanted ? list.find((s) => s.provider === "vidy" && /miami/i.test(String(s.name || "")) && /^auto/i.test(String(s.quality || ""))) : null)
                 || list.find((s) => s.provider === "vidy" && /miami/i.test(String(s.name || "")) && qualityHeight(s.quality) === 1080)
                 || list.find((s) => s.provider === "vidy" && /miami/i.test(String(s.name || "")))
                 || list[0];
@@ -473,39 +477,86 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
             setMode("ready");
         };
 
-        const quick = getStreams(mediaType, id, season, episode, { provider: "vidy", mirror: "miami", timeout: 12000 })
-            .then((d) => {
-                if (!alive) return;
-                const list = d.servers || [];
-                if (list.length) {
-                    setServers((current) => mergeServers(current, list));
-                    activate(list);
-                }
-            })
-            .catch(() => {});
+        let backgroundPromise = null;
+        let backgroundTimer = null;
+        let heavyTimer = null;
+        let safetyTimer = null;
 
-        const full = getStreams(mediaType, id, season, episode, { timeout: 90000 })
-            .then((d) => {
-                if (!alive) return;
-                const list = d.servers || [];
-                if (list.length) {
-                    setServers((current) => mergeServers(current, list));
-                    activate(list);
-                }
-                setSourcesLoading(false);
-            })
-            .catch(() => { if (alive) setSourcesLoading(false); });
+        const mergePayload = (data) => {
+            if (!alive) return [];
+            const list = data?.servers || [];
+            if (list.length) {
+                setServers((current) => mergeServers(current, list));
+                activate(list);
+            }
+            return list;
+        };
 
-        Promise.allSettled([quick, full]).then(() => {
+        const startHeavyCineJoy = () => {
+            if (!alive) return Promise.resolve([]);
+            return getStreams(mediaType, id, season, episode, { provider: "cinejoy", timeout: 18000 })
+                .then(mergePayload)
+                .catch(() => []);
+        };
+
+        const startBackground = (exclude) => {
+            if (backgroundPromise) return backgroundPromise;
+            backgroundPromise = getStreams(mediaType, id, season, episode, { timeout: 45000, exclude })
+                .then(mergePayload)
+                .catch(() => [])
+                .finally(() => {
+                    if (alive) setSourcesLoading(false);
+                });
+            return backgroundPromise;
+        };
+
+        const quick = getStreams(mediaType, id, season, episode, { provider: "vidy", mirror: "miami", timeout: 8500 })
+            .then((d) => {
+                if (!alive) return [];
+                const list = mergePayload(d);
+                if (!list.length) {
+                    return startBackground(undefined);
+                }
+
+                const hasMiamiCaptions = list.some((server) => (server.captions || []).length > 0);
+                // Keep the first second almost entirely for Miami + its manifest.
+                // If Miami omitted captions this time, let the fast Vidy fallback tier refresh them.
+                backgroundTimer = window.setTimeout(
+                    () => startBackground(hasMiamiCaptions ? "vidy,cinejoy" : "cinejoy"),
+                    700,
+                );
+                // CineJoy is WASM-heavy. Load it only after playback has had time to settle.
+                heavyTimer = window.setTimeout(() => startHeavyCineJoy(), 3800);
+                return list;
+            })
+            .catch(() => startBackground(undefined));
+
+        // If Miami is unusually slow, don't leave the user staring at it forever.
+        safetyTimer = window.setTimeout(() => {
+            if (!started) startBackground(undefined);
+        }, 1800);
+
+        Promise.resolve(quick).finally(() => {
             if (!alive) return;
-            clearInterval(tick);
-            if (!started) {
-                setMode("error");
-                setError("No streams could be scraped for this title yet.");
+            if (!started && !backgroundPromise) {
+                startBackground(undefined).finally(() => {
+                    if (alive && !started) {
+                        clearInterval(tick);
+                        setMode("error");
+                        setError("No streams could be scraped for this title yet.");
+                    }
+                });
             }
         });
 
-        return () => { alive = false; clearInterval(tick); };
+
+        return () => {
+            alive = false;
+            clearInterval(tick);
+            if (backgroundTimer) window.clearTimeout(backgroundTimer);
+            if (heavyTimer) window.clearTimeout(heavyTimer);
+            if (safetyTimer) window.clearTimeout(safetyTimer);
+        };
     }, [mediaType, id, season, episode]);
 
     // when ready + server chosen, start playback
@@ -904,14 +955,37 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
     const captionInventoryKey = externalCaptions.map((track) => track.key).sort().join("|");
 
     useEffect(() => {
+        if (mode !== "ready" || !externalCaptions.length) return undefined;
         let alive = true;
-        Promise.allSettled(externalCaptions.map(async (track) => {
-            const result = await loadExternalCaption(track, { silent: true });
-            return alive ? result : null;
-        }));
-        return () => { alive = false; };
+        let secondaryTimer = null;
+        const preferred = externalCaptions.filter((track) => track.language === preferredCaptionLang);
+        const english = externalCaptions.filter((track) => track.language === "en" && !preferred.includes(track));
+        const rest = externalCaptions.filter((track) => !preferred.includes(track) && !english.includes(track));
+        const firstBatch = preferred.length ? preferred : english;
+
+        const loadBatch = async (tracks) => {
+            for (let i = 0; alive && i < tracks.length; i += 2) {
+                await Promise.allSettled(tracks.slice(i, i + 2).map((track) => loadExternalCaption(track, { silent: true })));
+            }
+        };
+
+        const primaryDelay = captionsEnabled ? 0 : 1400;
+        const primaryTimer = window.setTimeout(async () => {
+            await loadBatch(firstBatch);
+            if (!alive) return;
+            secondaryTimer = window.setTimeout(
+                () => loadBatch([...english.filter((track) => !firstBatch.includes(track)), ...rest]),
+                captionsEnabled ? 500 : 1800,
+            );
+        }, primaryDelay);
+
+        return () => {
+            alive = false;
+            window.clearTimeout(primaryTimer);
+            if (secondaryTimer) window.clearTimeout(secondaryTimer);
+        };
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [captionInventoryKey]);
+    }, [captionInventoryKey, captionsEnabled, preferredCaptionLang, mode]);
 
     const captionLanguageOptions = (() => {
         const codes = new Set();
@@ -1009,6 +1083,7 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
                 onDoubleClick={toggleFs}
                 poster={meta.backdrop_path ? `https://image.tmdb.org/t/p/original${meta.backdrop_path}` : undefined}
                 playsInline
+                preload="auto"
                 crossOrigin="anonymous"
             />
             <style>{`.synapse-video::cue { color: transparent !important; background: transparent !important; text-shadow: none !important; }`}</style>
