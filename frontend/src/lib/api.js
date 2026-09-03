@@ -1,7 +1,9 @@
 import axios from "axios";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || "";
+const DOWNLOAD_WORKER_URL = (process.env.REACT_APP_DOWNLOAD_WORKER_URL || "").replace(/\/$/, "");
 export const API = `${BACKEND_URL}/api`;
+export const DOWNLOADS_CONFIGURED = Boolean(DOWNLOAD_WORKER_URL);
 
 const http = axios.create({ baseURL: API, timeout: 30000 });
 const memoryCache = new Map();
@@ -60,6 +62,46 @@ export const getStreams = (type, id, season, episode, options = {}) => {
         params,
         timeout: options.timeout || 90000,
     }).then((r) => r.data));
+};
+
+const downloadParams = (params = {}) => {
+    const query = new URLSearchParams();
+    const values = {
+        type: params.type,
+        id: params.id,
+        season: params.season,
+        episode: params.episode,
+        provider: params.provider,
+        mirror: params.mirror,
+        quality: params.quality,
+        title: params.title,
+    };
+    Object.entries(values).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== "") query.set(key, String(value));
+    });
+    return query;
+};
+
+export const getDownloadOptions = async (params) => {
+    if (!DOWNLOAD_WORKER_URL) throw new Error("Download worker is not configured");
+    const query = downloadParams(params);
+    query.delete("quality");
+    query.delete("title");
+    const response = await fetch(`${DOWNLOAD_WORKER_URL}/api/download/options?${query.toString()}`);
+    if (!response.ok) {
+        let message = `Download worker returned HTTP ${response.status}`;
+        try {
+            const body = await response.json();
+            message = body?.detail?.message || body?.detail || message;
+        } catch { /* ignore */ }
+        throw new Error(typeof message === "string" ? message : JSON.stringify(message));
+    }
+    return response.json();
+};
+
+export const downloadWorkerUrl = (params) => {
+    if (!DOWNLOAD_WORKER_URL) return null;
+    return `${DOWNLOAD_WORKER_URL}/api/download?${downloadParams(params).toString()}`;
 };
 
 // image helpers
