@@ -1,4 +1,4 @@
-name: Apply source modal v6
+name: Apply centered source modal
 
 on:
   push:
@@ -9,7 +9,7 @@ permissions:
 
 jobs:
   patch:
-    if: ${{ github.event.head_commit.message == 'Run source modal patch v6' }}
+    if: ${{ github.event.head_commit.message == 'Run centered source modal fix' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -19,23 +19,23 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - name: Patch source picker
+      - name: Mount source modal over player
         run: python scripts/apply_source_modal.py
       - name: Validate React build
         run: |
           npm install -g yarn@1.22.22
           yarn --cwd frontend install --frozen-lockfile
           CI=false yarn --cwd frontend build
-          grep -R "data-source-layout" frontend/build/static/js >/dev/null
-          grep -R "synscraper-default-source-v1" frontend/build/static/js >/dev/null
-          grep -R "Make default source" frontend/build/static/js >/dev/null
-          grep -R "Hindi v6 source" frontend/build/static/js >/dev/null
-          grep -R "Original audio, 4K" frontend/build/static/js >/dev/null
+          grep -R 'player-modal' frontend/build/static/js >/dev/null
+          grep -R 'synscraper-default-source-v1' frontend/build/static/js >/dev/null
+          grep -R 'Make default source' frontend/build/static/js >/dev/null
+          grep -R 'Hindi v6 source' frontend/build/static/js >/dev/null
+          grep -R 'Original audio, 4K' frontend/build/static/js >/dev/null
       - name: Commit changes
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add frontend/src/components/SynapsePlayer.jsx
-          git commit -m "Match server popup and add source favorites"
+          git commit -m "Mount server picker over player"
           git pull --rebase origin main
           git push origin HEAD:main
