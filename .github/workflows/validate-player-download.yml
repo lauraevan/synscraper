@@ -1,0 +1,25 @@
+name: Validate player download
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    if: ${{ github.event.head_commit.message == 'Validate player download build' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install -g yarn@1.22.22
+      - run: yarn --cwd frontend install --frozen-lockfile
+      - run: yarn --cwd frontend build
+      - name: Verify download UI reached production bundle
+        run: |
+          grep -R "synapse-download-settings-row" frontend/build/static/js >/dev/null
+          grep -R "synapse-download-mp4" frontend/build/static/js >/dev/null
