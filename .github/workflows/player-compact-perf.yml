@@ -1,4 +1,4 @@
-name: Apply compact SynPlayer controls
+name: Apply PStream SynPlayer theme
 
 on:
   push:
@@ -9,7 +9,7 @@ permissions:
 
 jobs:
   patch:
-    if: ${{ github.event.head_commit.message == 'Run compact SynPlayer patch' }}
+    if: ${{ github.event.head_commit.message == 'Run PStream SynPlayer theme' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -27,13 +27,25 @@ jobs:
           yarn --cwd frontend install --frozen-lockfile
           CI=false GENERATE_SOURCEMAP=false yarn --cwd frontend build
           grep -R "synplayer-label" frontend/build/static/js >/dev/null
-          grep -R "synapse-settings-volume-slider" frontend/build/static/js >/dev/null
-          grep -R "batchSize=3\|batchSize = 3" frontend/build/static/js >/dev/null || true
-      - name: Commit player changes
+          grep -R "synapse-friendly-subtitle-settings" frontend/build/static/js >/dev/null
+          grep -R "Subtitle settings" frontend/build/static/js >/dev/null
+          grep -R "#eadb8a" frontend/build/static/js >/dev/null
+      - name: Commit player and production bundle
         run: |
+          rm -rf public backend/public
+          cp -R frontend/build public
+          cp -R frontend/build backend/public
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          package = Path('package.json')
+          data = json.loads(package.read_text())
+          data.setdefault('scripts', {})['build'] = 'test -f public/index.html'
+          package.write_text(json.dumps(data, indent=2) + '\n')
+          PY
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add frontend/src/components/SynapsePlayer.jsx
-          git commit -m "Compact SynPlayer controls and reduce playback overhead"
+          git add frontend/src/components/SynapsePlayer.jsx public backend/public package.json
+          git commit -m "Restyle SynPlayer with PStream-inspired theme"
           git pull --rebase origin main
           git push origin HEAD:main
