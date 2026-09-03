@@ -5,6 +5,6 @@
     "node": "20.x"
   },
   "scripts": {
-    "build": "test -f public/index.html"
+    "build": "npx --yes yarn@1.22.22 --cwd frontend install --frozen-lockfile && CI=false GENERATE_SOURCEMAP=false npx --yes yarn@1.22.22 --cwd frontend build && rm -rf public && cp -R frontend/build public && test -f public/index.html"
   }
 }
