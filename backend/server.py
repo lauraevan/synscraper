@@ -115,6 +115,15 @@ def _play_url(url, ref, origin):
     return q
 
 
+def _caption_url(url, ref, origin):
+    q = f"/api/caption?url={quote(url, safe='')}"
+    if ref:
+        q += f"&ref={quote(ref, safe='')}"
+    if origin:
+        q += f"&origin={quote(origin, safe='')}"
+    return q
+
+
 @api_router.get("/streams")
 async def streams(type: str = "movie", id: str = Query(...),
                   season: int | None = None, episode: int | None = None,
@@ -130,7 +139,7 @@ async def streams(type: str = "movie", id: str = Query(...),
                 "lang": c.get("lang") or "und",
                 "source": c.get("source") or "vtt",
                 "type": "vtt",
-                "play_url": _play_url(c["url"], c.get("referer", ""), c.get("origin", "")),
+                "play_url": _caption_url(c["url"], c.get("referer", ""), c.get("origin", "")),
             })
         out.append({
             "id": s["id"], "name": s["name"], "provider": s["provider"],
@@ -140,6 +149,43 @@ async def streams(type: str = "movie", id: str = Query(...),
         })
     return {"type": type, "id": id, "season": season, "episode": episode,
             "count": len(out), "servers": out}
+
+
+@api_router.get("/caption")
+async def caption(url: str = Query(...), ref: str | None = None,
+                  origin: str | None = None):
+    if not url.startswith(("http://", "https://")):
+        raise HTTPException(400, "caption URL must be http(s)")
+    headers = {
+        "User-Agent": UA,
+        "Accept": "text/vtt,text/plain,application/x-subrip,application/octet-stream,*/*",
+    }
+    if ref:
+        headers["Referer"] = ref
+    if origin:
+        headers["Origin"] = origin
+    try:
+        async with httpx.AsyncClient(timeout=20, follow_redirects=True) as c:
+            r = await c.get(url, headers=headers)
+            r.raise_for_status()
+        if len(r.content) > 5 * 1024 * 1024:
+            raise HTTPException(413, "caption file is too large")
+        text = r.content.decode("utf-8-sig", errors="replace")
+        text = text.replace("\r\n", "\n").replace("\r", "\n")
+        return Response(
+            text,
+            media_type="text/vtt",
+            headers={
+                "Access-Control-Allow-Origin": "*",
+                "Cache-Control": "public, max-age=120",
+                "X-Content-Type-Options": "nosniff",
+            },
+        )
+    except HTTPException:
+        raise
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("caption proxy failed %s: %s", url[:80], exc)
+        raise HTTPException(502, "caption upstream error")
 
 
 @api_router.get("/hls")
