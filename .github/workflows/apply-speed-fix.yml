@@ -86,3 +86,5 @@ jobs:
           git add -A backend frontend/src public
           git commit -m "Make Miami playback and SynScraper load much faster"
           git push
+
+# trigger: 2
