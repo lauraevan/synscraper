@@ -1,0 +1,54 @@
+name: Verify player v2 live
+
+on:
+  push:
+    paths:
+      - '.github/workflows/verify-player-v2.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install -q -r requirements.txt
+      - name: Verify Backrooms Miami fast path and full sources
+        run: |
+          python - <<'PY'
+          import asyncio, sys, time
+          sys.path.insert(0, 'backend')
+          import scraper
+
+          async def main():
+              start = time.perf_counter()
+              quick = await scraper.scrape_streams('movie', '1083381', provider_id='vidy', mirror='miami')
+              quick_s = time.perf_counter() - start
+              print('QUICK_SECONDS', round(quick_s, 3))
+              print('QUICK_COUNT', len(quick))
+              print('QUICK', [(x.get('name'), x.get('quality'), x.get('type')) for x in quick])
+              assert quick, 'Miami returned no Backrooms streams'
+              assert any(str(x.get('name')).lower() == 'miami' for x in quick), 'Miami label missing'
+              assert any('1080' in str(x.get('quality')) for x in quick), 'Miami 1080p missing'
+
+              start = time.perf_counter()
+              full = await scraper.scrape_streams('movie', '1083381')
+              full_s = time.perf_counter() - start
+              names = []
+              for x in full:
+                  if x.get('name') not in names:
+                      names.append(x.get('name'))
+              print('FULL_SECONDS', round(full_s, 3))
+              print('FULL_COUNT', len(full))
+              print('FULL_NAMES', names)
+              print('PROVIDERS', sorted(set(x.get('provider') for x in full)))
+              assert full, 'Full source pass returned nothing'
+              assert 'Miami' in names, 'Miami missing from full pass'
+              assert len(names) >= 4, f'Expected extra source names, got {names}'
+
+          asyncio.run(main())
+          PY
