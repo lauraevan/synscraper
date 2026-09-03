@@ -1,0 +1,240 @@
+name: Player v2 source quality captions
+
+on:
+  push:
+    paths:
+      - '.github/workflows/player-v2-source-quality-captions.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Patch backend progressive source loading
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          p = Path('backend/scraper.py')
+          t = p.read_text()
+          t = t.replace('(\"Orbit\", \"castle\", CastleResolver)', '(\"Houston\", \"castle\", CastleResolver)', 1)
+          t = t.replace('_TTL = 480', '_TTL = 120', 1)
+
+          old = '''def _key(t, i, s, e):\n    return f"{t}:{i}:{s}:{e}"\n'''
+          new = '''def _key(t, i, s, e, provider_id=None, mirror=None):\n    return f"{t}:{i}:{s}:{e}:{provider_id or 'all'}:{mirror or 'all'}"\n'''
+          assert old in t
+          t = t.replace(old, new, 1)
+
+          old = 'def _run_one(cls, media_type, tmdb_id, season, episode):\n'
+          new = 'def _run_one(cls, media_type, tmdb_id, season, episode, provider_hint=None, all_mirrors=False):\n'
+          assert old in t
+          t = t.replace(old, new, 1)
+
+          old = '        out = r.resolve(str(tmdb_id), media_type=media_type, season=season, episode=episode)\n'
+          new = '''        resolve_kwargs = {}\n        if cls is VidyResolver:\n            if provider_hint:\n                resolve_kwargs["provider"] = provider_hint\n            elif all_mirrors:\n                resolve_kwargs["provider"] = "all"\n        out = r.resolve(str(tmdb_id), media_type=media_type, season=season, episode=episode, **resolve_kwargs)\n'''
+          assert old in t
+          t = t.replace(old, new, 1)
+
+          old = '''async def scrape_streams(media_type: str, tmdb_id, season=None, episode=None) -> list:\n    """Return a normalized, ranked list of playable servers scraped from all providers."""\n    ck = _key(media_type, tmdb_id, season, episode)\n'''
+          new = '''async def scrape_streams(media_type: str, tmdb_id, season=None, episode=None, provider_id=None, mirror=None) -> list:\n    """Return normalized playable servers, optionally scoped to one provider/mirror."""\n    ck = _key(media_type, tmdb_id, season, episode, provider_id, mirror)\n'''
+          assert old in t
+          t = t.replace(old, new, 1)
+
+          old = '''    async def run(name, pid, cls):\n        try:\n            streams = await asyncio.wait_for(\n                asyncio.to_thread(_run_one, cls, media_type, tmdb_id, season, episode),\n                timeout=10.0,\n            )\n        except (asyncio.TimeoutError, TimeoutError):\n            streams = []\n        return name, pid, streams\n\n    results = await asyncio.gather(\n        *[run(n, p, c) for n, p, c in PROVIDERS], return_exceptions=True\n    )\n'''
+          new = '''    selected_providers = [item for item in PROVIDERS if item[1] == provider_id] if provider_id else PROVIDERS\n    if provider_id and not selected_providers:\n        return []\n\n    async def run(name, pid, cls):\n        try:\n            provider_hint = mirror if pid == "vidy" and mirror else None\n            streams = await asyncio.wait_for(\n                asyncio.to_thread(\n                    _run_one, cls, media_type, tmdb_id, season, episode,\n                    provider_hint, provider_id is None,\n                ),\n                timeout=10.0,\n            )\n        except (asyncio.TimeoutError, TimeoutError):\n            streams = []\n        return name, pid, streams\n\n    results = await asyncio.gather(\n        *[run(n, p, c) for n, p, c in selected_providers], return_exceptions=True\n    )\n'''
+          assert old in t
+          t = t.replace(old, new, 1)
+          p.write_text(t)
+
+          p = Path('backend/server.py')
+          t = p.read_text()
+          old = '''@api_router.get("/streams")\nasync def streams(type: str = "movie", id: str = Query(...),\n                  season: int | None = None, episode: int | None = None):\n    servers = await scraper.scrape_streams(type, id, season, episode)\n'''
+          new = '''@api_router.get("/streams")\nasync def streams(type: str = "movie", id: str = Query(...),\n                  season: int | None = None, episode: int | None = None,\n                  provider: str | None = None, mirror: str | None = None):\n    servers = await scraper.scrape_streams(type, id, season, episode, provider_id=provider, mirror=mirror)\n'''
+          assert old in t
+          p.write_text(t.replace(old, new, 1))
+
+          p = Path('backend/providers/cinejoy.py')
+          t = p.read_text()
+          t = t.replace('for server in servers[:6]:', 'for server in servers[:8]:', 1)
+          t = t.replace('if successful_mirrors >= 3: break', 'if successful_mirrors >= 6: break', 1)
+          p.write_text(t)
+          PY
+
+      - name: Patch frontend API and branding
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          p = Path('frontend/src/lib/api.js')
+          t = p.read_text()
+          old = '''export const getStreams = (type, id, season, episode) =>\n    http.get("/streams", { params: { type, id, season, episode }, timeout: 90000 }).then((r) => r.data);\n'''
+          new = '''export const getStreams = (type, id, season, episode, options = {}) =>\n    http.get("/streams", {\n        params: { type, id, season, episode, provider: options.provider, mirror: options.mirror },\n        timeout: options.timeout || 90000,\n    }).then((r) => r.data);\n'''
+          assert old in t
+          p.write_text(t.replace(old, new, 1))
+
+          p = Path('frontend/src/App.js')
+          t = p.read_text()
+          t = t.replace('Synapse Player</p>', 'SynScraper</p>')
+          t = t.replace('Built for the Synapse player stack.', 'Built for the SynScraper stack.')
+          p.write_text(t)
+          PY
+
+      - name: Make Backrooms the licensed default demo
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('frontend/src/pages/Demo.jsx')
+          t = p.read_text()
+          t = t.replace('import { useMemo, useState } from "react";', 'import { useEffect, useMemo, useState } from "react";', 1)
+
+          marker = 'import { SynapsePlayer } from "@/components/SynapsePlayer";\n\n'
+          insert = '''import { SynapsePlayer } from "@/components/SynapsePlayer";\n\nconst DEFAULT_DEMO = {\n    id: "1083381",\n    mediaType: "movie",\n    season: undefined,\n    episode: undefined,\n    meta: { title: "Backrooms", release_date: "2026-05-27" },\n};\n\n'''
+          assert marker in t
+          t = t.replace(marker, insert, 1)
+          t = t.replace('const [tmdbId, setTmdbId] = useState("");', 'const [tmdbId, setTmdbId] = useState(DEFAULT_DEMO.id);', 1)
+          t = t.replace('const [active, setActive] = useState(null);', 'const [active, setActive] = useState(DEFAULT_DEMO);', 1)
+
+          marker = '    const canLaunch = tmdbId.trim().length > 0 && !loading;\n'
+          insert = '''    useEffect(() => {\n        let alive = true;\n        getDetails("movie", DEFAULT_DEMO.id).then((details) => {\n            if (!alive) return;\n            setActive((current) => current?.id === DEFAULT_DEMO.id ? {\n                ...current,\n                meta: {\n                    title: titleOf(details) || "Backrooms",\n                    poster_path: details.poster_path,\n                    backdrop_path: details.backdrop_path,\n                    release_date: details.release_date || "2026-05-27",\n                },\n            } : current);\n        }).catch(() => {});\n        return () => { alive = false; };\n    }, []);\n\n    const canLaunch = tmdbId.trim().length > 0 && !loading;\n'''
+          assert marker in t
+          t = t.replace(marker, insert, 1)
+          t = t.replace('Put a TMDB ID straight into Synapse.', 'Backrooms is ready to play.', 1)
+          t = t.replace('This page uses the same provider resolver, HLS handling and Synapse Player component as the watch route. Nothing is mocked once you launch a title.', 'The licensed Backrooms demo starts here by default. Enter any other TMDB ID to test another title with the same live resolver and player.', 1)
+          t = t.replace('Use the numeric TMDB ID from a movie or series page.', 'Backrooms (2026) is loaded by default. Enter another TMDB ID anytime.', 1)
+          p.write_text(t)
+          PY
+
+      - name: Rework player quality sources and captions
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('frontend/src/components/SynapsePlayer.jsx')
+          t = p.read_text()
+
+          t = t.replace('{ provider: "castle", name: "Orbit" }', '{ provider: "castle", name: "Houston" }', 1)
+
+          marker = '''const qualityHeight = (value) => {\n    const q = String(value || "").toLowerCase();\n    if (q.includes("4k") || q.includes("2160")) return 2160;\n    const m = q.match(/(1440|1080|720|480|360|240|144)/);\n    return m ? Number(m[1]) : 0;\n};\n'''
+          addition = marker + '''const readPreferredQuality = () => {\n    if (typeof window === "undefined") return 1080;\n    const saved = window.localStorage.getItem("synscraper-quality-v1");\n    if (saved === "auto") return null;\n    const parsed = Number(saved);\n    return [2160, 1440, 1080, 720, 480, 360, 240, 144].includes(parsed) ? parsed : 1080;\n};\n'''
+          assert marker in t
+          t = t.replace(marker, addition, 1)
+
+          marker = '    const gainRef = useRef(null);\n'
+          addition = '''    const gainRef = useRef(null);\n    const preferredQualityRef = useRef(1080);\n'''
+          assert marker in t
+          t = t.replace(marker, addition, 1)
+
+          marker = '    const [level, setLevel] = useState(-1);\n'
+          addition = '''    const [level, setLevel] = useState(-1);\n    const [preferredQuality, setPreferredQuality] = useState(readPreferredQuality);\n    const [sourcesLoading, setSourcesLoading] = useState(false);\n'''
+          assert marker in t
+          t = t.replace(marker, addition, 1)
+
+          marker = '    useEffect(() => { autoPlayRef.current = autoPlay; }, [autoPlay]);\n'
+          addition = '''    useEffect(() => { autoPlayRef.current = autoPlay; }, [autoPlay]);\n    useEffect(() => {\n        preferredQualityRef.current = preferredQuality;\n        if (typeof window !== "undefined") {\n            window.localStorage.setItem("synscraper-quality-v1", preferredQuality == null ? "auto" : String(preferredQuality));\n        }\n    }, [preferredQuality]);\n'''
+          assert marker in t
+          t = t.replace(marker, addition, 1)
+
+          old = '''            hls.on(Hls.Events.MANIFEST_PARSED, () => {\n                setLevels(hls.levels || []);\n                const resumeAt = pendingSeekRef.current;\n'''
+          new = '''            hls.on(Hls.Events.MANIFEST_PARSED, () => {\n                const parsedLevels = hls.levels || [];\n                setLevels(parsedLevels);\n                const wantedQuality = preferredQualityRef.current;\n                if (wantedQuality) {\n                    const wantedIndex = parsedLevels.findIndex((item) => Number(item.height || 0) === wantedQuality);\n                    if (wantedIndex >= 0) {\n                        hls.currentLevel = wantedIndex;\n                        hls.nextLevel = wantedIndex;\n                        setLevel(wantedIndex);\n                    }\n                }\n                const resumeAt = pendingSeekRef.current;\n'''
+          assert old in t
+          t = t.replace(old, new, 1)
+
+          old = '            hls.on(Hls.Events.LEVEL_SWITCHED, (_e, d) => setLevel(hls.autoLevelEnabled ? -1 : d.level));\n'
+          new = '''            hls.on(Hls.Events.LEVEL_SWITCHED, (_e, d) => {\n                setLevel(preferredQualityRef.current == null && hls.autoLevelEnabled ? -1 : d.level);\n            });\n'''
+          assert old in t
+          t = t.replace(old, new, 1)
+
+          start = t.index('    // scrape servers\n    useEffect(() => {')
+          end = t.index('    // when ready + server chosen, start playback', start)
+          progressive = '''    // Progressive source loading: start Miami immediately, fill the rest in the background.\n    useEffect(() => {\n        let alive = true;\n        let started = false;\n        setMode("loading"); setStepIdx(0); setError(null); setServers([]);\n        setSourcesLoading(true);\n        setExternalCaptionId(null); setExternalCues([]); setExternalCaptionError("");\n        const tick = setInterval(() => setStepIdx((i) => Math.min(i + 1, STEPS.length - 1)), 700);\n\n        const mergeServers = (current, incoming) => {\n            const map = new Map();\n            for (const item of current || []) map.set(`${item.provider}|${item.name}|${item.quality}`, item);\n            for (const item of incoming || []) {\n                const key = `${item.provider}|${item.name}|${item.quality}`;\n                if (!map.has(key)) map.set(key, item);\n            }\n            return Array.from(map.values());\n        };\n        const activate = (list) => {\n            if (!alive || started || !list.length) return;\n            const wanted = preferredQualityRef.current || 1080;\n            const preferred = list.find((s) => s.provider === "vidy" && /miami/i.test(String(s.name || "")) && qualityHeight(s.quality) === wanted)\n                || list.find((s) => s.provider === "vidy" && /miami/i.test(String(s.name || "")) && qualityHeight(s.quality) === 1080)\n                || list.find((s) => s.provider === "vidy" && /miami/i.test(String(s.name || "")))\n                || list[0];\n            started = true;\n            clearInterval(tick);\n            setServerId(preferred.id);\n            setMode("ready");\n        };\n\n        const quick = getStreams(mediaType, id, season, episode, { provider: "vidy", mirror: "miami", timeout: 12000 })\n            .then((d) => {\n                if (!alive) return;\n                const list = d.servers || [];\n                if (list.length) {\n                    setServers((current) => mergeServers(current, list));\n                    activate(list);\n                }\n            })\n            .catch(() => {});\n\n        const full = getStreams(mediaType, id, season, episode, { timeout: 90000 })\n            .then((d) => {\n                if (!alive) return;\n                const list = d.servers || [];\n                if (list.length) {\n                    setServers((current) => mergeServers(current, list));\n                    activate(list);\n                }\n                setSourcesLoading(false);\n            })\n            .catch(() => { if (alive) setSourcesLoading(false); });\n\n        Promise.allSettled([quick, full]).then(() => {\n            if (!alive) return;\n            clearInterval(tick);\n            if (!started) {\n                setMode("error");\n                setError("No streams could be scraped for this title yet.");\n            }\n        });\n\n        return () => { alive = false; clearInterval(tick); };\n    }, [mediaType, id, season, episode]);\n\n'''
+          t = t[:start] + progressive + t[end:]
+
+          t = t.replace('    }, [mode, serverId, servers.length]);', '    }, [mode, serverId]);', 1)
+
+          old = '''    const selectServer = (s) => {\n        pendingSeekRef.current = videoRef.current?.currentTime || current || 0;\n        setMenu(null); setServerId(s.id);\n    };\n'''
+          new = '''    const selectServer = (s) => {\n        pendingSeekRef.current = videoRef.current?.currentTime || current || 0;\n        const wanted = preferredQualityRef.current;\n        const matching = wanted ? servers.find((candidate) =>\n            candidate.provider === s.provider && candidate.name === s.name && qualityHeight(candidate.quality) === wanted\n        ) : null;\n        setMenu(null); setServerId((matching || s).id);\n    };\n'''
+          assert old in t
+          t = t.replace(old, new, 1)
+
+          old = '''    const changeLevel = (i) => { if (hlsRef.current) { hlsRef.current.currentLevel = i; } setLevel(i); setMenu(null); };\n    const chooseAutoQuality = () => {\n        if (hlsRef.current && levels.length) {\n            changeLevel(-1);\n            return;\n        }\n        if (autoServer && autoServer.id !== serverId) {\n            pendingSeekRef.current = videoRef.current?.currentTime || current || 0;\n            setLevel(-1);\n            setMenu(null);\n            setServerId(autoServer.id);\n            return;\n        }\n        setMenu(null);\n    };\n    const chooseQuality = (choice) => {\n        if (!choice) return;\n        if (choice.levelIndex >= 0 && hlsRef.current) {\n            changeLevel(choice.levelIndex);\n            return;\n        }\n        if (choice.server) {\n            pendingSeekRef.current = videoRef.current?.currentTime || current || 0;\n            setLevel(-1);\n            setMenu(null);\n            setServerId(choice.server.id);\n        }\n    };\n'''
+          new = '''    const changeLevel = (i) => { if (hlsRef.current) { hlsRef.current.currentLevel = i; hlsRef.current.nextLevel = i; } setLevel(i); };\n    const chooseAutoQuality = () => {\n        setPreferredQuality(null);\n        preferredQualityRef.current = null;\n        if (autoServer && autoServer.id !== serverId) {\n            pendingSeekRef.current = videoRef.current?.currentTime || current || 0;\n            setLevel(-1);\n            setServerId(autoServer.id);\n        } else if (hlsRef.current) {\n            hlsRef.current.currentLevel = -1;\n            hlsRef.current.nextLevel = -1;\n            setLevel(-1);\n        }\n        setMenu(null);\n    };\n    const chooseQuality = (choice) => {\n        if (!choice?.available) return;\n        setPreferredQuality(choice.height);\n        preferredQualityRef.current = choice.height;\n        const sameMirror = servers.find((candidate) =>\n            candidate.provider === activeServer?.provider && candidate.name === activeServer?.name && qualityHeight(candidate.quality) === choice.height\n        );\n        if (sameMirror && sameMirror.id !== serverId) {\n            pendingSeekRef.current = videoRef.current?.currentTime || current || 0;\n            setLevel(-1);\n            setServerId(sameMirror.id);\n            setMenu(null);\n            return;\n        }\n        if (choice.levelIndex >= 0 && hlsRef.current) {\n            changeLevel(choice.levelIndex);\n            setMenu(null);\n            return;\n        }\n        if (choice.server) {\n            pendingSeekRef.current = videoRef.current?.currentTime || current || 0;\n            setLevel(-1);\n            setServerId(choice.server.id);\n        }\n        setMenu(null);\n    };\n'''
+          assert old in t
+          t = t.replace(old, new, 1)
+
+          old = '''    const selectServerInSettings = (s) => {\n        pendingSeekRef.current = videoRef.current?.currentTime || current || 0;\n        setServerId(s.id);\n        setSettingsPage("root");\n    };\n'''
+          new = '''    const selectServerInSettings = (s) => {\n        pendingSeekRef.current = videoRef.current?.currentTime || current || 0;\n        const wanted = preferredQualityRef.current;\n        const matching = wanted ? servers.find((candidate) =>\n            candidate.provider === s.provider && candidate.name === s.name && qualityHeight(candidate.quality) === wanted\n        ) : null;\n        setServerId((matching || s).id);\n        setSettingsPage("root");\n    };\n'''
+          assert old in t
+          t = t.replace(old, new, 1)
+
+          old = '''    const chooseAutoQualityInSettings = () => {\n        if (hlsRef.current && levels.length) {\n            hlsRef.current.currentLevel = -1;\n            setLevel(-1);\n            return;\n        }\n        if (autoServer && autoServer.id !== serverId) {\n            pendingSeekRef.current = videoRef.current?.currentTime || current || 0;\n            setLevel(-1);\n            setServerId(autoServer.id);\n        }\n    };\n    const chooseQualityInSettings = (choice) => {\n        if (!choice?.available) return;\n        if (choice.levelIndex >= 0 && hlsRef.current) {\n            hlsRef.current.currentLevel = choice.levelIndex;\n            setLevel(choice.levelIndex);\n            return;\n        }\n        if (choice.server) {\n            pendingSeekRef.current = videoRef.current?.currentTime || current || 0;\n            setLevel(-1);\n            setServerId(choice.server.id);\n        }\n    };\n'''
+          new = '''    const chooseAutoQualityInSettings = () => { chooseAutoQuality(); setSettingsPage("root"); };\n    const chooseQualityInSettings = (choice) => { chooseQuality(choice); setSettingsPage("root"); };\n'''
+          assert old in t
+          t = t.replace(old, new, 1)
+
+          old = '    const activeQualityHeight = level >= 0 ? Number(levels[level]?.height || 0) : (levels.length ? 0 : qualityHeight(activeServer?.quality));\n'
+          new = '    const activeQualityHeight = preferredQuality || (level >= 0 ? Number(levels[level]?.height || 0) : (levels.length ? 0 : qualityHeight(activeServer?.quality)));\n'
+          assert old in t
+          t = t.replace(old, new, 1)
+
+          old = '    const settingsQualityLabel = level >= 0 ? (levels[level]?.height ? `${levels[level].height}p` : "Manual") : (activeQualityHeight ? (activeQualityHeight === 2160 ? "4K" : `${activeQualityHeight}p`) : "Auto");\n'
+          new = '    const settingsQualityLabel = preferredQuality ? (preferredQuality === 2160 ? "4K" : `${preferredQuality}p`) : "Auto";\n'
+          assert old in t
+          t = t.replace(old, new, 1)
+
+          # Put Miami first inside the Vidy mirror group and show background-loading status.
+          old = '''        return Array.from(mirrors.values()).map((server) => ({\n            ...server,\n            displayName: server.name || source.name,\n            available: true,\n        }));\n'''
+          new = '''        const mirrorValues = Array.from(mirrors.values());\n        if (source.provider === "vidy") {\n            mirrorValues.sort((a, b) => {\n                const am = /miami/i.test(String(a.name || "")) ? 0 : 1;\n                const bm = /miami/i.test(String(b.name || "")) ? 0 : 1;\n                return am - bm || String(a.name || "").localeCompare(String(b.name || ""));\n            });\n        }\n        return mirrorValues.map((server) => ({\n            ...server,\n            displayName: server.name || source.name,\n            available: true,\n        }));\n'''
+          assert old in t
+          t = t.replace(old, new, 1)
+
+          source_end = '''                                    </div>\n                                </div>\n                            )}\n                        </div>\n\n                        <div className="absolute left-1/2 top-5 md:top-6 -translate-x-1/2 text-center max-w-[60%] pointer-events-none">'''
+          source_new = '''                                    </div>\n                                    {sourcesLoading && (\n                                        <div className="border-t border-white/10 px-3 py-2 text-[10px] text-white/35">Loading more sources…</div>\n                                    )}\n                                </div>\n                            )}\n                        </div>\n\n                        <div className="absolute left-1/2 top-5 md:top-6 -translate-x-1/2 text-center max-w-[60%] pointer-events-none">'''
+          assert source_end in t
+          t = t.replace(source_end, source_new, 1)
+
+          # Replace the giant caption popover with a compact, track-first caption UI.
+          start_marker = '                                    <Popover open={menu === "subs"} wide>\n'
+          end_marker = '                                    </Popover>\n                                </div>\n\n                                <div className="relative">\n                                    <button\n                                        data-testid="synapse-quality-menu"'
+          start = t.index(start_marker)
+          end = t.index(end_marker, start)
+          captions = '''                                    <Popover open={menu === "subs"} wide>\n                                        <div className="px-4 pb-3 pt-2">\n                                            <p className="text-sm font-semibold text-white">Captions</p>\n                                            <p className="mt-1 text-[11px] text-white/40">Pick a track first. Styling stays simple and live.</p>\n                                        </div>\n                                        <div className="max-h-56 overflow-y-auto border-y border-white/10 py-1 scrollbar-none">\n                                            <MenuItem active={sub === -1 && !externalCaptionId} onClick={turnOffCaptions} testId="sub-off">\n                                                <span>Off</span><span className="text-[10px] opacity-40">No captions</span>\n                                            </MenuItem>\n                                            {externalCaptions.map((track) => (\n                                                <MenuItem key={`caption-${track.play_url || track.id}`} active={externalCaptionId === track.id} onClick={() => selectExternalCaption(track)}>\n                                                    <span className="min-w-0 truncate">{track.name || track.lang || "WebVTT"}</span>\n                                                    <span className="ml-3 text-[10px] uppercase opacity-40">{track.lang || "CC"} · {track.serverName || "VTT"}</span>\n                                                </MenuItem>\n                                            ))}\n                                            {subs.map((track, i) => (\n                                                <MenuItem key={`hls-caption-${i}`} active={sub === i && !externalCaptionId} onClick={() => { setExternalCaptionId(null); setExternalCues([]); changeSub(i); }}>\n                                                    <span className="min-w-0 truncate">{track.name || track.lang || `Track ${i + 1}`}</span>\n                                                    <span className="ml-3 text-[10px] uppercase opacity-40">{track.lang || track.language || "CC"} · HLS</span>\n                                                </MenuItem>\n                                            ))}\n                                            {!subs.length && !externalCaptions.length && (\n                                                <p className="px-3 py-4 text-xs text-white/40">No caption tracks are available yet. More may appear as sources finish loading.</p>\n                                            )}\n                                        </div>\n                                        {externalCaptionLoading && <p className="px-3 py-2 text-[11px] text-white/40">Loading captions…</p>}\n                                        {externalCaptionError && <p className="px-3 py-2 text-[11px] text-red-300/75">{externalCaptionError}</p>}\n                                        <div className="flex items-center justify-between px-3 pb-1 pt-3">\n                                            <p className="text-[10px] uppercase tracking-[0.16em] text-white/40">Appearance</p>\n                                            <button onClick={resetCaptionStyle} className="text-[11px] text-white/45 hover:text-white">Reset</button>\n                                        </div>\n                                        <div className="grid grid-cols-3 gap-1 px-3 py-2">\n                                            {[80, 100, 125].map((size) => (\n                                                <button key={size} onClick={() => updateCaptionStyle("size", size)} className={`rounded-lg px-2 py-2 text-xs ${captionStyle.size === size ? "bg-white text-black" : "bg-white/[0.05] text-white/60 hover:text-white"}`}>{size === 80 ? "Small" : size === 100 ? "Medium" : "Large"}</button>\n                                            ))}\n                                        </div>\n                                        <CaptionSlider label="Background" value={captionStyle.background} min={0} max={80} step={10} suffix="%" onChange={(v) => updateCaptionStyle("background", v)} />\n                                        <CaptionSlider label="Sync" value={captionStyle.delay} min={-3} max={3} step={0.1} suffix="s" onChange={(v) => updateCaptionStyle("delay", v)} />\n                                        <div className="flex items-center gap-2 px-3 pb-2 pt-1">\n                                            {["#ffffff", "#ffe66d", "#77e0ff", "#9cff8f"].map((color) => (\n                                                <button key={color} onClick={() => updateCaptionStyle("color", color)} className={`h-7 w-7 rounded-full border-2 ${captionStyle.color.toLowerCase() === color ? "border-white" : "border-white/15"}`} style={{ backgroundColor: color }} aria-label={`Caption color ${color}`} />\n                                            ))}\n                                        </div>\n                                    </Popover>\n                                </div>\n\n                                <div className="relative">\n                                    <button\n                                        data-testid="synapse-quality-menu"'''
+          t = t[:start] + captions + t[end + len(end_marker):]
+
+          # Turn the old settings icon slot into a one-click quality picker, then keep Settings beside it.
+          old_button = '''                                <div className="relative">\n                                    <button\n                                        data-testid="synapse-quality-menu"\n                                        onClick={() => { setSettingsPage("root"); setMenu(menu === "settings" ? null : "settings"); }}\n                                        className={`grid h-10 w-10 md:h-11 md:w-11 place-items-center transition active:scale-95 hover:scale-105 ${menu === "settings" ? "text-white" : "text-white/85 hover:text-white"}`}\n                                        title="Settings"\n                                        aria-label="Settings"\n                                    >\n                                        <Settings className="h-[25px] w-[25px] stroke-[1.8]" />\n                                    </button>\n                                </div>\n'''
+          new_button = '''                                <div className="relative">\n                                    <button\n                                        data-testid="synapse-quality-menu"\n                                        onClick={() => setMenu(menu === "quality" ? null : "quality")}\n                                        className={`h-10 min-w-[52px] px-1 text-xs font-semibold tracking-[-0.02em] transition hover:scale-105 active:scale-95 ${menu === "quality" ? "text-white" : "text-white/85 hover:text-white"}`}\n                                        title="Quality"\n                                        aria-label="Quality"\n                                    >\n                                        {settingsQualityLabel}\n                                    </button>\n                                    <Popover open={menu === "quality"}>\n                                        <div className="px-3 pb-2 pt-1 text-xs font-semibold text-white/70">Quality</div>\n                                        <MenuItem active={preferredQuality == null} onClick={chooseAutoQuality} disabled={!autoQualityAvailable}>\n                                            <span>Auto</span><span className="text-[10px] opacity-40">Adaptive</span>\n                                        </MenuItem>\n                                        {qualityChoices.filter((choice) => choice.available).map((choice) => (\n                                            <MenuItem key={`quick-quality-${choice.height}`} active={preferredQuality === choice.height} onClick={() => chooseQuality(choice)}>\n                                                <span>{choice.label}</span><span className="text-[10px] opacity-40">{choice.levelIndex >= 0 ? "HLS" : choice.server?.name || "Stream"}</span>\n                                            </MenuItem>\n                                        ))}\n                                    </Popover>\n                                </div>\n\n                                <div className="relative">\n                                    <button\n                                        onClick={() => { setSettingsPage("root"); setMenu(menu === "settings" ? null : "settings"); }}\n                                        className={`grid h-10 w-10 md:h-11 md:w-11 place-items-center transition active:scale-95 hover:scale-105 ${menu === "settings" ? "text-white" : "text-white/85 hover:text-white"}`}\n                                        title="Settings"\n                                        aria-label="Settings"\n                                    >\n                                        <Settings className="h-[25px] w-[25px] stroke-[1.8]" />\n                                    </button>\n                                </div>\n'''
+          assert old_button in t
+          t = t.replace(old_button, new_button, 1)
+
+          p.write_text(t)
+          PY
+
+      - name: Validate and build
+        run: |
+          python -m py_compile backend/scraper.py backend/server.py backend/providers/cinejoy.py
+          grep -q 'provider: "vidy", mirror: "miami"' frontend/src/components/SynapsePlayer.jsx
+          grep -q 'synscraper-quality-v1' frontend/src/components/SynapsePlayer.jsx
+          grep -q 'menu === "quality"' frontend/src/components/SynapsePlayer.jsx
+          grep -q 'Loading more sources' frontend/src/components/SynapsePlayer.jsx
+          grep -q 'id: "1083381"' frontend/src/pages/Demo.jsx
+          yarn --cwd frontend install
+          CI=false GENERATE_SOURCEMAP=false yarn --cwd frontend build
+          rm -rf public backend/public
+          cp -R frontend/build public
+          cp -R frontend/build backend/public
+
+      - name: Commit changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add backend/scraper.py backend/server.py backend/providers/cinejoy.py frontend/src/lib/api.js frontend/src/App.js frontend/src/pages/Demo.jsx frontend/src/components/SynapsePlayer.jsx public backend/public
+          git commit -m "Make Miami fast, quality sticky, sources progressive, and captions simpler"
+          git push
