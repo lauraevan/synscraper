@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { getDetails, getSeason } from "@/lib/api";
 import { titleOf } from "@/lib/format";
 import { SynapsePlayer } from "@/components/SynapsePlayer";
+import { DownloadPanel } from "@/components/DownloadPanel";
 import { Spinner } from "@/components/Spinner";
 
 export default function Watch() {
@@ -62,6 +63,14 @@ export default function Watch() {
                     hasNext={hasNext}
                     onNextEpisode={nextEpisode}
                     onBack={() => navigate(`/title/${mediaType}/${id}`)}
+                />
+
+                <DownloadPanel
+                    mediaType={mediaType}
+                    id={id}
+                    season={season}
+                    episode={episode}
+                    title={meta.title}
                 />
 
                 <div className="mx-auto mt-7 max-w-6xl border-t border-white/10 pt-6">
