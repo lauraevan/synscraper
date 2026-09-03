@@ -16,27 +16,32 @@ jobs:
           python-version: '3.12'
       - name: Install diagnostic dependency
         run: python -m pip install -q requests
-      - name: Test current VidCore primary source API
+      - name: Test VidCore relay path
         run: |
           python - <<'PY'
-          import json, requests, urllib.parse
+          import requests, urllib.parse
 
           ua='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/137 Safari/537.36'
-          s=requests.Session(); s.headers.update({'User-Agent':ua,'Accept':'application/json,text/plain,*/*','Referer':'https://vidcore.org/embed/movie/1083381','Origin':'https://vidcore.org'})
-          url='https://vidrack.created.app/api/sources/cineplay?id=1083381&type=movie'
-          r=s.get(url,timeout=12)
-          print('PACIFIC_STATUS',r.status_code,'CT',r.headers.get('content-type'),'LEN',len(r.content))
-          print('PACIFIC_CORS',r.headers.get('access-control-allow-origin'))
-          r.raise_for_status()
-          data=r.json()
-          print('ROOT_KEYS',sorted(data.keys()) if isinstance(data,dict) else type(data).__name__)
-          sources=data.get('sources') or [] if isinstance(data,dict) else []
-          print('SOURCE_COUNT',len(sources))
-          for idx,item in enumerate(sources[:12]):
-              if not isinstance(item,dict): continue
-              raw=str(item.get('url') or '')
-              host=urllib.parse.urlparse(raw).hostname or ''
-              print('SOURCE',idx,'quality=',item.get('quality'),'label=',item.get('label'),'type=',item.get('type'),'host=',host,'is_http=',raw.startswith('http'))
-          if not sources:
-              raise SystemExit('VidCore Pacific returned no sources')
+          referer='https://vidcore.org/embed/movie/1083381'
+          s=requests.Session(); s.headers.update({'User-Agent':ua,'Accept':'application/json,text/plain,*/*','Referer':referer,'Origin':'https://vidcore.org'})
+          api='https://vidrack.created.app/api/sources/cineplay?id=1083381&type=movie'
+          r=s.get(api,timeout=12); r.raise_for_status()
+          sources=(r.json() or {}).get('sources') or []
+          best=next((x for x in sources if str(x.get('quality'))=='2160p'), sources[0] if sources else None)
+          if not best: raise SystemExit('no VidCore source')
+          raw=str(best.get('url') or '')
+          relay='https://php-fredhorton613.wasmer.app/proxy1.php?play=' + urllib.parse.quote(raw,safe='')
+          m=s.get(relay,headers={'User-Agent':ua,'Accept':'*/*','Referer':referer,'Origin':'https://vidcore.org'},timeout=15,allow_redirects=True)
+          print('RELAY_STATUS',m.status_code,'CT',m.headers.get('content-type'),'LEN',len(m.content))
+          print('RELAY_CORS',m.headers.get('access-control-allow-origin'))
+          print('RELAY_HAS_EXTM3U','#EXTM3U' in m.text[:4096])
+          print('RELAY_FIRST_LINES')
+          for line in m.text.splitlines()[:12]:
+              if line.startswith('http'):
+                  p=urllib.parse.urlparse(line)
+                  print('URL host=',p.hostname,'path_suffix=',p.path[-40:])
+              else:
+                  print(line[:240])
+          m.raise_for_status()
+          if '#EXTM3U' not in m.text[:4096]: raise SystemExit('relay is not HLS')
           PY
