@@ -5,6 +5,8 @@ on:
     branches: [main]
     paths:
       - backend/**
+      - api/**
+      - requirements.txt
       - vercel.json
       - .github/workflows/backend-check.yml
   workflow_dispatch:
@@ -20,12 +22,21 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: pip install -r backend/requirements.txt
-      - run: python -m py_compile backend/server.py backend/scraper.py backend/providers/*.py
+      - run: pip install -r requirements.txt
+      - run: python -m py_compile backend/server.py backend/server_with_download.py backend/download_worker.py backend/scraper.py backend/providers/*.py api/index.py 'api/[...path].py'
       - run: |
           python - <<'PY'
           import sys
           sys.path.insert(0, "backend")
-          import server
-          print(server.app.title)
+          from download_worker import MAX_DOWNLOAD_HEIGHT, _find_ffmpeg
+          from server_with_download import app
+
+          paths = {route.path for route in app.routes}
+          assert MAX_DOWNLOAD_HEIGHT == 1080
+          assert "/api/download" in paths
+          assert "/api/download/options" in paths
+          assert _find_ffmpeg(), "Bundled FFmpeg executable was not found"
+          print(app.title)
+          print("download cap:", MAX_DOWNLOAD_HEIGHT)
+          print("ffmpeg:", _find_ffmpeg())
           PY
