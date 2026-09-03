@@ -16,52 +16,27 @@ jobs:
           python-version: '3.12'
       - name: Install diagnostic dependency
         run: python -m pip install -q requests
-      - name: Inspect current VidCore org embed config
+      - name: Test current VidCore primary source API
         run: |
           python - <<'PY'
-          import html, re, requests
-          from urllib.parse import urljoin
+          import json, requests, urllib.parse
 
-          s=requests.Session()
-          s.headers.update({'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/137 Safari/537.36'})
-          u='https://vidcore.org/embed/movie/1083381'
-          r=s.get(u,timeout=12,allow_redirects=True)
-          page=html.unescape(r.text)
-          print('PAGE_STATUS',r.status_code,'FINAL',r.url,'LEN',len(page))
-
-          # Show useful inline player/config contexts without dumping the full document.
-          needles=['.m3u8','master.m3u8','playlist','sources','source:','file:','tracks','subtitles','player','fetch(','axios','xmlhttprequest','/api/','server','stream','manifest']
-          lower=page.lower()
-          for needle in needles:
-            starts=[]
-            pos=0
-            while len(starts)<6:
-              i=lower.find(needle,pos)
-              if i<0: break
-              starts.append(i); pos=i+len(needle)
-            print('\nNEEDLE',needle,'COUNT_SHOWN',len(starts))
-            for i in starts:
-              print('CTX',page[max(0,i-420):i+720].replace('\n',' ')[:1140])
-
-          # Print only candidate URLs/endpoints from HTML.
-          vals=[]
-          for x in re.findall(r'https?://[^\s"\'<>\\]+',page):
-            if x not in vals: vals.append(x)
-          print('\nURLS')
-          for x in vals[:80]: print(x[:500])
-
-          # Inspect the small custom player.js (not the bundled hls.js library).
-          purl=urljoin(r.url,'/player/js/player.js')
-          js=s.get(purl,timeout=12).text
-          print('\nPLAYER_JS_LEN',len(js))
-          low=js.lower()
-          for needle in ['fetch(','xmlhttprequest','ajax','/api/','source','manifest','m3u8','server','stream','url']:
-            hits=[]; pos=0
-            while len(hits)<8:
-              i=low.find(needle,pos)
-              if i<0: break
-              hits.append(i); pos=i+len(needle)
-            if hits:
-              print('JS_NEEDLE',needle)
-              for i in hits: print('JS_CTX',js[max(0,i-350):i+650].replace('\n',' ')[:1000])
+          ua='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/137 Safari/537.36'
+          s=requests.Session(); s.headers.update({'User-Agent':ua,'Accept':'application/json,text/plain,*/*','Referer':'https://vidcore.org/embed/movie/1083381','Origin':'https://vidcore.org'})
+          url='https://vidrack.created.app/api/sources/cineplay?id=1083381&type=movie'
+          r=s.get(url,timeout=12)
+          print('PACIFIC_STATUS',r.status_code,'CT',r.headers.get('content-type'),'LEN',len(r.content))
+          print('PACIFIC_CORS',r.headers.get('access-control-allow-origin'))
+          r.raise_for_status()
+          data=r.json()
+          print('ROOT_KEYS',sorted(data.keys()) if isinstance(data,dict) else type(data).__name__)
+          sources=data.get('sources') or [] if isinstance(data,dict) else []
+          print('SOURCE_COUNT',len(sources))
+          for idx,item in enumerate(sources[:12]):
+              if not isinstance(item,dict): continue
+              raw=str(item.get('url') or '')
+              host=urllib.parse.urlparse(raw).hostname or ''
+              print('SOURCE',idx,'quality=',item.get('quality'),'label=',item.get('label'),'type=',item.get('type'),'host=',host,'is_http=',raw.startswith('http'))
+          if not sources:
+              raise SystemExit('VidCore Pacific returned no sources')
           PY
