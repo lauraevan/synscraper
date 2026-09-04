@@ -27,6 +27,7 @@ PROVIDERS = [
     ("Zen", "vidzee", ("providers.vidzee", "VidzeeResolver")),
     ("Rock", "vidrock", ("providers.vidrock", "VidrockResolver")),
     ("Vidy", "vidy", ("providers.vidy", "VidyResolver")),
+    ("Orlando", "orlando", ("providers.vidy", "VidyResolver")),
     ("CineJoy", "cinejoy", ("providers.cinejoy", "CineJoyResolver")),
     ("VidCore", "vidcore", ("providers.vidcore", "VidCoreResolver")),
     ("Vix", "vixsrc", ("providers.vixsrc", "VixSrcResolver")),
@@ -119,8 +120,10 @@ def _run_one(spec, provider_id, media_type, tmdb_id, season, episode, provider_h
         cls = _resolver_class(spec)
         r = cls()
         resolve_kwargs = {}
-        if provider_id == "vidy":
-            if provider_hint:
+        if provider_id in {"vidy", "orlando"}:
+            if provider_id == "orlando":
+                resolve_kwargs["provider"] = "orlando"
+            elif provider_hint:
                 resolve_kwargs["provider"] = provider_hint
             elif fast_mirrors:
                 resolve_kwargs["provider"] = "fast"
@@ -136,6 +139,8 @@ def _run_one(spec, provider_id, media_type, tmdb_id, season, episode, provider_h
         for pu in data.get("playable_urls", []):
             url = pu.get("url")
             if not url or not url.startswith("http"):
+                continue
+            if provider_id == "orlando" and not str(url).startswith("https://moon.peakstorm.top/"):
                 continue
             headers = pu.get("headers", {}) or {}
             captions = list(root_captions)
@@ -206,7 +211,9 @@ async def scrape_streams(media_type: str, tmdb_id, season=None, episode=None, pr
         name, pid, streams = res
         for idx, s in enumerate(streams):
             subserver = str(s.get("subserver") or "").strip()
-            if subserver:
+            if pid == "orlando":
+                display_name = "Orlando"
+            elif subserver:
                 if pid == "vidzee":
                     display_name = {
                         "dcloud": "DCloud",
@@ -232,14 +239,18 @@ async def scrape_streams(media_type: str, tmdb_id, season=None, episode=None, pr
                 **s,
             })
 
-    # Miami is the fast/default playback source. Prefer 1080p for startup,
-    # while preserving 4K/Auto as selectable qualities once the manifest is ready.
+    # Miami stays the fast/default playback source. Orlando is always ranked
+    # immediately behind it and is limited to the moon.peakstorm.top source.
+    def _quality_rank(server):
+        quality = str(server.get("quality") or "").lower()
+        return 0 if "1080" in quality else 1 if "720" in quality else 2 if "480" in quality else 3 if ("2160" in quality or "4k" in quality) else 4
+
     def _server_rank(server):
         if server.get("provider") == "vidy" and str(server.get("name") or "").lower() == "miami":
-            quality = str(server.get("quality") or "").lower()
-            qrank = 0 if "1080" in quality else 1 if "720" in quality else 2 if "480" in quality else 3 if ("2160" in quality or "4k" in quality) else 4
-            return (0, qrank, 0 if server.get("type") == "hls" else 1)
-        return (1 if server.get("primary") else 2, 0, 0 if server.get("type") == "hls" else 1)
+            return (0, _quality_rank(server), 0 if server.get("type") == "hls" else 1)
+        if server.get("provider") == "orlando":
+            return (1, _quality_rank(server), 0 if server.get("type") == "hls" else 1)
+        return (2 if server.get("primary") else 3, 0, 0 if server.get("type") == "hls" else 1)
 
     servers.sort(key=_server_rank)
     _cache[ck] = (time.time(), servers)
