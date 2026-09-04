@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { useEffect } from "react";
 import { useParams, useSearchParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { getDetails, getSeason } from "@/lib/api";
@@ -28,10 +28,6 @@ export default function Watch() {
 
     const epCount = seasonData?.episodes?.length || 0;
     const hasNext = mediaType === "tv" && episode < epCount;
-    const currentEp = useMemo(
-        () => seasonData?.episodes?.find((e) => e.episode_number === episode),
-        [seasonData, episode]
-    );
 
     const nextEpisode = () => {
         if (hasNext) setSp({ season: String(season), episode: String(episode + 1) });
@@ -64,39 +60,28 @@ export default function Watch() {
                     onBack={() => navigate(`/title/${mediaType}/${id}`)}
                 />
 
-
-             
-                                <p className="mt-2 text-sm text-white/55">Season {season} · Episode {episode} — {currentEp.name}</p>
-                            )}
-                            <p className="mt-4 text-sm leading-6 text-white/38">
-                                {mediaType === "tv" ? currentEp?.overview || details.overview : details.overview}
-                            </p>
+                {mediaType === "tv" && seasonData?.episodes?.length > 0 && (
+                    <div className="mx-auto mt-9 max-w-6xl" data-testid="watch-episode-strip">
+                        <h2 className="mb-3 text-sm font-semibold text-white/75">Season {season}</h2>
+                        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+                            {seasonData.episodes.map((ep) => (
+                                <button
+                                    key={ep.id}
+                                    data-testid={`watch-ep-${ep.episode_number}`}
+                                    onClick={() => setSp({ season: String(season), episode: String(ep.episode_number) })}
+                                    className={`rounded-xl border p-3 text-left text-sm transition-all ${
+                                        ep.episode_number === episode
+                                            ? "border-white/30 bg-white/[0.08]"
+                                            : "border-white/10 bg-white/[0.025] hover:border-white/20 hover:bg-white/[0.05]"
+                                    }`}
+                                >
+                                    <span className="font-mono text-[10px] text-white/25">EP {ep.episode_number}</span>
+                                    <p className="mt-1 truncate font-medium text-white/70">{ep.name}</p>
+                                </button>
+                            ))}
                         </div>
                     </div>
-
-                    {mediaType === "tv" && seasonData?.episodes?.length > 0 && (
-                        <div className="mt-9" data-testid="watch-episode-strip">
-                            <h2 className="mb-3 text-sm font-semibold text-white/75">Season {season}</h2>
-                            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
-                                {seasonData.episodes.map((ep) => (
-                                    <button
-                                        key={ep.id}
-                                        data-testid={`watch-ep-${ep.episode_number}`}
-                                        onClick={() => setSp({ season: String(season), episode: String(ep.episode_number) })}
-                                        className={`rounded-xl border p-3 text-left text-sm transition-all ${
-                                            ep.episode_number === episode
-                                                ? "border-white/30 bg-white/[0.08]"
-                                                : "border-white/10 bg-white/[0.025] hover:border-white/20 hover:bg-white/[0.05]"
-                                        }`}
-                                    >
-                                        <span className="font-mono text-[10px] text-white/25">EP {ep.episode_number}</span>
-                                        <p className="mt-1 truncate font-medium text-white/70">{ep.name}</p>
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-                </div>
+                )}
             </div>
         </main>
     );
