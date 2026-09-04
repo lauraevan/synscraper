@@ -155,3 +155,291 @@
 .syn-soft-pulse {
     animation: syn-soft-pulse 2s ease-in-out infinite;
 }
+
+/* --------------------------------------------------------------------------
+   SynPlayer / Peak Player chrome
+   Keep the SynPlayer wordmark warm; everything interactive goes back to white.
+   -------------------------------------------------------------------------- */
+
+[class~="text-[#eadb8a]"] {
+    color: #fff !important;
+}
+
+[class~="bg-[#eadb8a]"] {
+    background-color: #fff !important;
+}
+
+[class*="bg-[#eadb8a]/"] {
+    background-color: rgba(255, 255, 255, 0.09) !important;
+}
+
+[class~="border-[#eadb8a]"] {
+    border-color: rgba(255, 255, 255, 0.92) !important;
+}
+
+[class*="ring-[#eadb8a]"] {
+    --tw-ring-color: rgba(255, 255, 255, 0.42) !important;
+}
+
+[class~="bg-[#332e18]"] {
+    background-color: rgba(255, 255, 255, 0.13) !important;
+}
+
+[data-testid="synplayer-label"] [class~="text-[#eadb8a]"] {
+    color: #eadb8a !important;
+}
+
+[data-testid="synapse-settings-panel"] input[type="range"],
+[data-testid="synapse-seek-bar"] {
+    accent-color: #fff !important;
+}
+
+button[aria-label="Settings"],
+button[aria-label="Quality"],
+button[aria-label="Captions"],
+[data-testid="synapse-source-cloud-btn"] {
+    --tw-text-opacity: 1;
+}
+
+@keyframes peak-settings-in {
+    from {
+        opacity: 0;
+        transform: translate(50%, 50%) scale(0.965) translateY(8px);
+        filter: blur(3px);
+    }
+    to {
+        opacity: 1;
+        transform: translate(50%, 50%) scale(1) translateY(0);
+        filter: blur(0);
+    }
+}
+
+[data-testid="synapse-settings-overlay"] {
+    background: rgba(0, 0, 0, 0.035);
+}
+
+[data-testid="synapse-settings-panel"] {
+    bottom: 50% !important;
+    right: 50% !important;
+    width: min(548px, calc(100vw - 28px)) !important;
+    max-height: min(72%, 620px) !important;
+    border-radius: 24px !important;
+    border: 1px solid rgba(255, 255, 255, 0.145) !important;
+    background:
+        linear-gradient(145deg, rgba(25, 29, 35, 0.74), rgba(8, 10, 14, 0.67) 48%, rgba(3, 4, 7, 0.76)) !important;
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.08),
+        inset 0 -1px 0 rgba(255, 255, 255, 0.025),
+        0 26px 80px rgba(0, 0, 0, 0.55),
+        0 8px 24px rgba(0, 0, 0, 0.34) !important;
+    -webkit-backdrop-filter: blur(34px) saturate(155%) brightness(0.88) !important;
+    backdrop-filter: blur(34px) saturate(155%) brightness(0.88) !important;
+    transform: translate(50%, 50%);
+    animation: peak-settings-in 220ms cubic-bezier(0.16, 1, 0.3, 1) both;
+    isolation: isolate;
+}
+
+[data-testid="synapse-settings-panel"] > div:first-child {
+    height: 62px !important;
+    padding-inline: 17px !important;
+    border-bottom-color: rgba(255, 255, 255, 0.10) !important;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.025), transparent);
+}
+
+[data-testid="synapse-settings-panel"] > div:first-child h2 {
+    font-size: 18px !important;
+    line-height: 1.1 !important;
+    letter-spacing: -0.035em !important;
+    font-weight: 600 !important;
+    color: rgba(255, 255, 255, 0.97) !important;
+}
+
+/* SynPlayer is the one warm accent that stays. */
+[data-testid="synapse-settings-panel"] > div:first-child p[class*="text-[#eadb8a]/"] {
+    color: rgba(234, 219, 138, 0.72) !important;
+    font-size: 9px !important;
+    letter-spacing: 0.015em;
+}
+
+[data-testid="synapse-settings-panel"] > div:first-child button {
+    border-radius: 999px;
+}
+
+[data-testid="synapse-settings-panel"] > div:first-child button:hover {
+    background: rgba(255, 255, 255, 0.075);
+}
+
+[data-testid="synapse-settings-panel"] > div:nth-child(2) {
+    padding: 5px 0 7px;
+}
+
+/* Turn the old dashboard-card root into one clean Peak-style settings list. */
+[data-testid="synapse-settings-panel"] > div:nth-child(2) > div[class~="p-3"] > div:first-child[class~="grid"][class~="grid-cols-2"] {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0 !important;
+    margin: 2px 10px 0 !important;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.018);
+}
+
+[data-testid="synapse-settings-panel"] > div:nth-child(2) > div[class~="p-3"] > div:first-child[class~="grid"][class~="grid-cols-2"] > button {
+    display: flex !important;
+    min-height: 53px;
+    align-items: center !important;
+    gap: 13px !important;
+    padding: 11px 15px !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+}
+
+[data-testid="synapse-settings-panel"] > div:nth-child(2) > div[class~="p-3"] > div:first-child[class~="grid"][class~="grid-cols-2"] > button + button {
+    border-top: 1px solid rgba(255, 255, 255, 0.065) !important;
+}
+
+[data-testid="synapse-settings-panel"] > div:nth-child(2) > div[class~="p-3"] > div:first-child[class~="grid"][class~="grid-cols-2"] > button:hover {
+    background: rgba(255, 255, 255, 0.055) !important;
+}
+
+[data-testid="synapse-settings-panel"] > div:nth-child(2) > div[class~="p-3"] > div:first-child[class~="grid"][class~="grid-cols-2"] > button > div {
+    flex: 1;
+    gap: 11px !important;
+    color: rgba(255, 255, 255, 0.88) !important;
+    font-size: 13px !important;
+    font-weight: 500 !important;
+    line-height: 1 !important;
+    letter-spacing: -0.012em !important;
+    text-transform: none !important;
+}
+
+[data-testid="synapse-settings-panel"] > div:nth-child(2) > div[class~="p-3"] > div:first-child[class~="grid"][class~="grid-cols-2"] > button > div svg {
+    width: 18px !important;
+    height: 18px !important;
+    stroke-width: 1.75;
+    color: rgba(255, 255, 255, 0.70) !important;
+}
+
+[data-testid="synapse-settings-panel"] > div:nth-child(2) > div[class~="p-3"] > div:first-child[class~="grid"][class~="grid-cols-2"] > button > p {
+    margin: 0 !important;
+    max-width: 46%;
+    font-size: 12px !important;
+    line-height: 1 !important;
+    font-weight: 500 !important;
+    color: rgba(255, 255, 255, 0.56) !important;
+}
+
+[data-testid="synapse-settings-panel"] > div:nth-child(2) > div[class~="p-3"] > div:nth-child(2)[class~="mt-2"] {
+    display: flex !important;
+    flex-direction: column;
+    margin: 8px 10px 4px !important;
+    border-color: rgba(255, 255, 255, 0.07) !important;
+    border-radius: 16px !important;
+    background: rgba(255, 255, 255, 0.018) !important;
+}
+
+[data-testid="synapse-settings-panel"] > div:nth-child(2) > div[class~="p-3"] > div:nth-child(2)[class~="mt-2"] > div[class~="h-px"] {
+    display: none !important;
+}
+
+/* The root already has a proper subtitle row. Kill the duplicate toggle + duplicate link. */
+[data-testid="synapse-settings-panel"] > div:nth-child(2) > div[class~="p-3"] > div:nth-child(2)[class~="mt-2"] > button:nth-of-type(2),
+[data-testid="synapse-settings-panel"] > div:nth-child(2) > div[class~="p-3"] > div:nth-child(2)[class~="mt-2"] > button:nth-of-type(4) {
+    display: none !important;
+}
+
+[data-testid="synapse-settings-panel"] > div:nth-child(2) > div[class~="p-3"] > div:nth-child(2)[class~="mt-2"] > button {
+    min-height: 52px;
+    gap: 12px !important;
+    padding: 11px 15px !important;
+    border-radius: 0 !important;
+    color: rgba(255, 255, 255, 0.88) !important;
+}
+
+[data-testid="synapse-settings-panel"] > div:nth-child(2) > div[class~="p-3"] > div:nth-child(2)[class~="mt-2"] > button:not(:first-of-type) {
+    border-top: 1px solid rgba(255, 255, 255, 0.065);
+}
+
+[data-testid="synapse-settings-panel"] > div:nth-child(2) > div[class~="p-3"] > div:nth-child(2)[class~="mt-2"] > button:hover {
+    background: rgba(255, 255, 255, 0.055) !important;
+}
+
+[data-testid="synapse-settings-panel"] > div:nth-child(2) > div[class~="p-3"] > div:nth-child(2)[class~="mt-2"] > button > svg:first-child {
+    width: 18px !important;
+    height: 18px !important;
+    color: rgba(255, 255, 255, 0.68) !important;
+}
+
+[data-testid="synapse-settings-panel"] > div:nth-child(2) > div[class~="p-3"] > div:nth-child(2)[class~="mt-2"] > button > span[class*="flex-1"] {
+    font-size: 13px !important;
+    font-weight: 500 !important;
+    letter-spacing: -0.012em;
+    color: rgba(255, 255, 255, 0.88) !important;
+}
+
+[data-testid="synapse-settings-panel"] > div:nth-child(2) > div[class~="p-3"] > div:nth-child(2)[class~="mt-2"] > button > span:not([class*="flex-1"]):not([class*="relative"]) {
+    font-size: 11px !important;
+    color: rgba(255, 255, 255, 0.48) !important;
+}
+
+[data-testid="synapse-settings-panel"] svg[class*="text-white/24"],
+[data-testid="synapse-settings-panel"] svg[class*="text-white/30"] {
+    color: rgba(255, 255, 255, 0.42) !important;
+}
+
+/* Less copy, more controls. */
+[data-testid="synapse-settings-panel"] p[class*="leading-relaxed"] {
+    display: none !important;
+}
+
+[data-testid="synapse-settings-panel"] div[class~="p-4"] > div[class*="items-end"] > div > p + p {
+    display: none !important;
+}
+
+/* Peak-style secondary pages. */
+[data-testid="synapse-settings-panel"] div[class*="rounded-xl"][class*="border-white"],
+[data-testid="synapse-settings-panel"] div[class*="rounded-[12px]"][class*="border-white"],
+[data-testid="synapse-settings-panel"] div[class*="rounded-[13px]"][class*="border-white"] {
+    border-color: rgba(255, 255, 255, 0.085) !important;
+}
+
+[data-testid="synapse-settings-panel"] button[class*="bg-white/[0.035]"],
+[data-testid="synapse-settings-panel"] button[class*="bg-white/[0.03]"] {
+    background: rgba(255, 255, 255, 0.035) !important;
+}
+
+[data-testid="synapse-settings-panel"] button[class*="bg-white/[0.035]"]:hover,
+[data-testid="synapse-settings-panel"] button[class*="bg-white/[0.03]"]:hover {
+    background: rgba(255, 255, 255, 0.075) !important;
+}
+
+[data-testid="synapse-settings-panel"] input[type="range"] {
+    cursor: pointer;
+    accent-color: #fff !important;
+}
+
+@media (max-width: 640px) {
+    [data-testid="synapse-settings-panel"] {
+        width: calc(100vw - 18px) !important;
+        max-height: min(80%, 600px) !important;
+        border-radius: 20px !important;
+    }
+
+    [data-testid="synapse-settings-panel"] > div:first-child {
+        height: 56px !important;
+        padding-inline: 12px !important;
+    }
+
+    [data-testid="synapse-settings-panel"] > div:first-child h2 {
+        font-size: 16px !important;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    [data-testid="synapse-settings-panel"] {
+        animation: none !important;
+    }
+}
