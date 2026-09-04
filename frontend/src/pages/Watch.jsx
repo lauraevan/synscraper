@@ -65,12 +65,7 @@ export default function Watch() {
                 />
 
 
-                <div className="mx-auto mt-7 max-w-6xl border-t border-white/10 pt-6">
-                    <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
-                        <div className="max-w-3xl">
-                            <p className="text-xs uppercase tracking-[0.2em] text-white/25">Now playing</p>
-                            <h1 className="mt-2 text-2xl font-semibold tracking-[-0.03em] md:text-3xl">{meta.title}</h1>
-                            {mediaType === "tv" && currentEp && (
+             
                                 <p className="mt-2 text-sm text-white/55">Season {season} · Episode {episode} — {currentEp.name}</p>
                             )}
                             <p className="mt-4 text-sm leading-6 text-white/38">
