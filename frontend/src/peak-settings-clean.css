@@ -1,0 +1,62 @@
+/* Final cleanup for the Peak-style SynPlayer settings popup. */
+
+/* Keep the glass shell, remove every internal separator line. */
+[data-testid="synapse-settings-panel"] > div:first-child {
+    border-bottom: 0 !important;
+}
+
+[data-testid="synapse-settings-panel"] > div:nth-child(2),
+[data-testid="synapse-settings-panel"] > div:nth-child(2) *,
+[data-testid="synapse-settings-panel"] > div:nth-child(2) *::before,
+[data-testid="synapse-settings-panel"] > div:nth-child(2) *::after {
+    border-color: transparent !important;
+}
+
+/* Kill the old grouped/card boxes completely on the root settings page. */
+[data-testid="synapse-settings-panel"] > div:nth-child(2) > div[class~="p-3"] > div:first-child[class~="grid"][class~="grid-cols-2"],
+[data-testid="synapse-settings-panel"] > div:nth-child(2) > div[class~="p-3"] > div:nth-child(2)[class~="mt-2"] {
+    display: contents !important;
+    border: 0 !important;
+    outline: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+}
+
+/* Remove every generated horizontal separator from the old layout. */
+[data-testid="synapse-settings-panel"] > div:nth-child(2) div[class~="h-px"],
+[data-testid="synapse-settings-panel"] > div:nth-child(2) div[class*="border-t"],
+[data-testid="synapse-settings-panel"] > div:nth-child(2) div[class*="border-b"] {
+    border: 0 !important;
+    box-shadow: none !important;
+}
+
+/* Root rows float directly on the glass, with zero boxes or row rules. */
+[data-testid="synapse-settings-panel"] > div:nth-child(2) > div[class~="p-3"] button {
+    border: 0 !important;
+    outline: 0 !important;
+    box-shadow: none !important;
+    background: transparent !important;
+}
+
+[data-testid="synapse-settings-panel"] > div:nth-child(2) > div[class~="p-3"] button:hover {
+    background: rgba(255,255,255,0.035) !important;
+}
+
+/* Secondary settings pages should not reintroduce card outlines or divider rules. */
+[data-testid="synapse-settings-panel"] > div:nth-child(2) [class*="border-white"],
+[data-testid="synapse-settings-panel"] > div:nth-child(2) [class*="border-y"],
+[data-testid="synapse-settings-panel"] > div:nth-child(2) [class*="border-t"],
+[data-testid="synapse-settings-panel"] > div:nth-child(2) [class*="border-b"],
+[data-testid="synapse-settings-panel"] > div:nth-child(2) [class*="border-l"],
+[data-testid="synapse-settings-panel"] > div:nth-child(2) [class*="border-r"] {
+    border: 0 !important;
+}
+
+/* Remove the visual card behind subtitle/settings sub-sections too. */
+[data-testid="synapse-settings-panel"] > div:nth-child(2) [class*="rounded-[12px]"][class*="border"],
+[data-testid="synapse-settings-panel"] > div:nth-child(2) [class*="rounded-[13px]"][class*="border"],
+[data-testid="synapse-settings-panel"] > div:nth-child(2) [class*="rounded-xl"][class*="border"] {
+    border: 0 !important;
+    box-shadow: none !important;
+}
