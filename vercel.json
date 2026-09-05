@@ -4,6 +4,10 @@
   "buildCommand": "npm run build",
   "outputDirectory": "public",
   "functions": {
+    "api/index.py": {
+      "includeFiles": "backend/**",
+      "maxDuration": 300
+    },
     "api/[...path].py": {
       "includeFiles": "backend/**",
       "maxDuration": 300
@@ -11,15 +15,15 @@
   },
   "rewrites": [
     {
-      "source": "/api",
-      "destination": "/index.html"
-    },
-    {
       "source": "/demo",
       "destination": "/index.html"
     },
     {
       "source": "/docs",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/synplayer-api",
       "destination": "/index.html"
     },
     {
