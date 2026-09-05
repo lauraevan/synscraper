@@ -3,7 +3,10 @@ import ReactDOM from "react-dom/client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import "@/index.css";
 import "@/peak-settings-clean.css";
+import { applyPreferences } from "@/lib/preferences";
 import App from "@/App";
+
+applyPreferences();
 
 const queryClient = new QueryClient({
   defaultOptions: {
