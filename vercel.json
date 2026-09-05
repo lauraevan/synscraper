@@ -5,8 +5,8 @@
   "outputDirectory": "public",
   "functions": {
     "api/index.py": {
-      "includeFiles": "backend/**",
-      "maxDuration": 300
+      "includeFiles": "public/**",
+      "maxDuration": 30
     },
     "api/[...path].py": {
       "includeFiles": "backend/**",
