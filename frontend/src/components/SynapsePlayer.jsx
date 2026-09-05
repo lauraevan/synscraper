@@ -649,7 +649,7 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
                     .map((value) => value.trim().toLowerCase())
                     .filter(Boolean),
             );
-            const providers = ["castle", "vidlink", "vidnest", "vidzee", "vidrock", "vidy", "cinejoy", "vidcore", "vixsrc"];
+            const providers = ["orlando", "castle", "vidlink", "vidnest", "vidzee", "vidrock", "vidy", "cinejoy", "vidcore", "vixsrc"];
             const providerQueue = providers.filter((provider) => !excluded.has(provider));
 
             if (!providerQueue.length) {
@@ -661,7 +661,7 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
             const loadProvider = (provider) => getStreams(mediaType, id, season, episode, {
                 provider,
                 mirror: provider === "vidy" ? "fast" : undefined,
-                timeout: provider === "cinejoy" ? 12000 : 9500,
+                timeout: provider === "cinejoy" ? 12000 : provider === "orlando" ? 15000 : 9500,
                 ...streamResolveHints,
             })
                 .then((data) => mergePayload(data, true))
