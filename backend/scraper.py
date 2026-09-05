@@ -21,13 +21,13 @@ USER_AGENT = os.environ.get(
 
 # Friendly Synflix server names -> resolver classes, in priority order.
 PROVIDERS = [
+    ("Orlando", "orlando", ("providers.orlando", "OrlandoResolver")),
+    ("Vidy", "vidy", ("providers.vidy", "VidyResolver")),
     ("Houston", "castle", ("providers.castle", "CastleResolver")),
     ("Nova", "vidlink", ("providers.vidlink", "VidlinkResolver")),
     ("Nest", "vidnest", ("providers.vidnest", "VidNestResolver")),
     ("Zen", "vidzee", ("providers.vidzee", "VidzeeResolver")),
     ("Rock", "vidrock", ("providers.vidrock", "VidrockResolver")),
-    ("Vidy", "vidy", ("providers.vidy", "VidyResolver")),
-    ("Orlando", "orlando", ("providers.orlando", "OrlandoResolver")),
     ("CineJoy", "cinejoy", ("providers.cinejoy", "CineJoyResolver")),
     ("VidCore", "vidcore", ("providers.vidcore", "VidCoreResolver")),
     ("Vix", "vixsrc", ("providers.vixsrc", "VixSrcResolver")),
@@ -230,25 +230,25 @@ async def scrape_streams(media_type: str, tmdb_id, season=None, episode=None, pr
                     display_name = display_name or name
             else:
                 display_name = name if idx == 0 else f"{name} {idx + 1}"
-            is_miami = pid == "vidy" and display_name.lower() == "miami"
+            is_orlando = pid == "orlando"
             servers.append({
                 "id": f"{pid}-{idx}",
                 "name": display_name,
                 "provider": pid,
-                "primary": is_miami,
+                "primary": is_orlando,
                 **s,
             })
 
-    # Miami stays the fast/default playback source. Orlando is always ranked
-    # immediately behind it and is limited to the moon.peakstorm.top source.
+    # Orlando is the default playback source. Miami is ranked immediately
+    # behind it as the first fallback.
     def _quality_rank(server):
         quality = str(server.get("quality") or "").lower()
         return 0 if "1080" in quality else 1 if "720" in quality else 2 if "480" in quality else 3 if ("2160" in quality or "4k" in quality) else 4
 
     def _server_rank(server):
-        if server.get("provider") == "vidy" and str(server.get("name") or "").lower() == "miami":
-            return (0, _quality_rank(server), 0 if server.get("type") == "hls" else 1)
         if server.get("provider") == "orlando":
+            return (0, _quality_rank(server), 0 if server.get("type") == "hls" else 1)
+        if server.get("provider") == "vidy" and str(server.get("name") or "").lower() == "miami":
             return (1, _quality_rank(server), 0 if server.get("type") == "hls" else 1)
         return (2 if server.get("primary") else 3, 0, 0 if server.get("type") == "hls" else 1)
 

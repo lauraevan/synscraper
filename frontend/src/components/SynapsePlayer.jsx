@@ -355,9 +355,10 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
             if (!found.has(key)) found.set(key, { key, provider: server.provider, name: server.name });
         });
         return Array.from(found.values()).sort((a, b) => {
-            const aMiami = a.provider === "vidy" && /miami/i.test(a.name) ? 0 : 1;
-            const bMiami = b.provider === "vidy" && /miami/i.test(b.name) ? 0 : 1;
-            return aMiami - bMiami || a.name.localeCompare(b.name);
+            const rank = (source) => source.provider === "orlando"
+                ? 0
+                : (source.provider === "vidy" && /miami/i.test(source.name) ? 1 : 2);
+            return rank(a) - rank(b) || a.name.localeCompare(b.name);
         });
     })();
 
@@ -401,11 +402,12 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
                 .flatMap((result) => result.value);
             const unique = Array.from(new Map(items.map((item) => [item.key, item])).values());
             unique.sort((a, b) => {
-                const aMiami = a.provider === "vidy" && /miami/i.test(a.source) ? 0 : 1;
-                const bMiami = b.provider === "vidy" && /miami/i.test(b.source) ? 0 : 1;
+                const rank = (item) => item.provider === "orlando"
+                    ? 0
+                    : (item.provider === "vidy" && /miami/i.test(item.source) ? 1 : 2);
                 const aq = a.quality === "auto" ? 0 : Number(a.quality);
                 const bq = b.quality === "auto" ? 0 : Number(b.quality);
-                return aMiami - bMiami || bq - aq || a.source.localeCompare(b.source);
+                return rank(a) - rank(b) || bq - aq || a.source.localeCompare(b.source);
             });
             setDownloadItems(unique);
             const failed = results.filter((result) => result.status === "rejected").length;
@@ -607,6 +609,10 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
                 : null;
             if (preferredSource && !favorite && !allowFallback) return;
             const preferred = favorite
+                || (wanted ? list.find((candidate) => candidate.provider === "orlando" && qualityHeight(candidate.quality) === wanted) : null)
+                || (!wanted ? list.find((candidate) => candidate.provider === "orlando" && /^auto/i.test(String(candidate.quality || ""))) : null)
+                || list.find((candidate) => candidate.provider === "orlando" && qualityHeight(candidate.quality) === 1080)
+                || list.find((candidate) => candidate.provider === "orlando")
                 || (wanted ? list.find((candidate) => candidate.provider === "vidy" && /miami/i.test(String(candidate.name || "")) && qualityHeight(candidate.quality) === wanted) : null)
                 || (!wanted ? list.find((candidate) => candidate.provider === "vidy" && /miami/i.test(String(candidate.name || "")) && /^auto/i.test(String(candidate.quality || ""))) : null)
                 || list.find((candidate) => candidate.provider === "vidy" && /miami/i.test(String(candidate.name || "")) && qualityHeight(candidate.quality) === 1080)
@@ -649,7 +655,7 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
                     .map((value) => value.trim().toLowerCase())
                     .filter(Boolean),
             );
-            const providers = ["orlando", "castle", "vidlink", "vidnest", "vidzee", "vidrock", "vidy", "cinejoy", "vidcore", "vixsrc"];
+            const providers = ["orlando", "vidy", "castle", "vidlink", "vidnest", "vidzee", "vidrock", "cinejoy", "vidcore", "vixsrc"];
             const providerQueue = providers.filter((provider) => !excluded.has(provider));
 
             if (!providerQueue.length) {
@@ -660,7 +666,7 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
 
             const loadProvider = (provider) => getStreams(mediaType, id, season, episode, {
                 provider,
-                mirror: provider === "vidy" ? "fast" : undefined,
+                mirror: provider === "vidy" ? "miami" : undefined,
                 timeout: provider === "cinejoy" ? 12000 : provider === "orlando" ? 15000 : 9500,
                 ...streamResolveHints,
             })
@@ -687,46 +693,65 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
             return backgroundPromise;
         };
 
-        const quick = getStreams(mediaType, id, season, episode, { provider: "vidy", mirror: "miami", timeout: 5200, ...streamResolveHints })
-            .then((d) => {
+        const quick = getStreams(mediaType, id, season, episode, { provider: "orlando", timeout: 8000, ...streamResolveHints })
+            .then(async (d) => {
                 if (!alive) return [];
                 const list = mergePayload(d, false);
-                if (!list.length) {
-                    return startBackground(undefined);
-                }
-
                 const preferredSource = readPreferredSourceKey();
                 const quickHasPreferred = preferredSource && list.some((server) => sourcePreferenceKey(server) === preferredSource);
                 const preferredProvider = preferredSource ? preferredSource.split("|")[0] : "";
-                const hasMiamiCaptions = list.some((server) => (server.captions || []).length > 0);
+
+                // Orlando is the default. If it misses, give Miami the first fallback attempt.
+                if (!list.length) {
+                    const miami = await getStreams(mediaType, id, season, episode, {
+                        provider: "vidy",
+                        mirror: "miami",
+                        timeout: 5200,
+                        ...streamResolveHints,
+                    }).catch(() => null);
+                    if (!alive) return [];
+                    const miamiList = mergePayload(miami, false);
+                    backgroundTimer = window.setTimeout(() => startBackground("orlando,vidy,cinejoy"), 900);
+                    heavyTimer = window.setTimeout(() => startHeavyCineJoy(), 7000);
+                    if (!miamiList.length) return startBackground("orlando,vidy");
+                    return miamiList;
+                }
 
                 if (preferredSource && !quickHasPreferred) {
-                    // A starred source is the real default. Load the wider source pool immediately
-                    // instead of locking playback to Miami before the favorite can arrive.
+                    // A starred source still overrides the built-in Orlando -> Miami order.
                     if (preferredProvider === "cinejoy") {
                         heavyTimer = window.setTimeout(() => startHeavyCineJoy(), 120);
-                        backgroundTimer = window.setTimeout(() => startBackground("cinejoy"), 700);
+                        backgroundTimer = window.setTimeout(() => startBackground("orlando,cinejoy"), 700);
                     } else {
-                        backgroundTimer = window.setTimeout(() => startBackground("cinejoy"), 120);
+                        backgroundTimer = window.setTimeout(() => startBackground("orlando,cinejoy"), 120);
                         heavyTimer = window.setTimeout(() => startHeavyCineJoy(), 6500);
                     }
                     return list;
                 }
 
-                // Give Miami a clean startup lane when there is no different starred default.
-                backgroundTimer = window.setTimeout(
-                    () => startBackground(hasMiamiCaptions ? "vidy,cinejoy" : "cinejoy"),
-                    1800,
-                );
+                // Orlando is already active; load Miami immediately behind it, then the rest.
+                backgroundTimer = window.setTimeout(() => startBackground("orlando,cinejoy"), 350);
                 heavyTimer = window.setTimeout(() => startHeavyCineJoy(), 7000);
                 return list;
             })
-            .catch(() => startBackground(undefined));
+            .catch(async () => {
+                const miami = await getStreams(mediaType, id, season, episode, {
+                    provider: "vidy",
+                    mirror: "miami",
+                    timeout: 5200,
+                    ...streamResolveHints,
+                }).catch(() => null);
+                if (!alive) return [];
+                const miamiList = mergePayload(miami, false);
+                if (!miamiList.length) return startBackground("orlando,vidy");
+                backgroundTimer = window.setTimeout(() => startBackground("orlando,vidy,cinejoy"), 900);
+                return miamiList;
+            });
 
-        // If Miami is unusually slow, don't leave the user staring at it forever.
+        // Give Orlando the startup lane; if it stalls, begin the Miami-first fallback pool.
         safetyTimer = window.setTimeout(() => {
-            if (!started) startBackground(undefined);
-        }, readPreferredSourceKey() ? 5500 : 1800);
+            if (!started) startBackground("orlando,cinejoy");
+        }, readPreferredSourceKey() ? 5500 : 4200);
 
         Promise.resolve(quick).finally(() => {
             if (!alive) return;
