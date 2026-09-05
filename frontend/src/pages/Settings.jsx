@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
-import { Check, CircleGauge, Contrast, Eye, Gauge, Layers3, MonitorCog, Palette, RotateCcw, Sparkles, Square, Text, WandSparkles } from "lucide-react";
-import { DEFAULT_PREFERENCES, PLAYER_THEMES, SITE_THEMES, getPreferences, resetPreferences, savePreferences } from "@/lib/preferences";
+import { Check, CircleGauge, Contrast, Eye, Gauge, Layers3, MonitorCog, RotateCcw, Sparkles, Square, Text, WandSparkles } from "lucide-react";
+import { PLAYER_THEMES, SITE_THEMES, getPreferences, resetPreferences, savePreferences } from "@/lib/preferences";
 
 const SettingSection = ({ eyebrow, title, description, children }) => (
   <section className="rounded-[28px] border border-white/[0.07] bg-white/[0.025] p-5 sm:p-7">
