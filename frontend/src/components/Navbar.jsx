@@ -24,6 +24,7 @@ export const Navbar = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [gearOpen, setGearOpen] = useState(false);
+  const [brandOpen, setBrandOpen] = useState(false);
   const [q, setQ] = useState("");
   const location = useLocation();
   const navigate = useNavigate();
@@ -82,9 +83,20 @@ export const Navbar = () => {
     <header className="pointer-events-none fixed inset-x-0 top-0 z-50">
       <div className="mx-auto w-full max-w-[1160px] px-3.5 pt-3.5 md:px-4 md:pt-4">
         <div className={`pointer-events-auto grid h-[60px] grid-cols-[auto_1fr_auto] items-center rounded-[31px] border px-4 backdrop-blur-xl transition-all duration-300 md:h-[68px] md:rounded-[35px] md:px-6 ${shellTone}`}>
-          <Link to="/" className="flex shrink-0 items-center" aria-label="SynFlix home">
-            <span className="grid h-9 w-9 place-items-center md:h-10 md:w-10">
-              <img src="/synflix-logo.webp" alt="" className="synflix-brand-logo h-9 w-9 object-contain md:h-10 md:w-10" />
+          <Link
+            to="/"
+            onClick={() => setBrandOpen((v) => !v)}
+            className="group flex shrink-0 items-center overflow-hidden"
+            aria-label="SynFlix home"
+          >
+            <span className="grid h-9 w-9 shrink-0 place-items-center md:h-10 md:w-10">
+              <img src="/synflix-logo.webp" alt="" className="synflix-brand-logo h-9 w-9 object-contain transition-transform duration-300 group-active:scale-90 md:h-10 md:w-10" />
+            </span>
+            <span
+              className={`whitespace-nowrap text-[14px] font-bold tracking-[-0.035em] text-[#ffd400] transition-all duration-300 ease-out md:text-[15px] ${brandOpen ? "ml-2 max-w-[78px] translate-x-0 opacity-100" : "ml-0 max-w-0 -translate-x-2 opacity-0"}`}
+              aria-hidden={!brandOpen}
+            >
+              SynFlix
             </span>
           </Link>
 
