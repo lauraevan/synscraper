@@ -1,4 +1,4 @@
-name: Verify Orlando production bundle
+name: Verify Orlando-first production bundle
 
 on:
   push:
@@ -22,12 +22,12 @@ jobs:
           manifest = json.load(open('/tmp/asset-manifest.json'))
           main = manifest['files']['main.js']
           print(f'LIVE_MAIN_JS={main}')
-          if 'main.747bee83.js' not in main:
+          if 'main.8ebbd4a2.js' not in main:
               raise SystemExit(f'Production is still serving the wrong bundle: {main}')
           open('/tmp/main-path', 'w').write(main)
           PY
 
-      - name: Check live compiled player contains Orlando loader
+      - name: Check live compiled player is Orlando then Miami
         run: |
           set -euo pipefail
           MAIN_PATH="$(cat /tmp/main-path)"
@@ -37,14 +37,15 @@ jobs:
           python - <<'PY'
           text = open('/tmp/main.js', encoding='utf-8').read()
           checks = {
-              'Orlando is in runtime provider queue': '["orlando","castle","vidlink"' in text,
-              'Orlando has dedicated 15s timeout': '"orlando"===e?15e3' in text,
-              'Orlando is in source catalog': 'provider:"orlando",name:"Orlando"' in text,
+              'Orlando is first and Vidy/Miami second in provider queue': '["orlando","vidy","castle","vidlink"' in text,
+              'Orlando is the startup provider': 'provider:"orlando",timeout:8e3' in text,
+              'Miami is explicitly requested as the fallback mirror': 'provider:"vidy",mirror:"miami",timeout:5200' in text or 'provider:"vidy",mirror:"miami",timeout:5200' in text.replace('5.2e3', '5200'),
+              'Orlando remains in source catalog': 'provider:"orlando",name:"Orlando"' in text,
           }
           for label, ok in checks.items():
               print(('PASS' if ok else 'FAIL') + ': ' + label)
           if not all(checks.values()):
-              raise SystemExit('Live production bundle does not contain the Orlando loader fix')
+              raise SystemExit('Live production bundle is not Orlando-first with Miami second')
           PY
 
       - name: Check live Orlando API
