@@ -3,13 +3,18 @@ name: Direct Vercel prebuild
 on:
   push:
     branches: [main]
+    paths:
+      - 'frontend/**'
 
 permissions:
   contents: write
 
+concurrency:
+  group: synscraper-vercel-prebuild
+  cancel-in-progress: true
+
 jobs:
   prebuild:
-    if: github.event.head_commit.message == 'Build direct Vercel bundle 2'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -40,6 +45,10 @@ jobs:
           data.setdefault('scripts', {})['build'] = 'test -f public/index.html'
           p.write_text(json.dumps(data, indent=2) + '\n')
           PY
+          if git diff --quiet -- public package.json; then
+            echo "Compiled public bundle is already current"
+            exit 0
+          fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add public package.json
