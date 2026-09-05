@@ -2,10 +2,19 @@ import { useQuery } from "@tanstack/react-query";
 import { Hero } from "@/components/Hero";
 import { Row } from "@/components/Row";
 import { CinematicRow } from "@/components/CinematicRow";
+import { TopTenRow } from "@/components/TopTenRow";
 import { Spinner } from "@/components/Spinner";
 import { getHome } from "@/lib/api";
 
 const withType = (items = [], mediaType) => items.map((item) => ({ ...item, media_type: item.media_type || mediaType }));
+const uniqueById = (items = []) => {
+  const seen = new Set();
+  return items.filter((item) => {
+    if (!item?.id || seen.has(item.id)) return false;
+    seen.add(item.id);
+    return true;
+  });
+};
 
 export default function Home() {
   const { data, isLoading } = useQuery({ queryKey: ["home"], queryFn: getHome });
@@ -22,12 +31,17 @@ export default function Home() {
   const upcoming = withType(data?.upcoming, "movie");
   const topTv = withType(data?.top_rated_tv, "tv");
   const heroItems = trending.length ? trending : [...popularMovies, ...popularTv];
+  const topMoviesToday = uniqueById([
+    ...trending.filter((item) => item.media_type === "movie"),
+    ...popularMovies,
+  ]).slice(0, 10);
 
   return (
     <main className="min-h-screen overflow-hidden bg-[#070707] pb-14" data-testid="home-page">
       <Hero items={heroItems} />
       <div className="-mt-2 space-y-1">
         <Row title="Trending now" subtitle="What people are watching this week" items={trending} testId="row-trending" />
+        <TopTenRow items={topMoviesToday} />
         <CinematicRow title="Popular movies" subtitle="Big-screen favorites, presented in a wider cinematic rail." items={popularMovies} testId="row-popular-movies" />
         <Row title="Now playing" items={nowPlaying} fallbackType="movie" testId="row-now-playing" />
         <Row title="Popular TV" items={popularTv} fallbackType="tv" testId="row-popular-tv" />
