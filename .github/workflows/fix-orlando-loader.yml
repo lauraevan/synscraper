@@ -1,0 +1,58 @@
+name: Fix Orlando provider loader
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/fix-orlando-loader.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Add Orlando to provider queue
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('frontend/src/components/SynapsePlayer.jsx')
+          text = path.read_text()
+
+          old_providers = 'const providers = ["castle", "vidlink", "vidnest", "vidzee", "vidrock", "vidy", "cinejoy", "vidcore", "vixsrc"];'
+          new_providers = 'const providers = ["orlando", "castle", "vidlink", "vidnest", "vidzee", "vidrock", "vidy", "cinejoy", "vidcore", "vixsrc"];'
+          if old_providers not in text and new_providers not in text:
+              raise SystemExit('Could not find provider queue')
+          text = text.replace(old_providers, new_providers)
+
+          old_timeout = 'timeout: provider === "cinejoy" ? 12000 : 9500,'
+          new_timeout = 'timeout: provider === "cinejoy" ? 12000 : provider === "orlando" ? 15000 : 9500,'
+          if old_timeout not in text and new_timeout not in text:
+              raise SystemExit('Could not find provider timeout')
+          text = text.replace(old_timeout, new_timeout)
+
+          path.write_text(text)
+          PY
+
+      - name: Verify Orlando loading path
+        run: |
+          grep -F 'const providers = ["orlando", "castle"' frontend/src/components/SynapsePlayer.jsx
+          grep -F 'provider === "orlando" ? 15000' frontend/src/components/SynapsePlayer.jsx
+
+      - name: Commit fix
+        run: |
+          if git diff --quiet; then
+            echo "Orlando loader already fixed"
+            exit 0
+          fi
+          git config user.name "Polaris"
+          git config user.email "264532369+lauraevan@users.noreply.github.com"
+          git add frontend/src/components/SynapsePlayer.jsx
+          git commit -m "Load Orlando Peakstorm source in player"
+          git push
