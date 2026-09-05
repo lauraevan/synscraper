@@ -31,6 +31,30 @@
       "destination": "/index.html"
     },
     {
+      "source": "/roulette",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/my-list",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/search",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/browse/:path*",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/title/:path*",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/person/:path*",
+      "destination": "/index.html"
+    },
+    {
       "source": "/watch/:path*",
       "destination": "/index.html"
     }
