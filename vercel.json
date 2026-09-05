@@ -4,30 +4,67 @@
   "buildCommand": "npm run build",
   "outputDirectory": "public",
   "functions": {
-    "api/index.py": {
-      "includeFiles": "backend/**",
-      "maxDuration": 300
-    },
     "api/[...path].py": {
       "includeFiles": "backend/**",
       "maxDuration": 300
     }
   },
-  "routes": [
+  "rewrites": [
     {
-      "src": "^/api/?$",
-      "dest": "/index.html"
+      "source": "/api",
+      "destination": "/index.html"
     },
     {
-      "handle": "filesystem"
+      "source": "/demo",
+      "destination": "/index.html"
     },
     {
-      "src": "^/(demo|docs|privacy|terms|settings|roulette|my-list|search)/?$",
-      "dest": "/index.html"
+      "source": "/docs",
+      "destination": "/index.html"
     },
     {
-      "src": "^/(browse|title|person|watch|embed)(?:/.*)?$",
-      "dest": "/index.html"
+      "source": "/privacy",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/terms",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/settings",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/roulette",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/my-list",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/search",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/browse/:path*",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/title/:path*",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/person/:path*",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/watch/:path*",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/embed/:path*",
+      "destination": "/index.html"
     }
   ]
 }
