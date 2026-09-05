@@ -73,7 +73,7 @@ const SOURCE_CATALOG = [
     { provider: "vixsrc", name: "Vix" },
 ];
 const QUALITY_LADDER = [
-    { label: "4K", height: 2160 }, { label: "1440p", height: 1440 },
+    { label: "4K UHD", height: 2160 }, { label: "1440p", height: 1440 },
     { label: "1080p", height: 1080 }, { label: "720p", height: 720 },
     { label: "480p", height: 480 }, { label: "360p", height: 360 },
     { label: "240p", height: 240 }, { label: "144p", height: 144 },
@@ -1317,7 +1317,7 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
     const resolvePct = ((stepIdx + 1) / STEPS.length) * 100;
     const activeExternalCaption = externalCaptions.find((track) => track.key === externalCaptionId);
     const subtitleSettingsLabel = captionsEnabled ? `${captionLanguageName(preferredCaptionLang)}${activeExternalCaption ? ` · ${activeExternalCaption.serverName}` : sub >= 0 ? " · HLS" : ""}` : "Off";
-    const settingsQualityLabel = preferredQuality ? (preferredQuality === 2160 ? "4K" : `${preferredQuality}p`) : "Auto";
+    const settingsQualityLabel = preferredQuality ? (preferredQuality === 2160 ? "4K UHD" : `${preferredQuality}p`) : "Auto";
 
     return (
         <div
@@ -1492,7 +1492,7 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
                                         const subtitle = !s.available
                                             ? "Unavailable"
                                             : show4K
-                                                ? "Original audio, 4K"
+                                                ? "Original audio, 4K UHD"
                                                 : hindi
                                                     ? "Hindi audio"
                                                     : s.provider === "cinejoy"
@@ -1516,12 +1516,7 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
                                                 >
                                                     <div className="flex h-7 w-8 shrink-0 items-center justify-center">
                                                         {show4K ? (
-                                                            <img
-                                                                src={SOURCE_4K_BADGE}
-                                                                alt="4K"
-                                                                title="4K source"
-                                                                className="h-6 w-8 object-contain"
-                                                            />
+                                                            <span data-testid="player-4k-uhd-badge" className="inline-flex h-[20px] shrink-0 items-center rounded-[4px] border border-white/30 bg-black/72 px-1.5 text-[8px] font-black uppercase tracking-[0.08em] text-white">4K UHD</span>
                                                         ) : (
                                                             <img
                                                                 src={hindi ? SOURCE_INDIA_FLAG : sourceFlag(s)}
@@ -1889,7 +1884,7 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
                                                 <button key={s.id} disabled={!s.available} onClick={() => s.available && selectServerInSettings(s)} className={`flex w-full items-center gap-3 border-b border-white/[0.055] px-4 py-3 text-left transition ${s.available ? "hover:bg-white/[0.045]" : "cursor-not-allowed opacity-30"}`}>
                                                     <span className={`h-2 w-2 shrink-0 rounded-full ${selected ? "bg-white" : "bg-white/18"}`} />
                                                     <span className={`min-w-0 flex-1 truncate text-[14px] ${selected ? "font-semibold text-white" : "font-medium text-white/72"}`}>{s.displayName || s.name}</span>
-                                                    {sourceHas4KBadge(s) && <img src={SOURCE_4K_BADGE} alt="4K" title="4K source" className="h-[18px] w-[18px] shrink-0 object-contain" />}
+                                                    {sourceHas4KBadge(s) && <span data-testid="player-4k-uhd-badge" className="inline-flex h-[20px] shrink-0 items-center rounded-[4px] border border-white/30 bg-black/72 px-1.5 text-[8px] font-black uppercase tracking-[0.08em] text-white">4K UHD</span>}
                                                     <img src={sourceFlag(s)} alt={sourceIsHindi(s) ? "India" : "US"} title={sourceIsHindi(s) ? "Hindi source" : "US source"} className="h-4 w-6 shrink-0 rounded-[2px] object-cover" loading="lazy" />
                                                     {!s.available ? <span className="text-[9px] uppercase tracking-[0.12em] text-white/30">Unavailable</span> : selected ? <span className="text-[10px] font-medium text-white/45">Active</span> : null}
                                                 </button>
@@ -2156,7 +2151,7 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
 
                             {settingsPage === "upscaler" && (
                                 <div className="p-4">
-                                    <p className="mb-3 text-[11px] leading-relaxed text-white/34">A light display enhancement for softer sources. It does not create a native 4K stream.</p>
+                                    <p className="mb-3 text-[11px] leading-relaxed text-white/34">A light display enhancement for softer sources. It does not create a native 4K UHD stream.</p>
                                     <div className="grid grid-cols-2 overflow-hidden rounded-xl border border-white/[0.08]">
                                         <button onClick={() => { setUpscaler(true); setSettingsPage("root"); }} className={`px-4 py-3 text-[13px] font-medium transition ${upscaler ? "bg-[#eadb8a] text-[#17140c]" : "text-white/60 hover:bg-white/[0.045]"}`}>Enhance</button>
                                         <button onClick={() => { setUpscaler(false); setSettingsPage("root"); }} className={`border-l border-white/[0.08] px-4 py-3 text-[13px] font-medium transition ${!upscaler ? "bg-[#eadb8a] text-[#17140c]" : "text-white/60 hover:bg-white/[0.045]"}`}>Off</button>
