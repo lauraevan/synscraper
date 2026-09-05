@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Bookmark, Film, Home, Menu, Search, Tv2, X } from "lucide-react";
+import { Bookmark, Dices, Film, Home, Menu, Search, Tv2, X } from "lucide-react";
 
 const NAV_ITEMS = [
   { to: "/", label: "Home", icon: Home, exact: true },
   { to: "/browse/movie", label: "Movies", icon: Film },
   { to: "/browse/tv", label: "TV", icon: Tv2 },
+  { to: "/roulette", label: "Roulette", icon: Dices },
   { to: "/my-list", label: "My List", icon: Bookmark },
 ];
 
