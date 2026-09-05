@@ -37,29 +37,30 @@
     overscroll-behavior: contain;
 }
 
-/* The player settings/quality control reads visually as an HD control. */
-[data-testid="watch-page"] button[aria-label="Settings"] > svg {
+/* Leave the actual player Settings button as the normal gear. Only the Quality tile gets an HD icon. */
+[data-testid="watch-page"] button:has(svg.lucide-gauge) > div:first-child > svg {
     display: none;
 }
 
-[data-testid="watch-page"] button[aria-label="Settings"]::after {
+[data-testid="watch-page"] button:has(svg.lucide-gauge) > div:first-child::before {
     content: "HD";
     display: inline-grid;
     place-items: center;
-    width: 28px;
-    height: 19px;
-    border: 1.5px solid currentColor;
-    border-radius: 5px;
-    font-size: 9px;
-    font-weight: 800;
+    width: 24px;
+    height: 16px;
+    flex: 0 0 24px;
+    border: 1.35px solid currentColor;
+    border-radius: 4px;
+    font-size: 7px;
+    font-weight: 900;
     line-height: 1;
-    letter-spacing: -0.02em;
+    letter-spacing: -0.03em;
 }
 
-/* Replace the source-list 4K UHD pill with the same compact HD icon language. */
+/* Source capability badges stay 4K UHD; they are separate from the HD quality-selector icon. */
 [data-testid="player-4k-uhd-badge"] {
-    width: 29px !important;
-    min-width: 29px;
+    width: 44px !important;
+    min-width: 44px;
     padding-left: 0 !important;
     padding-right: 0 !important;
     justify-content: center;
@@ -68,16 +69,63 @@
 }
 
 [data-testid="player-4k-uhd-badge"]::after {
-    content: "HD";
-    font-size: 9px;
-    font-weight: 800;
+    content: "4K UHD";
+    font-size: 8px;
+    font-weight: 900;
     line-height: 1;
-    letter-spacing: -0.02em;
+    letter-spacing: 0.045em;
+}
+
+/* Put UHD badges across the homepage rails, not just on a couple of titles. */
+[data-testid="home-page"] [data-testid^="movie-card-"] {
+    position: relative;
+}
+
+[data-testid="home-page"] [data-testid^="movie-card-"]::after,
+[data-testid="home-page"] [data-testid="row-popular-movies"] article::after,
+[data-testid="home-page"] [data-testid="row-top-rated-movies"] article::after,
+[data-testid="home-page"] [data-testid="top-ten-row"] article > div:first-child > div:last-child::after {
+    content: "4K UHD";
+    position: absolute;
+    right: 8px;
+    top: 8px;
+    z-index: 25;
+    display: inline-grid;
+    place-items: center;
+    height: 20px;
+    min-width: 43px;
+    padding: 0 6px;
+    border: 1px solid rgba(255, 255, 255, 0.32);
+    border-radius: 5px;
+    background: rgba(0, 0, 0, 0.72);
+    color: rgba(255, 255, 255, 0.96);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.28);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    font-size: 8px;
+    font-weight: 900;
+    line-height: 1;
+    letter-spacing: 0.055em;
+}
+
+[data-testid="home-page"] [data-testid="row-popular-movies"] article::after,
+[data-testid="home-page"] [data-testid="row-top-rated-movies"] article::after {
+    right: 12px;
+    top: 12px;
 }
 
 @media (max-width: 640px) {
     [data-testid="season-picker"] > div:last-child {
         max-height: 320px;
         padding: 6px;
+    }
+
+    [data-testid="home-page"] [data-testid^="movie-card-"]::after {
+        right: 7px;
+        top: 7px;
+        height: 18px;
+        min-width: 39px;
+        padding: 0 5px;
+        font-size: 7px;
     }
 }
