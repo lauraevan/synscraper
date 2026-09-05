@@ -85,11 +85,13 @@ jobs:
 
       - name: Install frontend dependencies
         working-directory: frontend
-        run: npm ci
+        run: |
+          npm install -g yarn@1.22.22
+          yarn install --frozen-lockfile
 
       - name: Build frontend
         working-directory: frontend
-        run: npm run build
+        run: yarn build
 
       - name: Sync Vercel bundle
         run: |
