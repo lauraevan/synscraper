@@ -14,6 +14,7 @@ import Search from "@/pages/Search";
 import MyList from "@/pages/MyList";
 import Demo from "@/pages/Demo";
 import Docs from "@/pages/Docs";
+import Api from "@/pages/Api";
 import Privacy from "@/pages/Privacy";
 import Terms from "@/pages/Terms";
 import Person from "@/pages/Person";
@@ -37,6 +38,7 @@ function Footer() {
           <Link to="/roulette" className="transition hover:text-[#ffd400]">Roulette</Link>
           <Link to="/my-list" className="transition hover:text-[#ffd400]">My List</Link>
           <Link to="/settings" className="transition hover:text-[#ffd400]">Settings</Link>
+          <Link to="/api" className="transition hover:text-[#ffd400]">API</Link>
           <Link to="/privacy" className="transition hover:text-[#ffd400]">Privacy</Link>
           <Link to="/terms" className="transition hover:text-[#ffd400]">Terms</Link>
           <Link to="/demo" className="transition hover:text-[#ffd400]">Demo</Link>
@@ -50,15 +52,17 @@ function Footer() {
 function Shell() {
   const location = useLocation();
   const isWatch = location.pathname.startsWith("/watch/");
+  const isEmbed = location.pathname.startsWith("/embed/");
+  const isPlayerSurface = isWatch || isEmbed;
 
   useEffect(() => {
-    document.title = isWatch ? "SynPlayer" : "SynFlix";
+    document.title = isPlayerSurface ? "SynPlayer" : "SynFlix";
 
     const syncBrowserChrome = () => {
       const meta = document.querySelector('meta[name="theme-color"]');
       if (meta) {
         const light = document.documentElement.dataset.siteMode === "light";
-        meta.setAttribute("content", isWatch ? "#000000" : light ? "#f5f3ed" : "#070707");
+        meta.setAttribute("content", isPlayerSurface ? "#000000" : light ? "#f5f3ed" : "#070707");
       }
     };
     syncBrowserChrome();
@@ -73,15 +77,16 @@ function Shell() {
     icon.setAttribute("href", "/synflix-logo.webp");
 
     return () => window.removeEventListener("synflix-preferences", syncBrowserChrome);
-  }, [isWatch]);
+  }, [isPlayerSurface]);
 
   return (
-    <div className={isWatch ? "" : "synflix-site"}>
-      {!isWatch && <Navbar />}
+    <div className={isPlayerSurface ? "" : "synflix-site"}>
+      {!isPlayerSurface && <Navbar />}
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/demo" element={<Demo />} />
         <Route path="/docs" element={<Docs />} />
+        <Route path="/api" element={<Api />} />
         <Route path="/privacy" element={<Privacy />} />
         <Route path="/terms" element={<Terms />} />
         <Route path="/settings" element={<Settings />} />
@@ -90,10 +95,11 @@ function Shell() {
         <Route path="/browse/:mediaType" element={<Browse />} />
         <Route path="/title/:mediaType/:id" element={<Title />} />
         <Route path="/watch/:mediaType/:id" element={<Watch />} />
+        <Route path="/embed/:mediaType/:id" element={<Watch embed />} />
         <Route path="/search" element={<Search />} />
         <Route path="/my-list" element={<MyList />} />
       </Routes>
-      {!isWatch && <Footer />}
+      {!isPlayerSurface && <Footer />}
     </div>
   );
 }
