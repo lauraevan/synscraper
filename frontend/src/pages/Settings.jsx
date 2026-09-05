@@ -1,6 +1,14 @@
 import { useMemo, useState } from "react";
-import { Check, CircleGauge, Contrast, Eye, Gauge, Layers3, MonitorCog, RotateCcw, Sparkles, Square, Text, WandSparkles } from "lucide-react";
+import { Accessibility, Check, CircleGauge, Contrast, Eye, Gauge, Layers3, LayoutGrid, MonitorCog, Palette, PlayCircle, RotateCcw, Sparkles, Square, Text, WandSparkles } from "lucide-react";
 import { PLAYER_THEMES, SITE_THEMES, getPreferences, resetPreferences, savePreferences } from "@/lib/preferences";
+
+const TABS = [
+  { id: "all", label: "All", icon: LayoutGrid },
+  { id: "site", label: "Site", icon: Palette },
+  { id: "browsing", label: "Browsing", icon: Layers3 },
+  { id: "player", label: "Player", icon: PlayCircle },
+  { id: "accessibility", label: "Accessibility", icon: Accessibility },
+];
 
 const SettingSection = ({ eyebrow, title, description, children }) => (
   <section className="rounded-[28px] border border-white/[0.07] bg-white/[0.025] p-5 sm:p-7">
@@ -73,6 +81,7 @@ const SettingRow = ({ icon: Icon, title, description, children }) => (
 export default function Settings() {
   const [prefs, setPrefs] = useState(() => getPreferences());
   const [resetFlash, setResetFlash] = useState(false);
+  const [activeTab, setActiveTab] = useState("all");
   const siteTheme = useMemo(() => SITE_THEMES.find((theme) => theme.id === prefs.siteTheme), [prefs.siteTheme]);
   const playerTheme = useMemo(() => PLAYER_THEMES.find((theme) => theme.id === prefs.playerTheme), [prefs.playerTheme]);
 
@@ -91,10 +100,12 @@ export default function Settings() {
     window.setTimeout(() => setResetFlash(false), 1400);
   };
 
+  const show = (tab) => activeTab === "all" || activeTab === tab;
+
   return (
     <main className="min-h-screen bg-[#070707] px-5 pb-20 pt-[104px] md:px-8" data-testid="settings-page">
       <div className="mx-auto max-w-[1280px]">
-        <div className="mb-10 grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-end">
+        <div className="mb-8 grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-end">
           <div>
             <div className="mb-2 inline-flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-[#ffd400]/70"><MonitorCog className="h-3.5 w-3.5" /> Personalize SynFlix</div>
             <h1 className="text-5xl font-semibold tracking-[-0.06em] text-white md:text-7xl">Settings</h1>
@@ -115,34 +126,67 @@ export default function Settings() {
           </div>
         </div>
 
+        <div className="scrollbar-none mb-6 flex max-w-full gap-1.5 overflow-x-auto rounded-full border border-white/[0.07] bg-black/30 p-1.5 sm:w-fit" role="tablist" aria-label="Settings categories">
+          {TABS.map((tab) => {
+            const Icon = tab.icon;
+            const active = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                role="tab"
+                aria-selected={active}
+                onClick={() => setActiveTab(tab.id)}
+                className={`inline-flex h-9 shrink-0 items-center gap-2 rounded-full px-3.5 text-xs font-medium transition ${active ? "bg-[#ffd400] text-black shadow-[0_5px_18px_rgba(0,0,0,.2)]" : "text-white/42 hover:bg-white/[0.045] hover:text-white/78"}`}
+              >
+                <Icon className="h-3.5 w-3.5" />
+                {tab.label}
+              </button>
+            );
+          })}
+        </div>
+
         <div className="space-y-5">
-          <SettingSection eyebrow="Site appearance" title="Site themes" description="These recolor the SynFlix shell, buttons, focus states, cards, accents, backgrounds, and even tint the brand mark to match.">
-            <ThemeGrid themes={SITE_THEMES} value={prefs.siteTheme} onChange={(value) => set("siteTheme", value)} />
-          </SettingSection>
+          {show("site") && (
+            <SettingSection eyebrow="Site appearance" title="Site themes" description="These recolor the SynFlix shell, buttons, focus states, cards, accents, backgrounds, and even tint the brand mark to match.">
+              <ThemeGrid themes={SITE_THEMES} value={prefs.siteTheme} onChange={(value) => set("siteTheme", value)} />
+            </SettingSection>
+          )}
 
-          <SettingSection eyebrow="Browsing" title="Layout & motion" description="Change how dense and expressive the movie browsing experience feels without touching playback.">
-            <SettingRow icon={Layers3} title="Content density" description="Compact fits more films on screen; comfortable keeps the larger cinematic spacing."><Segmented value={prefs.siteDensity} onChange={(value) => set("siteDensity", value)} options={[{ value: "comfortable", label: "Comfortable" }, { value: "compact", label: "Compact" }]} /></SettingRow>
-            <SettingRow icon={Square} title="Corner style" description="Adjust card geometry across the SynFlix interface."><Segmented value={prefs.siteCorners} onChange={(value) => set("siteCorners", value)} options={[{ value: "round", label: "Round" }, { value: "soft", label: "Soft" }, { value: "square", label: "Square" }]} /></SettingRow>
-            <SettingRow icon={Sparkles} title="Ambient color" description="Adds a very subtle theme-colored wash to dark backgrounds."><Toggle value={prefs.siteAmbient} onChange={(value) => set("siteAmbient", value)} /></SettingRow>
-            <SettingRow icon={Text} title="Row descriptions" description="Show the smaller descriptive line under supported content-row headings."><Toggle value={prefs.showRowSubtitles} onChange={(value) => set("showRowSubtitles", value)} /></SettingRow>
-            <SettingRow icon={WandSparkles} title="Interface motion" description="Reduced motion disables most card movement, transitions, and decorative animation."><Segmented value={prefs.siteMotion} onChange={(value) => set("siteMotion", value)} options={[{ value: "full", label: "Full" }, { value: "reduced", label: "Reduced" }]} /></SettingRow>
-            <SettingRow icon={Contrast} title="Site contrast" description="High contrast strengthens text and surface separation."><Segmented value={prefs.siteContrast} onChange={(value) => set("siteContrast", value)} options={[{ value: "normal", label: "Normal" }, { value: "high", label: "High" }]} /></SettingRow>
-            <SettingRow icon={Eye} title="Interface scale" description="Slightly enlarges navigation and control text while keeping film artwork intact."><Segmented value={prefs.siteScale} onChange={(value) => set("siteScale", value)} options={[{ value: "normal", label: "Normal" }, { value: "large", label: "Large" }]} /></SettingRow>
-          </SettingSection>
+          {show("browsing") && (
+            <SettingSection eyebrow="Browsing" title="Layout & browsing" description="Change how dense and expressive the movie browsing experience feels without touching playback.">
+              <SettingRow icon={Layers3} title="Content density" description="Compact fits more films on screen; comfortable keeps the larger cinematic spacing."><Segmented value={prefs.siteDensity} onChange={(value) => set("siteDensity", value)} options={[{ value: "comfortable", label: "Comfortable" }, { value: "compact", label: "Compact" }]} /></SettingRow>
+              <SettingRow icon={Square} title="Corner style" description="Adjust card geometry across the SynFlix interface."><Segmented value={prefs.siteCorners} onChange={(value) => set("siteCorners", value)} options={[{ value: "round", label: "Round" }, { value: "soft", label: "Soft" }, { value: "square", label: "Square" }]} /></SettingRow>
+              <SettingRow icon={Sparkles} title="Ambient color" description="Adds a very subtle theme-colored wash to dark backgrounds."><Toggle value={prefs.siteAmbient} onChange={(value) => set("siteAmbient", value)} /></SettingRow>
+              <SettingRow icon={Text} title="Row descriptions" description="Show the smaller descriptive line under supported content-row headings."><Toggle value={prefs.showRowSubtitles} onChange={(value) => set("showRowSubtitles", value)} /></SettingRow>
+            </SettingSection>
+          )}
 
-          <SettingSection eyebrow="SynPlayer" title="Player themes" description="Player themes are completely separate from the site theme. Pick Purple and player sliders, active controls, server highlights, focus states, and settings chrome become purple while SynFlix can stay any other color.">
-            <ThemeGrid themes={PLAYER_THEMES} value={prefs.playerTheme} onChange={(value) => set("playerTheme", value)} />
-          </SettingSection>
+          {show("player") && (
+            <>
+              <SettingSection eyebrow="SynPlayer" title="Player themes" description="Player themes are completely separate from the site theme. Pick Purple and player sliders, active controls, server highlights, focus states, and settings chrome become purple while SynFlix can stay any other color.">
+                <ThemeGrid themes={PLAYER_THEMES} value={prefs.playerTheme} onChange={(value) => set("playerTheme", value)} />
+              </SettingSection>
 
-          <SettingSection eyebrow="Playback appearance" title="Player interface" description="These settings only affect SynPlayer. They do not change movie discovery pages.">
-            <SettingRow icon={Square} title="Player corners" description="Choose the outer player and popup geometry."><Segmented value={prefs.playerCorners} onChange={(value) => set("playerCorners", value)} options={[{ value: "round", label: "Round" }, { value: "soft", label: "Soft" }, { value: "square", label: "Square" }]} /></SettingRow>
-            <SettingRow icon={Layers3} title="Settings material" description="Glass keeps the translucent Peak-style panel; solid removes the blur for a flatter look."><Segmented value={prefs.playerGlass} onChange={(value) => set("playerGlass", value)} options={[{ value: "glass", label: "Glass" }, { value: "solid", label: "Solid" }]} /></SettingRow>
-            <SettingRow icon={Gauge} title="Player density" description="Compact shortens player settings rows and reduces visual padding."><Segmented value={prefs.playerDensity} onChange={(value) => set("playerDensity", value)} options={[{ value: "comfortable", label: "Comfortable" }, { value: "compact", label: "Compact" }]} /></SettingRow>
-            <SettingRow icon={CircleGauge} title="Accent strength" description="Controls how strongly the selected player color appears on interactive chrome."><Segmented value={prefs.playerAccentStrength} onChange={(value) => set("playerAccentStrength", value)} options={[{ value: "subtle", label: "Subtle" }, { value: "normal", label: "Normal" }, { value: "bold", label: "Bold" }]} /></SettingRow>
-            <SettingRow icon={Contrast} title="Player contrast" description="Boosts separation for darker scenes and translucent controls."><Segmented value={prefs.playerContrast} onChange={(value) => set("playerContrast", value)} options={[{ value: "normal", label: "Normal" }, { value: "high", label: "High" }]} /></SettingRow>
-            <SettingRow icon={WandSparkles} title="Player motion" description="Reduced motion removes popup animations and most control transitions."><Segmented value={prefs.playerMotion} onChange={(value) => set("playerMotion", value)} options={[{ value: "full", label: "Full" }, { value: "reduced", label: "Reduced" }]} /></SettingRow>
-            <SettingRow icon={Eye} title="SynPlayer label" description="Show or hide the small SynPlayer brand label inside playback controls."><Toggle value={prefs.playerTitle} onChange={(value) => set("playerTitle", value)} /></SettingRow>
-          </SettingSection>
+              <SettingSection eyebrow="Playback appearance" title="Player interface" description="These settings only affect SynPlayer. They do not change movie discovery pages.">
+                <SettingRow icon={Square} title="Player corners" description="Choose the outer player and popup geometry."><Segmented value={prefs.playerCorners} onChange={(value) => set("playerCorners", value)} options={[{ value: "round", label: "Round" }, { value: "soft", label: "Soft" }, { value: "square", label: "Square" }]} /></SettingRow>
+                <SettingRow icon={Layers3} title="Settings material" description="Glass keeps the translucent Peak-style panel; solid removes the blur for a flatter look."><Segmented value={prefs.playerGlass} onChange={(value) => set("playerGlass", value)} options={[{ value: "glass", label: "Glass" }, { value: "solid", label: "Solid" }]} /></SettingRow>
+                <SettingRow icon={Gauge} title="Player density" description="Compact shortens player settings rows and reduces visual padding."><Segmented value={prefs.playerDensity} onChange={(value) => set("playerDensity", value)} options={[{ value: "comfortable", label: "Comfortable" }, { value: "compact", label: "Compact" }]} /></SettingRow>
+                <SettingRow icon={CircleGauge} title="Accent strength" description="Controls how strongly the selected player color appears on interactive chrome."><Segmented value={prefs.playerAccentStrength} onChange={(value) => set("playerAccentStrength", value)} options={[{ value: "subtle", label: "Subtle" }, { value: "normal", label: "Normal" }, { value: "bold", label: "Bold" }]} /></SettingRow>
+                <SettingRow icon={Eye} title="SynPlayer label" description="Show or hide the small SynPlayer brand label inside playback controls."><Toggle value={prefs.playerTitle} onChange={(value) => set("playerTitle", value)} /></SettingRow>
+              </SettingSection>
+            </>
+          )}
+
+          {show("accessibility") && (
+            <SettingSection eyebrow="Accessibility" title="Motion, contrast & scale" description="Keep SynFlix and SynPlayer comfortable to use without changing your chosen colors or layout style.">
+              <SettingRow icon={WandSparkles} title="Site motion" description="Reduced motion disables most card movement, transitions, and decorative animation."><Segmented value={prefs.siteMotion} onChange={(value) => set("siteMotion", value)} options={[{ value: "full", label: "Full" }, { value: "reduced", label: "Reduced" }]} /></SettingRow>
+              <SettingRow icon={Contrast} title="Site contrast" description="High contrast strengthens text and surface separation."><Segmented value={prefs.siteContrast} onChange={(value) => set("siteContrast", value)} options={[{ value: "normal", label: "Normal" }, { value: "high", label: "High" }]} /></SettingRow>
+              <SettingRow icon={Eye} title="Interface scale" description="Slightly enlarges navigation and control text while keeping film artwork intact."><Segmented value={prefs.siteScale} onChange={(value) => set("siteScale", value)} options={[{ value: "normal", label: "Normal" }, { value: "large", label: "Large" }]} /></SettingRow>
+              <SettingRow icon={Contrast} title="Player contrast" description="Boosts separation for darker scenes and translucent controls."><Segmented value={prefs.playerContrast} onChange={(value) => set("playerContrast", value)} options={[{ value: "normal", label: "Normal" }, { value: "high", label: "High" }]} /></SettingRow>
+              <SettingRow icon={WandSparkles} title="Player motion" description="Reduced motion removes popup animations and most control transitions."><Segmented value={prefs.playerMotion} onChange={(value) => set("playerMotion", value)} options={[{ value: "full", label: "Full" }, { value: "reduced", label: "Reduced" }]} /></SettingRow>
+            </SettingSection>
+          )}
 
           <section className="flex flex-col gap-4 rounded-[28px] border border-white/[0.07] bg-white/[0.025] p-5 sm:flex-row sm:items-center sm:justify-between sm:p-7">
             <div>
