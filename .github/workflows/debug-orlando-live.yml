@@ -16,7 +16,7 @@ jobs:
           python-version: '3.12'
       - name: Install dependencies
         run: pip install -r requirements.txt
-      - name: Resolve licensed Backrooms demo through Orlando
+      - name: Resolve licensed Backrooms demo locally with metadata hint
         env:
           PYTHONPATH: backend
         run: |
@@ -28,3 +28,19 @@ jobs:
               metadata_hint={'title': 'Backrooms', 'year': '2026', 'imdbId': ''},
           ))
           PY
+      - name: Resolve licensed Backrooms demo locally without metadata hint
+        env:
+          PYTHONPATH: backend
+        run: |
+          python - <<'PY'
+          from providers.orlando import OrlandoResolver
+          print(OrlandoResolver(debug=True).resolve(1083381, media_type='movie'))
+          PY
+      - name: Probe production Orlando API with metadata hint
+        run: |
+          set -x
+          curl -i -sS --max-time 25 'https://synscraper-tffk.vercel.app/api/streams?type=movie&id=1083381&provider=orlando&title=Backrooms&year=2026'
+      - name: Probe production Orlando API without metadata hint
+        run: |
+          set -x
+          curl -i -sS --max-time 25 'https://synscraper-tffk.vercel.app/api/streams?type=movie&id=1083381&provider=orlando'
