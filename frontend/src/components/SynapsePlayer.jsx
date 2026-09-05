@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import Hls from "hls.js";
 import {
     Play, Pause, Volume2, VolumeX, Maximize, Minimize, SkipForward,
@@ -16,7 +16,7 @@ const SOURCE_INDIA_FLAG = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAAB
 const sourceHas4KBadge = (source) => {
     const provider = String(source?.provider || "").trim().toLowerCase();
     const name = String(source?.displayName || source?.name || "");
-    return provider === "vidcore" || (provider === "vidy" && /miami/i.test(name));
+    return provider === "orlando" || provider === "vidcore" || (provider === "vidy" && /miami/i.test(name));
 };
 const sourceIsHindi = (source) => {
     const language = String(source?.lang || source?.language || "").trim().toLowerCase();
@@ -36,9 +36,28 @@ const readPreferredSourceKey = () => typeof window !== "undefined"
     ? String(window.localStorage.getItem("synscraper-default-source-v1") || "").trim().toLowerCase()
     : "";
 
+const sourceQualityRank = (source) => {
+    const provider = String(source?.provider || "").trim().toLowerCase();
+    const name = String(source?.displayName || source?.name || "").trim().toLowerCase();
+    if (provider === "orlando") return 0;
+    if (provider === "vidy" && /miami/i.test(name)) return 1;
+    if (provider === "vidcore") return 2;
+    if (provider === "castle") return 3;
+    if (provider === "vidlink") return 4;
+    if (provider === "vidnest") return 5;
+    if (provider === "vidzee") return 6;
+    if (provider === "vidrock") return 7;
+    if (provider === "cinejoy") return 8;
+    if (provider === "vixsrc") return 9;
+    return 20;
+};
+const bestServerForQuality = (items, height) => [...(items || [])]
+    .filter((source) => qualityHeight(source?.quality) === height)
+    .sort((a, b) => sourceQualityRank(a) - sourceQualityRank(b))[0] || null;
+
 const SOURCE_CATALOG = [
-    { provider: "vidy", name: "Miami" },
     { provider: "orlando", name: "Orlando" },
+    { provider: "vidy", name: "Miami" },
     { provider: "castle", name: "Houston" },
     { provider: "vidlink", name: "Nova" },
     { provider: "vidnest", name: "Nest" },
@@ -343,11 +362,11 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
     });
 
     const activeServer = servers.find((s) => s.id === serverId);
-    const streamResolveHints = {
+    const streamResolveHints = useMemo(() => ({
         title: meta?.title || meta?.name || "",
         year: Number(String(meta?.release_date || meta?.first_air_date || "").slice(0, 4)) || undefined,
         imdbId: meta?.imdb_id || meta?.external_ids?.imdb_id || undefined,
-    };
+    }), [meta]);
     const downloadSources = (() => {
         const found = new Map();
         servers.filter((server) => server?.type === "hls").forEach((server) => {
@@ -561,7 +580,7 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
         else setError("All scraped servers failed to play. Try another title.");
     }, [servers]);
 
-    // Progressive source loading: start Miami immediately, fill the rest in the background.
+    // Progressive source loading: start Orlando immediately, keep Miami directly behind it, then fill the rest in the background.
     useEffect(() => {
         let alive = true;
         let started = false;
@@ -774,7 +793,7 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
             if (heavyTimer) window.clearTimeout(heavyTimer);
             if (safetyTimer) window.clearTimeout(safetyTimer);
         };
-    }, [mediaType, id, season, episode]);
+    }, [mediaType, id, season, episode, streamResolveHints]);
 
     // when ready + server chosen, start playback
     useEffect(() => {
@@ -1023,25 +1042,26 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
         if (!choice?.available) return;
         setPreferredQuality(choice.height);
         preferredQualityRef.current = choice.height;
-        const sameMirror = servers.find((candidate) =>
-            candidate.provider === activeServer?.provider && candidate.name === activeServer?.name && qualityHeight(candidate.quality) === choice.height
-        );
-        if (sameMirror && sameMirror.id !== serverId) {
+
+        const targetServer = choice.server;
+        const currentIsAtLeastAsPreferred = choice.levelIndex >= 0
+            && activeServer
+            && (!targetServer || sourceQualityRank(activeServer) <= sourceQualityRank(targetServer));
+
+        if (currentIsAtLeastAsPreferred && hlsRef.current) {
+            changeLevel(choice.levelIndex);
+            setMenu(null);
+            return;
+        }
+        if (targetServer && targetServer.id !== serverId) {
             pendingSeekRef.current = videoRef.current?.currentTime || current || 0;
             setLevel(-1);
-            setServerId(sameMirror.id);
+            setServerId(targetServer.id);
             setMenu(null);
             return;
         }
         if (choice.levelIndex >= 0 && hlsRef.current) {
             changeLevel(choice.levelIndex);
-            setMenu(null);
-            return;
-        }
-        if (choice.server) {
-            pendingSeekRef.current = videoRef.current?.currentTime || current || 0;
-            setLevel(-1);
-            setServerId(choice.server.id);
         }
         setMenu(null);
     };
@@ -1280,9 +1300,7 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
     const autoQualityAvailable = levels.length > 0 || !!autoServer;
     const qualityChoices = QUALITY_LADDER.map((target) => {
         const levelIndex = levels.findIndex((l) => Number(l.height || 0) === target.height);
-        const sameMirror = servers.find((s) => s.provider === activeServer?.provider && s.name === activeServer?.name && qualityHeight(s.quality) === target.height);
-        const sameProvider = servers.find((s) => s.provider === activeServer?.provider && qualityHeight(s.quality) === target.height);
-        const server = sameMirror || sameProvider || servers.find((s) => qualityHeight(s.quality) === target.height);
+        const server = bestServerForQuality(servers, target.height);
         return { ...target, levelIndex, server, available: levelIndex >= 0 || !!server };
     });
     const releaseDate = meta.release_date || meta.first_air_date || "";
@@ -1692,7 +1710,7 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
                                         </MenuItem>
                                         {qualityChoices.filter((choice) => choice.available).map((choice) => (
                                             <MenuItem key={`quick-quality-${choice.height}`} active={preferredQuality === choice.height} onClick={() => chooseQuality(choice)}>
-                                                <span>{choice.label}</span><span className="text-[10px] opacity-40">{choice.levelIndex >= 0 ? "HLS" : choice.server?.name || "Stream"}</span>
+                                                <span>{choice.label}</span><span className="text-[10px] opacity-40">{choice.available ? "Available" : "Unavailable"}</span>
                                             </MenuItem>
                                         ))}
                                     </Popover>
@@ -1855,7 +1873,7 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
 
                             {settingsPage === "server" && (
                                 <div className="py-1.5">
-                                    <p className="px-4 py-2 text-[11px] leading-relaxed text-white/34">Miami is prioritized for startup. Switching sources keeps your current position.</p>
+                                    <p className="px-4 py-2 text-[11px] leading-relaxed text-white/34">Orlando is prioritized for startup, with Miami immediately behind it. Switching sources keeps your current position.</p>
                                     <div className="border-t border-white/[0.06]">
                                         {sourceSlots.map((s) => {
                                             const selected = serverId === s.id;
@@ -1886,7 +1904,7 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
                                         <button key={`settings-quality-${choice.height}`} disabled={!choice.available} onClick={() => chooseQualityInSettings(choice)} className={`flex w-full items-center gap-3 border-b border-white/[0.055] px-4 py-3 text-left transition ${activeQualityHeight === choice.height ? "bg-white/[0.07] text-white" : choice.available ? "text-white/72 hover:bg-white/[0.045]" : "text-white/22"}`}>
                                             <span className={`h-2 w-2 rounded-full ${activeQualityHeight === choice.height ? "bg-white" : "bg-white/18"}`} />
                                             <span className="flex-1 text-[14px] font-medium">{choice.label}</span>
-                                            <span className="max-w-[42%] truncate text-[10px] text-white/35">{choice.available ? (choice.levelIndex >= 0 ? "HLS" : choice.server?.name || "Stream") : "Unavailable"}</span>
+                                            <span className="max-w-[42%] truncate text-[10px] text-white/35">{choice.available ? "Available" : "Unavailable"}</span>
                                         </button>
                                     ))}
                                 </div>
