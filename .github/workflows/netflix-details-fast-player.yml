@@ -1,0 +1,351 @@
+name: Apply Netflix details and faster player
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    if: github.event.head_commit.message == 'Apply Netflix-style details previews and faster player'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Apply UI and player changes
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          # 1) Home hero: remove the "SynFlix featured film/series" eyebrow completely.
+          hero_path = Path('frontend/src/components/Hero.jsx')
+          hero = hero_path.read_text()
+          eyebrow = '''          <div className="mb-4 flex items-center gap-2.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#ffd400]/72">
+            <span className="h-px w-7 bg-[#ffd400]/70" />
+            {mt === "tv" ? "SynFlix featured series" : "SynFlix featured film"}
+          </div>
+
+'''
+          if eyebrow not in hero:
+              raise SystemExit('Hero featured eyebrow block not found')
+          hero = hero.replace(eyebrow, '', 1)
+          hero_path.write_text(hero)
+
+          # 2) Netflix-style background trailer component.
+          bg_component = r'''import { useEffect, useMemo, useRef, useState } from "react";
+import { Volume2, VolumeX } from "lucide-react";
+import { backdrop } from "@/lib/api";
+
+const supportedSite = (site) => site === "YouTube" || site === "Vimeo";
+
+const videoScore = (video) => {
+  const type = String(video?.type || "").toLowerCase();
+  const name = String(video?.name || "").toLowerCase();
+  let score = 0;
+  if (type === "trailer") score += 100;
+  else if (type === "teaser") score += 80;
+  else if (type === "clip") score += 55;
+  else if (type === "featurette") score += 35;
+  if (video?.official) score += 30;
+  if (/official|trailer|teaser/.test(name)) score += 10;
+  if (video?.site === "YouTube") score += 4;
+  return score;
+};
+
+const backgroundUrl = (video) => {
+  if (!video?.key) return "";
+  const key = encodeURIComponent(video.key);
+  if (video.site === "YouTube") {
+    return `https://www.youtube-nocookie.com/embed/${key}?autoplay=1&mute=1&controls=0&loop=1&playlist=${key}&playsinline=1&rel=0&modestbranding=1&disablekb=1&iv_load_policy=3&enablejsapi=1`;
+  }
+  if (video.site === "Vimeo") {
+    return `https://player.vimeo.com/video/${key}?autoplay=1&muted=1&background=1&loop=1&title=0&byline=0&portrait=0&api=1`;
+  }
+  return "";
+};
+
+export const DetailsTrailerBackground = ({ videos = [], title = "", backdropPath }) => {
+  const frameRef = useRef(null);
+  const ranked = useMemo(() => [...videos]
+    .filter((video) => video?.key && supportedSite(video.site))
+    .sort((a, b) => videoScore(b) - videoScore(a)), [videos]);
+  const primary = ranked[0] || null;
+  const [mounted, setMounted] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+  const [muted, setMuted] = useState(true);
+
+  useEffect(() => {
+    setMounted(false);
+    setLoaded(false);
+    setMuted(true);
+    if (!primary) return undefined;
+    const timer = window.setTimeout(() => setMounted(true), 900);
+    return () => window.clearTimeout(timer);
+  }, [primary?.key, primary?.site]);
+
+  const sendCommand = (command) => {
+    const win = frameRef.current?.contentWindow;
+    if (!win || !primary) return;
+    if (primary.site === "YouTube") {
+      win.postMessage(JSON.stringify({ event: "command", func: command, args: [] }), "*");
+    } else if (primary.site === "Vimeo") {
+      if (command === "mute") win.postMessage({ method: "setVolume", value: 0 }, "*");
+      if (command === "unMute") win.postMessage({ method: "setVolume", value: 1 }, "*");
+      if (command === "pauseVideo") win.postMessage({ method: "pause" }, "*");
+      if (command === "playVideo") win.postMessage({ method: "play" }, "*");
+    }
+  };
+
+  useEffect(() => {
+    if (!mounted || !primary) return undefined;
+    const onVisibility = () => sendCommand(document.hidden ? "pauseVideo" : "playVideo");
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => document.removeEventListener("visibilitychange", onVisibility);
+  }, [mounted, primary]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const toggleMute = () => {
+    const next = !muted;
+    setMuted(next);
+    sendCommand(next ? "mute" : "unMute");
+  };
+
+  return (
+    <div className="absolute inset-0 overflow-hidden bg-black" aria-label={`${title || "Title"} background`}>
+      {backdropPath && (
+        <img
+          src={backdrop(backdropPath, "w1280")}
+          alt=""
+          className={`absolute inset-0 h-full w-full object-cover object-center transition-opacity duration-1000 ${loaded ? "opacity-0" : "opacity-100"}`}
+        />
+      )}
+
+      {mounted && primary && (
+        <iframe
+          ref={frameRef}
+          src={backgroundUrl(primary)}
+          title={`${title || "Title"} trailer background`}
+          className={`pointer-events-none absolute left-1/2 top-1/2 h-[56.25vw] min-h-full w-[177.78vh] min-w-full -translate-x-1/2 -translate-y-1/2 border-0 transition-opacity duration-1000 ${loaded ? "opacity-100" : "opacity-0"}`}
+          allow="autoplay; encrypted-media; picture-in-picture"
+          referrerPolicy="strict-origin-when-cross-origin"
+          onLoad={() => setLoaded(true)}
+        />
+      )}
+
+      {loaded && primary && (
+        <button
+          type="button"
+          onClick={toggleMute}
+          className="absolute bottom-[86px] right-5 z-20 grid h-10 w-10 place-items-center rounded-full border border-white/35 bg-black/30 text-white backdrop-blur-md transition hover:bg-white/12 md:right-8"
+          aria-label={muted ? "Unmute trailer" : "Mute trailer"}
+          title={muted ? "Unmute trailer" : "Mute trailer"}
+        >
+          {muted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
+        </button>
+      )}
+    </div>
+  );
+};
+'''
+          Path('frontend/src/components/DetailsTrailerBackground.jsx').write_text(bg_component)
+
+          # 3) Details page: move trailer into the hero background and remove extra branded eyebrow/preview CTA.
+          title_path = Path('frontend/src/pages/Title.jsx')
+          title = title_path.read_text()
+          title = title.replace('import { Check, ChevronLeft, Clapperboard, Play, Plus, Star } from "lucide-react";', 'import { Check, ChevronLeft, Play, Plus, Star } from "lucide-react";')
+          trailer_import = 'import { TrailerPreview } from "@/components/TrailerPreview";\n'
+          if trailer_import not in title:
+              raise SystemExit('TrailerPreview import not found')
+          title = title.replace(trailer_import, trailer_import + 'import { DetailsTrailerBackground } from "@/components/DetailsTrailerBackground";\n', 1)
+
+          old_bg = '        <img src={backdrop(data.backdrop_path, "original")} alt={titleOf(data)} className="h-full w-full object-cover object-center" />'
+          new_bg = '        <DetailsTrailerBackground videos={videos} title={titleOf(data)} backdropPath={data.backdrop_path} />'
+          if old_bg not in title:
+              raise SystemExit('Details backdrop line not found')
+          title = title.replace(old_bg, new_bg, 1)
+          title = title.replace('import { getDetails, getSeason, backdrop, img } from "@/lib/api";', 'import { getDetails, getSeason, img } from "@/lib/api";')
+
+          details_eyebrow = '            <div className="mb-4 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-[#ffd400]/72"><span className="h-px w-6 bg-[#ffd400]/65" /> SynFlix details</div>\n'
+          title = title.replace(details_eyebrow, '')
+
+          preview_button = '              {hasPreview && <button onClick={() => document.getElementById("synflix-preview")?.scrollIntoView({ behavior: "smooth", block: "start" })} className="inline-flex h-11 items-center gap-2 rounded-full border border-[#ffd400]/24 bg-[#ffd400]/[0.06] px-5 text-sm font-medium text-[#ffd400] backdrop-blur-md transition hover:bg-[#ffd400]/12"><Clapperboard className="h-4 w-4" /> Preview</button>}\n'
+          title = title.replace(preview_button, '')
+          title = title.replace('  const hasPreview = videos.some((video) => video?.key && (video.site === "YouTube" || video.site === "Vimeo"));\n', '')
+          title_path.write_text(title)
+
+          # 4) Keep trailers below, but as Netflix-like thumbnails only — no second autoplay iframe.
+          trailer_component = r'''import { useMemo, useState } from "react";
+import { Clapperboard, Play, X } from "lucide-react";
+
+const supportedSite = (site) => site === "YouTube" || site === "Vimeo";
+
+const videoScore = (video) => {
+  const type = String(video?.type || "").toLowerCase();
+  const name = String(video?.name || "").toLowerCase();
+  let score = 0;
+  if (type === "trailer") score += 100;
+  else if (type === "teaser") score += 80;
+  else if (type === "clip") score += 60;
+  else if (type === "featurette") score += 40;
+  if (video?.official) score += 30;
+  if (/official|trailer|teaser/.test(name)) score += 10;
+  if (video?.site === "YouTube") score += 4;
+  return score;
+};
+
+const embedUrl = (video) => {
+  if (!video?.key) return "";
+  if (video.site === "YouTube") {
+    return `https://www.youtube-nocookie.com/embed/${encodeURIComponent(video.key)}?autoplay=1&playsinline=1&rel=0&modestbranding=1`;
+  }
+  if (video.site === "Vimeo") {
+    return `https://player.vimeo.com/video/${encodeURIComponent(video.key)}?autoplay=1&title=0&byline=0&portrait=0`;
+  }
+  return "";
+};
+
+const thumbnailUrl = (video) => video?.site === "YouTube" && video?.key
+  ? `https://i.ytimg.com/vi/${encodeURIComponent(video.key)}/hqdefault.jpg`
+  : null;
+
+export const TrailerPreview = ({ videos = [], title = "" }) => {
+  const ranked = useMemo(() => [...videos]
+    .filter((video) => video?.key && supportedSite(video.site))
+    .sort((a, b) => videoScore(b) - videoScore(a))
+    .slice(0, 6), [videos]);
+  const [selected, setSelected] = useState(null);
+
+  if (!ranked.length) return null;
+
+  return (
+    <section id="synflix-preview" className="mx-auto max-w-[1500px] px-5 py-9 md:px-8 md:py-12" data-testid="title-preview">
+      <div className="mb-5">
+        <h2 className="text-xl font-semibold tracking-[-0.025em] text-white md:text-2xl">Trailers & more</h2>
+      </div>
+
+      <div className="scrollbar-none flex snap-x gap-3.5 overflow-x-auto pb-2">
+        {ranked.map((video) => {
+          const thumb = thumbnailUrl(video);
+          return (
+            <button
+              key={`${video.site}-${video.key}`}
+              type="button"
+              onClick={() => setSelected(video)}
+              className="group w-[280px] shrink-0 snap-start overflow-hidden rounded-[16px] border border-white/[0.07] bg-white/[0.025] text-left transition hover:border-[#ffd400]/22 sm:w-[330px]"
+            >
+              <div className="relative aspect-video overflow-hidden bg-[#111]">
+                {thumb ? (
+                  <img src={thumb} alt="" loading="lazy" className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.025]" />
+                ) : (
+                  <div className="grid h-full w-full place-items-center"><Clapperboard className="h-8 w-8 text-white/18" /></div>
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/5 to-transparent" />
+                <span className="absolute bottom-3 left-3 grid h-10 w-10 place-items-center rounded-full bg-white text-black shadow-lg transition group-hover:scale-105">
+                  <Play className="ml-0.5 h-4 w-4 fill-current" />
+                </span>
+              </div>
+              <div className="p-3.5">
+                <p className="truncate text-sm font-medium text-white/88">{video.name || video.type || "Preview"}</p>
+                <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-white/36">{video.type || "Video"}{video.official ? " · Official" : ""}</p>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+
+      {selected && (
+        <div className="fixed inset-0 z-[90] grid place-items-center bg-black/88 p-4 backdrop-blur-md" onClick={() => setSelected(null)} role="presentation">
+          <div className="relative w-full max-w-5xl overflow-hidden rounded-[22px] border border-white/10 bg-black shadow-2xl" onClick={(e) => e.stopPropagation()} role="presentation">
+            <button onClick={() => setSelected(null)} className="absolute right-3 top-3 z-10 grid h-10 w-10 place-items-center rounded-full border border-white/12 bg-black/70 text-white backdrop-blur-md transition hover:border-[#ffd400]/40 hover:text-[#ffd400]" aria-label="Close preview">
+              <X className="h-5 w-5" />
+            </button>
+            <div className="aspect-video bg-black">
+              <iframe
+                src={embedUrl(selected)}
+                title={selected.name || `${title} preview`}
+                className="h-full w-full"
+                allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
+                allowFullScreen
+                referrerPolicy="strict-origin-when-cross-origin"
+              />
+            </div>
+          </div>
+        </div>
+      )}
+    </section>
+  );
+};
+'''
+          Path('frontend/src/components/TrailerPreview.jsx').write_text(trailer_component)
+
+          # 5) SynPlayer performance pass.
+          player_path = Path('frontend/src/components/SynapsePlayer.jsx')
+          player = player_path.read_text()
+
+          if 'import Hls from "hls.js";\n' not in player:
+              raise SystemExit('Static Hls import not found')
+          player = player.replace('import Hls from "hls.js";\n', '', 1)
+
+          storage_import = 'import { saveProgress, getProgress } from "@/lib/storage";\n'
+          lazy_loader = '''import { saveProgress, getProgress } from "@/lib/storage";\n\nlet hlsLoaderPromise = null;\nconst loadHls = () => {\n    if (!hlsLoaderPromise) hlsLoaderPromise = import("hls.js").then((module) => module.default || module);\n    return hlsLoaderPromise;\n};\n'''
+          if storage_import not in player:
+              raise SystemExit('Storage import not found')
+          player = player.replace(storage_import, lazy_loader, 1)
+
+          player = player.replace('    const activeServer = servers.find((s) => s.id === serverId);', '    useEffect(() => { loadHls().catch(() => {}); }, []);\n\n    const activeServer = servers.find((s) => s.id === serverId);', 1)
+          player = player.replace('    const playServer = useCallback((server) => {', '    const playServer = useCallback(async (server) => {', 1)
+          player = player.replace('        const url = hlsProxyUrl(server.play_url);\n        if (server.type === "hls" && Hls.isSupported()) {', '        const url = hlsProxyUrl(server.play_url);\n        const Hls = server.type === "hls" ? await loadHls() : null;\n        if (server.type === "hls" && Hls?.isSupported()) {', 1)
+
+          # Smaller buffers = faster startup and less memory while keeping enough headroom for VOD.
+          player = player.replace('                progressive: isMiami,', '                progressive: true,', 1)
+          player = player.replace('                maxBufferLength: isMiami ? 18 : 30,', '                maxBufferLength: isMiami ? 10 : 14,', 1)
+          player = player.replace('                maxMaxBufferLength: isMiami ? 36 : 60,', '                maxMaxBufferLength: isMiami ? 24 : 30,', 1)
+          player = player.replace('                backBufferLength: 30,', '                backBufferLength: 15,', 1)
+
+          # Faster first fallback and less provider contention.
+          player = player.replace('timeout: 5200,', 'timeout: 3600,')
+          player = player.replace('timeout: 8000, ...streamResolveHints', 'timeout: 4600, ...streamResolveHints', 1)
+          player = player.replace('const batchSize = 3;', 'const batchSize = 2;', 1)
+          player = player.replace('backgroundTimer = window.setTimeout(() => startBackground("orlando,cinejoy"), 350);', 'backgroundTimer = window.setTimeout(() => startBackground("orlando,cinejoy"), 650);', 1)
+          player = player.replace('}, readPreferredSourceKey() ? 5500 : 4200);', '}, readPreferredSourceKey() ? 2600 : 1800);', 1)
+
+          # Lower CPU overhead for caption polling and avoid loading full-resolution art in the player shell.
+          player = player.replace('const timer = window.setInterval(updateCaption, 160);', 'const timer = window.setInterval(updateCaption, 250);', 1)
+          player = player.replace('https://image.tmdb.org/t/p/original${meta.backdrop_path}', 'https://image.tmdb.org/t/p/w1280${meta.backdrop_path}')
+
+          player_path.write_text(player)
+          PY
+
+      - name: Install frontend
+        run: yarn --cwd frontend install --frozen-lockfile
+
+      - name: Build frontend
+        env:
+          CI: 'false'
+          GENERATE_SOURCEMAP: 'false'
+        run: yarn --cwd frontend build
+
+      - name: Sync deploy bundles
+        shell: bash
+        run: |
+          rm -rf public backend/public
+          cp -R frontend/build public
+          mkdir -p backend
+          cp -R frontend/build backend/public
+
+      - name: Commit changes
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add frontend/src/components/Hero.jsx frontend/src/components/DetailsTrailerBackground.jsx frontend/src/components/TrailerPreview.jsx frontend/src/pages/Title.jsx frontend/src/components/SynapsePlayer.jsx public backend/public
+          git commit -m "Polish Netflix-style previews and speed up SynPlayer"
+          git push origin HEAD:main
