@@ -1,5 +1,6 @@
 import "@/App.css";
 import "@/synflix-site.css";
+import "@/theme-system.css";
 import { useEffect } from "react";
 import { BrowserRouter, Routes, Route, useLocation, Link } from "react-router-dom";
 import { Navbar } from "@/components/Navbar";
@@ -7,8 +8,6 @@ import { Toaster } from "@/components/ui/sonner";
 import Home from "@/pages/Home";
 import Browse from "@/pages/Browse";
 import Title from "@/pages/Title";
-import Person from "@/pages/Person";
-import Roulette from "@/pages/Roulette";
 import Watch from "@/pages/Watch";
 import Search from "@/pages/Search";
 import MyList from "@/pages/MyList";
@@ -16,6 +15,9 @@ import Demo from "@/pages/Demo";
 import Docs from "@/pages/Docs";
 import Privacy from "@/pages/Privacy";
 import Terms from "@/pages/Terms";
+import Person from "@/pages/Person";
+import Roulette from "@/pages/Roulette";
+import Settings from "@/pages/Settings";
 
 function Footer() {
   return (
@@ -31,8 +33,9 @@ function Footer() {
         <div className="flex flex-wrap gap-x-6 gap-y-3 text-sm text-white/38">
           <Link to="/browse/movie" className="transition hover:text-[#ffd400]">Movies</Link>
           <Link to="/browse/tv" className="transition hover:text-[#ffd400]">TV</Link>
-          <Link to="/roulette" className="transition hover:text-[#ffd400]">Film Roulette</Link>
+          <Link to="/roulette" className="transition hover:text-[#ffd400]">Roulette</Link>
           <Link to="/my-list" className="transition hover:text-[#ffd400]">My List</Link>
+          <Link to="/settings" className="transition hover:text-[#ffd400]">Settings</Link>
           <Link to="/privacy" className="transition hover:text-[#ffd400]">Privacy</Link>
           <Link to="/terms" className="transition hover:text-[#ffd400]">Terms</Link>
           <Link to="/demo" className="transition hover:text-[#ffd400]">Demo</Link>
@@ -50,7 +53,7 @@ function Shell() {
   useEffect(() => {
     document.title = isWatch ? "SynPlayer" : "SynFlix";
     const meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) meta.setAttribute("content", isWatch ? "#000000" : "#ffd400");
+    if (meta) meta.setAttribute("content", isWatch ? "#000000" : "#070707");
 
     let icon = document.querySelector('link[rel="icon"]');
     if (!icon) {
@@ -70,10 +73,11 @@ function Shell() {
         <Route path="/docs" element={<Docs />} />
         <Route path="/privacy" element={<Privacy />} />
         <Route path="/terms" element={<Terms />} />
+        <Route path="/settings" element={<Settings />} />
         <Route path="/roulette" element={<Roulette />} />
+        <Route path="/person/:id" element={<Person />} />
         <Route path="/browse/:mediaType" element={<Browse />} />
         <Route path="/title/:mediaType/:id" element={<Title />} />
-        <Route path="/person/:id" element={<Person />} />
         <Route path="/watch/:mediaType/:id" element={<Watch />} />
         <Route path="/search" element={<Search />} />
         <Route path="/my-list" element={<MyList />} />
