@@ -31,34 +31,32 @@ jobs:
               '("Orlando", "orlando", ("providers.orlando", "OrlandoResolver")),',
           )
 
-          old = '''        if provider_id in {"vidy", "orlando"}:
-              if provider_id == "orlando":
-                  resolve_kwargs["provider"] = "orlando"
-              elif provider_hint:
-                  resolve_kwargs["provider"] = provider_hint
-              elif fast_mirrors:
-                  resolve_kwargs["provider"] = "fast"
-              if metadata_hint:
-                  resolve_kwargs["metadata_hint"] = metadata_hint
-          '''
-          new = '''        if provider_id == "vidy":
-              if provider_hint:
-                  resolve_kwargs["provider"] = provider_hint
-              elif fast_mirrors:
-                  resolve_kwargs["provider"] = "fast"
-              if metadata_hint:
-                  resolve_kwargs["metadata_hint"] = metadata_hint
-          elif provider_id == "orlando" and metadata_hint:
-              resolve_kwargs["metadata_hint"] = metadata_hint
-          '''
-          if old not in text and 'provider_id in {"vidy", "orlando"}' in text:
-              raise SystemExit('Could not find exact Orlando/Vidy resolver kwargs block')
-          text = text.replace(old, new)
+          old_marker = '        if provider_id in {"vidy", "orlando"}:'
+          new_marker = '        if provider_id == "vidy":'
+          if old_marker in text:
+              start = text.index(old_marker)
+              end = text.index('        out = r.resolve', start)
+              block = (
+                  '        if provider_id == "vidy":\n'
+                  '            if provider_hint:\n'
+                  '                resolve_kwargs["provider"] = provider_hint\n'
+                  '            elif fast_mirrors:\n'
+                  '                resolve_kwargs["provider"] = "fast"\n'
+                  '            if metadata_hint:\n'
+                  '                resolve_kwargs["metadata_hint"] = metadata_hint\n'
+                  '        elif provider_id == "orlando" and metadata_hint:\n'
+                  '            resolve_kwargs["metadata_hint"] = metadata_hint\n'
+              )
+              text = text[:start] + block + text[end:]
+          elif new_marker not in text:
+              raise SystemExit('Could not locate Orlando/Vidy resolver kwargs block')
 
-          text = text.replace(
-              '            per_provider_timeout = 8.5 if provider_id else 9.0',
-              '            per_provider_timeout = 14.0 if pid == "orlando" else (8.5 if provider_id else 9.0)',
-          )
+          old_timeout = '            per_provider_timeout = 8.5 if provider_id else 9.0'
+          new_timeout = '            per_provider_timeout = 14.0 if pid == "orlando" else (8.5 if provider_id else 9.0)'
+          if old_timeout in text:
+              text = text.replace(old_timeout, new_timeout)
+          elif new_timeout not in text:
+              raise SystemExit('Could not locate provider timeout line')
 
           path.write_text(text)
           PY
