@@ -1,0 +1,52 @@
+name: Fix Orlando source picker
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.event.head_commit.message == 'Fix Orlando source picker'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Add Orlando to source catalog
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('frontend/src/components/SynapsePlayer.jsx')
+          s = p.read_text()
+          entry = '    { provider: "orlando", name: "Orlando" },\n'
+          if entry not in s:
+              needle = 'const SOURCE_CATALOG = [\n    { provider: "vidy", name: "Miami" },\n'
+              if needle not in s:
+                  raise SystemExit('SOURCE_CATALOG / Miami anchor not found')
+              s = s.replace(needle, needle + entry, 1)
+              p.write_text(s)
+          PY
+      - name: Build frontend
+        env:
+          CI: 'false'
+          GENERATE_SOURCEMAP: 'false'
+          REACT_APP_BACKEND_URL: ''
+        run: |
+          yarn --cwd frontend install --frozen-lockfile
+          yarn --cwd frontend build
+      - name: Sync compiled bundle
+        run: |
+          rm -rf public backend/public
+          cp -R frontend/build public
+          cp -R frontend/build backend/public
+      - name: Commit fix
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add frontend/src/components/SynapsePlayer.jsx public backend/public
+          git commit -m "Expose Orlando source in player" || exit 0
+          git push origin HEAD:main
