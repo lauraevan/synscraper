@@ -1,0 +1,64 @@
+name: Rename SynPlayer 4K to 4K UHD
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/player-uhd-trigger.txt'
+
+permissions:
+  contents: write
+
+jobs:
+  patch-player:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Rename 2160p UI and UHD source badges
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          path = Path('frontend/src/components/SynapsePlayer.jsx')
+          text = path.read_text()
+
+          replacements = [
+              ('{ label: "4K", height: 2160 }', '{ label: "4K UHD", height: 2160 }'),
+              ('preferredQuality === 2160 ? "4K" : `${preferredQuality}p`', 'preferredQuality === 2160 ? "4K UHD" : `${preferredQuality}p`'),
+              ('"Original audio, 4K"', '"Original audio, 4K UHD"'),
+              ('native 4K stream', 'native 4K UHD stream'),
+          ]
+          for old, new in replacements:
+              if old not in text:
+                  raise SystemExit(f'Missing expected player label: {old}')
+              text = text.replace(old, new)
+
+          badge_pattern = re.compile(
+              r'<img\s+src=\{SOURCE_4K_BADGE\}\s+alt="4K"\s+title="4K source"\s+className="[^"]+"\s*/>',
+              re.MULTILINE,
+          )
+          badge = '<span data-testid="player-4k-uhd-badge" className="inline-flex h-[20px] shrink-0 items-center rounded-[4px] border border-white/30 bg-black/72 px-1.5 text-[8px] font-black uppercase tracking-[0.08em] text-white">4K UHD</span>'
+          text, count = badge_pattern.subn(badge, text)
+          if count < 2:
+              raise SystemExit(f'Expected at least two 4K source badge images, replaced {count}')
+
+          path.write_text(text)
+          print(f'Updated {count} source badges and all 2160p labels to 4K UHD')
+          PY
+
+      - name: Commit player labels
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add frontend/src/components/SynapsePlayer.jsx
+          if git diff --cached --quiet; then
+            echo "No player changes needed"
+            exit 0
+          fi
+          git commit -m "Rename SynPlayer 4K to 4K UHD"
+          git pull --rebase origin main
+          git push origin HEAD:main
