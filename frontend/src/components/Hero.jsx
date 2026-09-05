@@ -1,122 +1,95 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Play, Info, Plus, Check, Star } from "lucide-react";
+import { Check, Info, Play, Plus, Star } from "lucide-react";
 import { backdrop } from "@/lib/api";
-import { mediaTypeOf, titleOf, yearOf, ratingStr } from "@/lib/format";
+import { mediaTypeOf, ratingStr, titleOf, yearOf } from "@/lib/format";
 import { inWatchlist, toggleWatchlist } from "@/lib/storage";
 
 export const Hero = ({ items = [] }) => {
-    const navigate = useNavigate();
-    const [idx, setIdx] = useState(0);
-    const [saved, setSaved] = useState(false);
-    const featured = items.slice(0, 6);
-    const item = featured[idx];
-    const mt = item ? mediaTypeOf(item) : "movie";
+  const navigate = useNavigate();
+  const featured = useMemo(() => items.filter((item) => item?.backdrop_path).slice(0, 5), [items]);
+  const [idx, setIdx] = useState(0);
+  const item = featured[idx];
+  const mt = item ? mediaTypeOf(item) : "movie";
+  const [saved, setSaved] = useState(false);
 
-    useEffect(() => {
-        if (featured.length < 2) return;
-        const t = setInterval(() => setIdx((i) => (i + 1) % featured.length), 8000);
-        return () => clearInterval(t);
-    }, [featured.length]);
+  useEffect(() => {
+    if (idx >= featured.length) setIdx(0);
+  }, [featured.length, idx]);
 
-    useEffect(() => {
-        if (item) setSaved(inWatchlist({ media_type: mt, id: item.id }));
-    }, [item, mt]);
+  useEffect(() => {
+    if (featured.length < 2) return undefined;
+    const timer = window.setInterval(() => setIdx((v) => (v + 1) % featured.length), 9000);
+    return () => window.clearInterval(timer);
+  }, [featured.length]);
 
-    if (!featured.length) return <div className="h-[60vh]" />;
+  useEffect(() => {
+    if (item) setSaved(inWatchlist({ media_type: mt, id: item.id }));
+  }, [item, mt]);
 
-    const save = () => {
-        const now = toggleWatchlist({
-            media_type: mt,
-            id: item.id,
-            title: titleOf(item),
-            poster_path: item.poster_path,
-            backdrop_path: item.backdrop_path,
-            vote_average: item.vote_average,
-            release_date: item.release_date,
-            first_air_date: item.first_air_date,
-        });
-        setSaved(now);
-    };
+  if (!item) return <section className="h-[62vh] min-h-[500px] bg-[#0b0b0b]" />;
 
-    return (
-        <div
-            data-testid="hero-banner"
-            className="relative h-[80vh] min-h-[520px] max-h-[820px] w-full"
-        >
-            {featured.map((f, i) => (
-                <div
-                    key={f.id}
-                    className="absolute inset-0 transition-opacity duration-1000"
-                    style={{ opacity: i === idx ? 1 : 0 }}
-                >
-                    <img
-                        src={backdrop(f.backdrop_path, "original")}
-                        alt={titleOf(f)}
-                        className="w-full h-full object-cover object-top"
-                    />
-                </div>
-            ))}
-            <div className="absolute inset-0 bg-gradient-to-t from-obsidian via-obsidian/50 to-transparent" />
-            <div className="absolute inset-0 bg-gradient-to-r from-obsidian via-obsidian/70 to-transparent" />
+  const save = () => {
+    const next = toggleWatchlist({
+      media_type: mt,
+      id: item.id,
+      title: titleOf(item),
+      poster_path: item.poster_path,
+      backdrop_path: item.backdrop_path,
+      vote_average: item.vote_average,
+      release_date: item.release_date,
+      first_air_date: item.first_air_date,
+    });
+    setSaved(next);
+  };
 
-            <div className="relative h-full flex flex-col justify-end pb-20 md:pb-28 px-4 md:px-12 max-w-3xl syn-fade-up" key={item.id}>
-                <span className="text-xs font-semibold uppercase tracking-[0.25em] text-amber-glow mb-3">
-                    {mt === "tv" ? "Featured Series" : "Featured Film"}
-                </span>
-                <h1 className="font-display text-5xl sm:text-6xl lg:text-7xl leading-none mb-4">
-                    {titleOf(item)}
-                </h1>
-                <div className="flex items-center gap-3 text-sm text-zinc-300 mb-4">
-                    <span className="flex items-center gap-1 text-amber-glow font-mono">
-                        <Star className="w-4 h-4 fill-amber-glow" /> {ratingStr(item.vote_average)}
-                    </span>
-                    <span>{yearOf(item)}</span>
-                    <span className="px-2 py-0.5 rounded border border-white/20 text-xs uppercase">
-                        {mt === "tv" ? "Series" : "Movie"}
-                    </span>
-                </div>
-                <p className="text-zinc-300 text-sm md:text-base line-clamp-3 mb-6 max-w-xl">
-                    {item.overview}
-                </p>
-                <div className="flex items-center gap-3">
-                    <button
-                        data-testid="hero-play-button"
-                        onClick={() => navigate(`/watch/${mt}/${item.id}`)}
-                        className="flex items-center gap-2 px-7 py-3 rounded-full bg-white text-black font-bold hover:bg-white/85 active:scale-95 transition-all"
-                    >
-                        <Play className="w-5 h-5 fill-black" /> Play
-                    </button>
-                    <button
-                        data-testid="hero-info-button"
-                        onClick={() => navigate(`/title/${mt}/${item.id}`)}
-                        className="flex items-center gap-2 px-6 py-3 rounded-full bg-white/10 backdrop-blur border border-white/15 hover:bg-white/20 active:scale-95 transition-all font-semibold"
-                    >
-                        <Info className="w-5 h-5" /> More Info
-                    </button>
-                    <button
-                        data-testid="hero-watchlist-button"
-                        onClick={save}
-                        className="flex items-center justify-center w-12 h-12 rounded-full bg-white/10 border border-white/15 hover:bg-white/20 active:scale-95 transition-all"
-                        aria-label="Add to list"
-                    >
-                        {saved ? <Check className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
-                    </button>
-                </div>
-
-                <div className="flex gap-1.5 mt-8">
-                    {featured.map((_, i) => (
-                        <button
-                            key={i}
-                            onClick={() => setIdx(i)}
-                            className={`h-1 rounded-full transition-all ${
-                                i === idx ? "w-8 bg-crimson" : "w-4 bg-white/25"
-                            }`}
-                            aria-label={`Slide ${i + 1}`}
-                        />
-                    ))}
-                </div>
-            </div>
+  return (
+    <section data-testid="hero-banner" className="relative h-[76vh] min-h-[570px] max-h-[880px] overflow-hidden">
+      {featured.map((feature, index) => (
+        <div key={feature.id} className="absolute inset-0 transition-opacity duration-1000 ease-out" style={{ opacity: index === idx ? 1 : 0 }}>
+          <img src={backdrop(feature.backdrop_path, "original")} alt={titleOf(feature)} className="h-full w-full object-cover object-center" />
         </div>
-    );
+      ))}
+
+      <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(7,7,7,.96)_0%,rgba(7,7,7,.78)_30%,rgba(7,7,7,.22)_65%,rgba(7,7,7,.08)_100%)]" />
+      <div className="absolute inset-0 bg-[linear-gradient(0deg,#070707_0%,rgba(7,7,7,.78)_10%,rgba(7,7,7,.06)_44%,rgba(7,7,7,.16)_100%)]" />
+
+      <div className="relative mx-auto flex h-full max-w-[1500px] items-end px-5 pb-20 pt-28 md:px-8 md:pb-24">
+        <div key={item.id} className="max-w-[720px] syn-fade-up">
+          <div className="mb-4 flex items-center gap-2.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-white/45">
+            <span className="h-px w-7 bg-white/35" />
+            {mt === "tv" ? "Featured series" : "Featured film"}
+          </div>
+
+          <h1 className="text-balance text-[45px] font-semibold leading-[0.96] tracking-[-0.055em] text-white sm:text-6xl md:text-[74px]">{titleOf(item)}</h1>
+
+          <div className="mt-5 flex flex-wrap items-center gap-3 text-sm text-white/60">
+            {Number(item.vote_average) > 0 && <span className="inline-flex items-center gap-1.5 font-medium text-white/82"><Star className="h-3.5 w-3.5 fill-current" />{ratingStr(item.vote_average)}</span>}
+            {yearOf(item) && <span>{yearOf(item)}</span>}
+            <span className="rounded-md border border-white/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-white/52">{mt === "tv" ? "Series" : "Movie"}</span>
+          </div>
+
+          {item.overview && <p className="mt-5 max-w-[620px] line-clamp-3 text-[14px] leading-6 text-white/56 md:text-[15px] md:leading-7">{item.overview}</p>}
+
+          <div className="mt-7 flex flex-wrap items-center gap-2.5">
+            <button data-testid="hero-play-button" onClick={() => navigate(`/watch/${mt}/${item.id}${mt === "tv" ? "?season=1&episode=1" : ""}`)} className="inline-flex h-11 items-center gap-2 rounded-full bg-white px-5 text-sm font-semibold text-black transition hover:bg-white/88 active:scale-[.98]">
+              <Play className="h-4 w-4 fill-current" /> Play
+            </button>
+            <button data-testid="hero-info-button" onClick={() => navigate(`/title/${mt}/${item.id}`)} className="inline-flex h-11 items-center gap-2 rounded-full border border-white/14 bg-black/28 px-5 text-sm font-medium text-white/82 backdrop-blur-md transition hover:bg-white/[0.08] hover:text-white">
+              <Info className="h-4 w-4" /> Details
+            </button>
+            <button data-testid="hero-watchlist-button" onClick={save} className="grid h-11 w-11 place-items-center rounded-full border border-white/14 bg-black/28 text-white/78 backdrop-blur-md transition hover:bg-white/[0.08] hover:text-white" aria-label={saved ? "Remove from My List" : "Add to My List"}>
+              {saved ? <Check className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+            </button>
+          </div>
+
+          {featured.length > 1 && (
+            <div className="mt-9 flex items-center gap-2">
+              {featured.map((feature, index) => <button key={feature.id} onClick={() => setIdx(index)} className={`h-[3px] rounded-full transition-all ${index === idx ? "w-8 bg-white" : "w-4 bg-white/22 hover:bg-white/40"}`} aria-label={`Show ${titleOf(feature)}`} />)}
+            </div>
+          )}
+        </div>
+      </div>
+    </section>
+  );
 };
