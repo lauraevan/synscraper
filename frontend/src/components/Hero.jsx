@@ -1,9 +1,26 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { Check, Info, Play, Plus, Star } from "lucide-react";
-import { backdrop } from "@/lib/api";
+import { backdrop, getTitleImages, img } from "@/lib/api";
 import { mediaTypeOf, ratingStr, titleOf, yearOf } from "@/lib/format";
 import { inWatchlist, toggleWatchlist } from "@/lib/storage";
+
+const pickLogo = (logos = []) => {
+  const rank = (list) => [...list].sort((a, b) => {
+    const votes = Number(b?.vote_average || 0) - Number(a?.vote_average || 0);
+    if (votes) return votes;
+    return Number(b?.width || 0) - Number(a?.width || 0);
+  });
+
+  const english = rank(logos.filter((logo) => logo?.iso_639_1 === "en"));
+  if (english.length) return english[0];
+
+  const neutral = rank(logos.filter((logo) => !logo?.iso_639_1));
+  if (neutral.length) return neutral[0];
+
+  return rank(logos)[0] || null;
+};
 
 export const Hero = ({ items = [] }) => {
   const navigate = useNavigate();
@@ -12,6 +29,16 @@ export const Hero = ({ items = [] }) => {
   const item = featured[idx];
   const mt = item ? mediaTypeOf(item) : "movie";
   const [saved, setSaved] = useState(false);
+
+  const { data: titleImages, isFetched: logoFetched } = useQuery({
+    queryKey: ["hero-logo", mt, item?.id],
+    queryFn: () => getTitleImages(mt, item.id),
+    enabled: !!item?.id,
+    staleTime: 3_600_000,
+    retry: 1,
+  });
+
+  const heroLogo = useMemo(() => pickLogo(titleImages?.logos || []), [titleImages]);
 
   useEffect(() => {
     if (idx >= featured.length) setIdx(0);
@@ -56,7 +83,19 @@ export const Hero = ({ items = [] }) => {
 
       <div className="relative mx-auto flex h-full max-w-[1500px] items-end px-5 pb-20 pt-28 md:px-8 md:pb-24">
         <div key={item.id} className="max-w-[720px] syn-fade-up">
-          <h1 className="text-balance text-[45px] font-semibold leading-[0.96] tracking-[-0.055em] text-white sm:text-6xl md:text-[74px]">{titleOf(item)}</h1>
+          <div className="flex min-h-[92px] items-end md:min-h-[126px]">
+            {heroLogo ? (
+              <img
+                src={img(heroLogo.file_path, "w500")}
+                alt={titleOf(item)}
+                className="max-h-[118px] w-auto max-w-[78vw] object-contain object-left drop-shadow-[0_8px_28px_rgba(0,0,0,0.45)] md:max-h-[150px] md:max-w-[520px]"
+                loading="eager"
+                decoding="async"
+              />
+            ) : logoFetched ? (
+              <h1 className="text-balance text-[45px] font-semibold leading-[0.96] tracking-[-0.055em] text-white sm:text-6xl md:text-[74px]">{titleOf(item)}</h1>
+            ) : null}
+          </div>
 
           <div className="mt-5 flex flex-wrap items-center gap-3 text-sm text-white/60">
             {Number(item.vote_average) > 0 && <span className="inline-flex items-center gap-1.5 font-medium text-[#ffd400]"><Star className="h-3.5 w-3.5 fill-current" />{ratingStr(item.vote_average)}</span>}
