@@ -4,7 +4,7 @@ import { Row } from "@/components/Row";
 import { CinematicRow } from "@/components/CinematicRow";
 import { TopTenRow } from "@/components/TopTenRow";
 import { Spinner } from "@/components/Spinner";
-import { getHome } from "@/lib/api";
+import { discover, getHome } from "@/lib/api";
 
 const withType = (items = [], mediaType) => items.map((item) => ({ ...item, media_type: item.media_type || mediaType }));
 const uniqueById = (items = []) => {
@@ -16,8 +16,18 @@ const uniqueById = (items = []) => {
   });
 };
 
+const useMovieShelf = (key, params) => useQuery({
+  queryKey: ["home-shelf", key],
+  queryFn: () => discover("movie", params),
+  staleTime: 5 * 60_000,
+});
+
 export default function Home() {
   const { data, isLoading } = useQuery({ queryKey: ["home"], queryFn: getHome });
+  const { data: actionData } = useMovieShelf("action", { with_genres: 28, sort_by: "popularity.desc", "vote_count.gte": 300 });
+  const { data: comedyData } = useMovieShelf("comedy", { with_genres: 35, sort_by: "popularity.desc", "vote_count.gte": 250 });
+  const { data: familyData } = useMovieShelf("family", { with_genres: 10751, sort_by: "popularity.desc", "vote_count.gte": 100 });
+  const { data: sciFiData } = useMovieShelf("scifi", { with_genres: 878, sort_by: "popularity.desc", "vote_count.gte": 250 });
 
   if (isLoading && !data) {
     return <main className="min-h-screen bg-[#070707] pt-20" data-testid="home-page"><div className="grid min-h-[70vh] place-items-center"><Spinner /></div></main>;
@@ -30,6 +40,10 @@ export default function Home() {
   const topMovies = withType(data?.top_rated_movies, "movie");
   const upcoming = withType(data?.upcoming, "movie");
   const topTv = withType(data?.top_rated_tv, "tv");
+  const action = withType(actionData?.results, "movie");
+  const comedy = withType(comedyData?.results, "movie");
+  const family = withType(familyData?.results, "movie");
+  const sciFi = withType(sciFiData?.results, "movie");
   const heroItems = trending.length ? trending : [...popularMovies, ...popularTv];
   const topMoviesToday = uniqueById([
     ...trending.filter((item) => item.media_type === "movie"),
@@ -45,9 +59,13 @@ export default function Home() {
         <Row title="Now playing" items={nowPlaying} fallbackType="movie" testId="row-now-playing" />
         <Row title="Popular TV" items={popularTv} fallbackType="tv" testId="row-popular-tv" />
         <CinematicRow title="Top rated movies" subtitle="Critically loved films, flipped for a different rhythm." items={topMovies} reverse testId="row-top-rated-movies" />
+        <TopTenRow items={topMoviesToday} />
+        <Row title="Action hits" subtitle="Big action, fast pacing, zero patience." items={action} fallbackType="movie" testId="row-action" />
+        <Row title="Comedy night" subtitle="Easy picks when you just want something fun." items={comedy} fallbackType="movie" testId="row-comedy" />
+        <Row title="Sci-fi worlds" subtitle="Future tech, strange worlds, and impossible ideas." items={sciFi} fallbackType="movie" testId="row-scifi" />
+        <Row title="Family favorites" subtitle="Crowd-friendly movies for everyone." items={family} fallbackType="movie" testId="row-family" />
         <Row title="Coming soon" items={upcoming} fallbackType="movie" testId="row-upcoming" />
         <Row title="Top rated TV" items={topTv} fallbackType="tv" testId="row-top-rated-tv" />
-        <TopTenRow items={topMoviesToday} />
       </div>
     </main>
   );
