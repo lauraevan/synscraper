@@ -10,20 +10,13 @@ export const TopTenRow = ({ items = [] }) => {
   if (!top.length) return null;
 
   return (
-    <section className="mx-auto max-w-[1500px] px-5 py-10 md:px-8" data-testid="top-ten-row">
-      <div className="mb-7 flex items-end gap-4 sm:gap-6">
-        <div className="leading-none">
-          <div
-            className="text-[64px] font-black tracking-[-0.08em] sm:text-[88px] md:text-[104px]"
-            style={{ color: "transparent", WebkitTextStroke: "2px rgba(255,255,255,.82)" }}
-          >
-            TOP10
-          </div>
+    <section className="mx-auto max-w-[1500px] px-5 pb-12 pt-10 md:px-8" data-testid="top-ten-row">
+      <div className="mb-5 flex items-end justify-between gap-4">
+        <div>
+          <div className="mb-1 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#ffd400]/60"><span className="h-px w-5 bg-[#ffd400]/55" /> Today</div>
+          <h2 className="text-[19px] font-semibold tracking-[-0.025em] text-white md:text-[22px]">Top 10 Movies</h2>
         </div>
-        <div className="pb-2 text-[10px] font-semibold uppercase leading-[1.45] tracking-[0.36em] text-white/48 sm:pb-3 sm:text-xs">
-          <div>Movies</div>
-          <div>Today</div>
-        </div>
+        <span className="rounded-full border border-white/[0.07] bg-white/[0.025] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.15em] text-white/28">10 picks</span>
       </div>
 
       <div className="scrollbar-none flex snap-x snap-mandatory gap-4 overflow-x-auto pb-4 pr-6 sm:gap-7">
