@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { Check, ChevronLeft, Play, Plus, Star } from "lucide-react";
-import { getDetails, getSeason, img } from "@/lib/api";
+import { getDetails, getSeason, getStreams, img } from "@/lib/api";
 import { titleOf, yearOf, runtimeStr, ratingStr } from "@/lib/format";
 import { Row } from "@/components/Row";
 import { Spinner } from "@/components/Spinner";
@@ -43,11 +43,36 @@ const SeasonPicker = ({ id, seasons }) => {
   );
 };
 
+const has2160pSource = (payload) => (payload?.servers || []).some((server) => {
+  const value = `${server?.quality || ""} ${server?.label || ""} ${server?.url || ""}`;
+  return /(^|[^0-9])2160(?:p)?([^0-9]|$)|\b4k\b/i.test(value);
+});
+
 export default function Title() {
   const { mediaType, id } = useParams();
   const navigate = useNavigate();
   const { data, isLoading } = useQuery({ queryKey: ["details", mediaType, id], queryFn: () => getDetails(mediaType, id) });
   const [saved, setSaved] = useState(false);
+
+  const { data: uhdSources } = useQuery({
+    queryKey: ["title-uhd", mediaType, id],
+    queryFn: () => getStreams(
+      mediaType,
+      id,
+      mediaType === "tv" ? 1 : undefined,
+      mediaType === "tv" ? 1 : undefined,
+      {
+        provider: "orlando",
+        timeout: 5200,
+        title: titleOf(data),
+        year: Number(String(data?.release_date || data?.first_air_date || "").slice(0, 4)) || undefined,
+        imdbId: data?.imdb_id || data?.external_ids?.imdb_id || undefined,
+      },
+    ).catch(() => null),
+    enabled: !!data?.id,
+    staleTime: 5 * 60_000,
+    retry: 0,
+  });
 
   useEffect(() => setSaved(inWatchlist({ media_type: mediaType, id: Number(id) })), [id, mediaType]);
   useEffect(() => window.scrollTo(0, 0), [id]);
@@ -58,6 +83,7 @@ export default function Title() {
   const cast = (data.credits?.cast || []).slice(0, 12);
   const similar = data.similar?.results || data.recommendations?.results || [];
   const videos = data.videos?.results || [];
+  const hasUhd = has2160pSource(uhdSources);
   const save = () => {
     const now = toggleWatchlist({ media_type: mediaType, id: Number(id), title: titleOf(data), poster_path: data.poster_path, backdrop_path: data.backdrop_path, vote_average: data.vote_average, release_date: data.release_date, first_air_date: data.first_air_date });
     setSaved(now);
@@ -80,6 +106,7 @@ export default function Title() {
               {yearOf(data) && <span>{yearOf(data)}</span>}
               {mediaType === "movie" && data.runtime ? <span>{runtimeStr(data.runtime)}</span> : null}
               {mediaType === "tv" && data.number_of_seasons ? <span>{data.number_of_seasons} Season{data.number_of_seasons > 1 ? "s" : ""}</span> : null}
+              {hasUhd && <span data-testid="title-4k-uhd-badge" className="inline-flex h-6 items-center rounded-[5px] border border-white/35 bg-black/70 px-2 text-[9px] font-black uppercase tracking-[0.11em] text-white shadow-[0_4px_16px_rgba(0,0,0,.25)]">4K UHD</span>}
             </div>
             <div className="mt-3 flex flex-wrap gap-2">{genres.slice(0, 4).map((g) => <span key={g} className="rounded-full border border-[#ffd400]/18 bg-[#ffd400]/[0.05] px-2.5 py-1 text-[10px] font-medium text-[#ffd400]/72 backdrop-blur-sm">{g}</span>)}</div>
             {data.overview && <p className="mt-5 max-w-[650px] text-sm leading-6 text-white/52 md:text-[15px] md:leading-7">{data.overview}</p>}
