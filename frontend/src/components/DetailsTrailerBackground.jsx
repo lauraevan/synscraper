@@ -45,7 +45,7 @@ export const DetailsTrailerBackground = ({ videos = [], title = "", backdropPath
     setLoaded(false);
     setMuted(true);
     if (!primary) return undefined;
-    const timer = window.setTimeout(() => setMounted(true), 900);
+    const timer = window.setTimeout(() => setMounted(true), 80);
     return () => window.clearTimeout(timer);
   }, [primary?.key, primary?.site]);
 
@@ -81,7 +81,8 @@ export const DetailsTrailerBackground = ({ videos = [], title = "", backdropPath
         <img
           src={backdrop(backdropPath, "w1280")}
           alt=""
-          className={`absolute inset-0 h-full w-full object-cover object-center transition-opacity duration-1000 ${loaded ? "opacity-0" : "opacity-100"}`}
+          fetchPriority="high"
+          className={`absolute inset-0 h-full w-full object-cover object-center transition-opacity duration-300 ${loaded ? "opacity-0" : "opacity-100"}`}
         />
       )}
 
@@ -90,8 +91,9 @@ export const DetailsTrailerBackground = ({ videos = [], title = "", backdropPath
           ref={frameRef}
           src={backgroundUrl(primary)}
           title={`${title || "Title"} trailer background`}
-          className={`pointer-events-none absolute left-1/2 top-1/2 h-[56.25vw] min-h-full w-[177.78vh] min-w-full -translate-x-1/2 -translate-y-1/2 border-0 transition-opacity duration-1000 ${loaded ? "opacity-100" : "opacity-0"}`}
+          className={`pointer-events-none absolute left-1/2 top-1/2 h-[56.25vw] min-h-full w-[177.78vh] min-w-full -translate-x-1/2 -translate-y-1/2 border-0 transition-opacity duration-300 ${loaded ? "opacity-100" : "opacity-0"}`}
           allow="autoplay; encrypted-media; picture-in-picture"
+          loading="eager"
           referrerPolicy="strict-origin-when-cross-origin"
           onLoad={() => setLoaded(true)}
         />
