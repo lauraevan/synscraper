@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
-import Hls from "hls.js";
 import {
     Play, Pause, Volume2, VolumeX, Maximize, Minimize, SkipForward,
     RotateCcw, RotateCw, Settings, Subtitles, Gauge, PictureInPicture2,
@@ -9,6 +8,12 @@ import {
 import { getStreams, hlsProxyUrl, getDownloadOptions, downloadWorkerUrl } from "@/lib/api";
 import { fmtTime } from "@/lib/format";
 import { saveProgress, getProgress } from "@/lib/storage";
+
+let hlsLoaderPromise = null;
+const loadHls = () => {
+    if (!hlsLoaderPromise) hlsLoaderPromise = import("hls.js").then((module) => module.default || module);
+    return hlsLoaderPromise;
+};
 
 const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2];
 const SOURCE_4K_BADGE = "data:image/webp;base64,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";
@@ -361,6 +366,8 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
         }
     });
 
+    useEffect(() => { loadHls().catch(() => {}); }, []);
+
     const activeServer = servers.find((s) => s.id === serverId);
     const streamResolveHints = useMemo(() => ({
         title: meta?.title || meta?.name || "",
@@ -468,7 +475,7 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
         }
     }, [preferredQuality]);
 
-    const playServer = useCallback((server) => {
+    const playServer = useCallback(async (server) => {
         const video = videoRef.current;
         if (!video || !server) return;
         setBuffering(true);
@@ -476,15 +483,16 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
         setLevels([]); setLevel(-1); setSubs([]); setSub(-1);
         if (hlsRef.current) { hlsRef.current.destroy(); hlsRef.current = null; }
         const url = hlsProxyUrl(server.play_url);
-        if (server.type === "hls" && Hls.isSupported()) {
+        const Hls = server.type === "hls" ? await loadHls() : null;
+        if (server.type === "hls" && Hls?.isSupported()) {
             const isMiami = server.provider === "vidy" && /miami/i.test(String(server.name || ""));
             const hls = new Hls({
                 enableWorker: true,
-                progressive: isMiami,
+                progressive: true,
                 startFragPrefetch: true,
-                maxBufferLength: isMiami ? 18 : 30,
-                maxMaxBufferLength: isMiami ? 36 : 60,
-                backBufferLength: 30,
+                maxBufferLength: isMiami ? 10 : 14,
+                maxMaxBufferLength: isMiami ? 24 : 30,
+                backBufferLength: 15,
                 abrEwmaDefaultEstimate: isMiami ? 24_000_000 : 5_000_000,
                 manifestLoadingTimeOut: isMiami ? 4500 : 7000,
                 manifestLoadingMaxRetry: 2,
@@ -697,7 +705,7 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
             // with the active HLS stream for CPU/network during startup.
             backgroundPromise = (async () => {
                 const collected = [];
-                const batchSize = 3;
+                const batchSize = 2;
                 for (let index = 0; alive && index < providerQueue.length; index += batchSize) {
                     const batch = providerQueue.slice(index, index + batchSize);
                     const results = await Promise.allSettled(batch.map(loadProvider));
@@ -712,7 +720,7 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
             return backgroundPromise;
         };
 
-        const quick = getStreams(mediaType, id, season, episode, { provider: "orlando", timeout: 8000, ...streamResolveHints })
+        const quick = getStreams(mediaType, id, season, episode, { provider: "orlando", timeout: 4600, ...streamResolveHints })
             .then(async (d) => {
                 if (!alive) return [];
                 const list = mergePayload(d, false);
@@ -725,7 +733,7 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
                     const miami = await getStreams(mediaType, id, season, episode, {
                         provider: "vidy",
                         mirror: "miami",
-                        timeout: 5200,
+                        timeout: 3600,
                         ...streamResolveHints,
                     }).catch(() => null);
                     if (!alive) return [];
@@ -749,7 +757,7 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
                 }
 
                 // Orlando is already active; load Miami immediately behind it, then the rest.
-                backgroundTimer = window.setTimeout(() => startBackground("orlando,cinejoy"), 350);
+                backgroundTimer = window.setTimeout(() => startBackground("orlando,cinejoy"), 650);
                 heavyTimer = window.setTimeout(() => startHeavyCineJoy(), 7000);
                 return list;
             })
@@ -757,7 +765,7 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
                 const miami = await getStreams(mediaType, id, season, episode, {
                     provider: "vidy",
                     mirror: "miami",
-                    timeout: 5200,
+                    timeout: 3600,
                     ...streamResolveHints,
                 }).catch(() => null);
                 if (!alive) return [];
@@ -770,7 +778,7 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
         // Give Orlando the startup lane; if it stalls, begin the Miami-first fallback pool.
         safetyTimer = window.setTimeout(() => {
             if (!started) startBackground("orlando,cinejoy");
-        }, readPreferredSourceKey() ? 5500 : 4200);
+        }, readPreferredSourceKey() ? 2600 : 1800);
 
         Promise.resolve(quick).finally(() => {
             if (!alive) return;
@@ -984,7 +992,7 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
             setCaptionText((old) => old === next ? old : next);
         };
         updateCaption();
-        const timer = window.setInterval(updateCaption, 160);
+        const timer = window.setInterval(updateCaption, 250);
         return () => window.clearInterval(timer);
     }, [mode, sub, subs, serverId, externalCaptionId, captionStyle.delay, captionStyle.accuracy, captionStyle.autoCorrect]);
 
@@ -1327,7 +1335,7 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
                 style={{ transform: `scale(${videoScale / 100})`, filter: upscaler ? "contrast(1.045) saturate(1.025)" : undefined }}
                 onClick={(e) => { e.stopPropagation(); togglePlay(); wake(); }}
                 onDoubleClick={toggleFs}
-                poster={meta.backdrop_path ? `https://image.tmdb.org/t/p/original${meta.backdrop_path}` : undefined}
+                poster={meta.backdrop_path ? `https://image.tmdb.org/t/p/w1280${meta.backdrop_path}` : undefined}
                 playsInline
                 preload="auto"
                 crossOrigin="anonymous"
@@ -1371,7 +1379,7 @@ export const SynapsePlayer = ({ mediaType, id, meta = {}, season, episode, onNex
                 <div data-testid="synapse-resolving" className="absolute inset-0 z-40 overflow-hidden bg-black">
                     {meta.backdrop_path && (
                         <img
-                            src={`https://image.tmdb.org/t/p/original${meta.backdrop_path}`}
+                            src={`https://image.tmdb.org/t/p/w1280${meta.backdrop_path}`}
                             alt=""
                             className="absolute inset-0 h-full w-full scale-105 object-cover opacity-25 blur-[2px]"
                         />

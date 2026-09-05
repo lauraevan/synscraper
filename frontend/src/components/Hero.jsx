@@ -56,11 +56,6 @@ export const Hero = ({ items = [] }) => {
 
       <div className="relative mx-auto flex h-full max-w-[1500px] items-end px-5 pb-20 pt-28 md:px-8 md:pb-24">
         <div key={item.id} className="max-w-[720px] syn-fade-up">
-          <div className="mb-4 flex items-center gap-2.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#ffd400]/72">
-            <span className="h-px w-7 bg-[#ffd400]/70" />
-            {mt === "tv" ? "SynFlix featured series" : "SynFlix featured film"}
-          </div>
-
           <h1 className="text-balance text-[45px] font-semibold leading-[0.96] tracking-[-0.055em] text-white sm:text-6xl md:text-[74px]">{titleOf(item)}</h1>
 
           <div className="mt-5 flex flex-wrap items-center gap-3 text-sm text-white/60">

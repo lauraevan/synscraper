@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { Check, ChevronLeft, Clapperboard, Play, Plus, Star } from "lucide-react";
-import { getDetails, getSeason, backdrop, img } from "@/lib/api";
+import { Check, ChevronLeft, Play, Plus, Star } from "lucide-react";
+import { getDetails, getSeason, img } from "@/lib/api";
 import { titleOf, yearOf, runtimeStr, ratingStr } from "@/lib/format";
 import { Row } from "@/components/Row";
 import { Spinner } from "@/components/Spinner";
 import { TrailerPreview } from "@/components/TrailerPreview";
+import { DetailsTrailerBackground } from "@/components/DetailsTrailerBackground";
 import { inWatchlist, toggleWatchlist } from "@/lib/storage";
 
 const SeasonPicker = ({ id, seasons }) => {
@@ -57,7 +58,6 @@ export default function Title() {
   const cast = (data.credits?.cast || []).slice(0, 12);
   const similar = data.similar?.results || data.recommendations?.results || [];
   const videos = data.videos?.results || [];
-  const hasPreview = videos.some((video) => video?.key && (video.site === "YouTube" || video.site === "Vimeo"));
   const save = () => {
     const now = toggleWatchlist({ media_type: mediaType, id: Number(id), title: titleOf(data), poster_path: data.poster_path, backdrop_path: data.backdrop_path, vote_average: data.vote_average, release_date: data.release_date, first_air_date: data.first_air_date });
     setSaved(now);
@@ -66,7 +66,7 @@ export default function Title() {
   return (
     <main className="min-h-screen bg-[#070706]" data-testid="title-page">
       <section className="relative h-[72vh] min-h-[560px] max-h-[840px] overflow-hidden">
-        <img src={backdrop(data.backdrop_path, "original")} alt={titleOf(data)} className="h-full w-full object-cover object-center" />
+        <DetailsTrailerBackground videos={videos} title={titleOf(data)} backdropPath={data.backdrop_path} />
         <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(7,7,6,.97)_0%,rgba(7,7,6,.72)_34%,rgba(7,7,6,.18)_70%,rgba(7,7,6,.08)_100%)]" />
         <div className="absolute inset-0 bg-[linear-gradient(0deg,#070706_0%,rgba(7,7,6,.72)_11%,transparent_50%)]" />
 
@@ -74,7 +74,6 @@ export default function Title() {
 
         <div className="absolute inset-x-0 bottom-0 mx-auto max-w-[1500px] px-5 pb-14 md:px-8 md:pb-16">
           <div className="max-w-[760px]">
-            <div className="mb-4 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-[#ffd400]/72"><span className="h-px w-6 bg-[#ffd400]/65" /> SynFlix details</div>
             <h1 className="text-balance text-5xl font-semibold leading-[0.96] tracking-[-0.055em] text-white md:text-7xl">{titleOf(data)}</h1>
             <div className="mt-5 flex flex-wrap items-center gap-3 text-sm text-white/55">
               {Number(data.vote_average) > 0 && <span className="inline-flex items-center gap-1.5 font-medium text-[#ffd400]"><Star className="h-3.5 w-3.5 fill-current" />{ratingStr(data.vote_average)}</span>}
@@ -86,7 +85,6 @@ export default function Title() {
             {data.overview && <p className="mt-5 max-w-[650px] text-sm leading-6 text-white/52 md:text-[15px] md:leading-7">{data.overview}</p>}
             <div className="mt-7 flex flex-wrap items-center gap-2.5">
               <button data-testid="title-play-button" onClick={() => navigate(`/watch/${mediaType}/${id}${mediaType === "tv" ? "?season=1&episode=1" : ""}`)} className="inline-flex h-11 items-center gap-2 rounded-full bg-[#ffd400] px-5 text-sm font-semibold text-black transition hover:bg-[#ffe04a]"><Play className="h-4 w-4 fill-current" /> Play</button>
-              {hasPreview && <button onClick={() => document.getElementById("synflix-preview")?.scrollIntoView({ behavior: "smooth", block: "start" })} className="inline-flex h-11 items-center gap-2 rounded-full border border-[#ffd400]/24 bg-[#ffd400]/[0.06] px-5 text-sm font-medium text-[#ffd400] backdrop-blur-md transition hover:bg-[#ffd400]/12"><Clapperboard className="h-4 w-4" /> Preview</button>}
               <button data-testid="title-watchlist-button" onClick={save} className="inline-flex h-11 items-center gap-2 rounded-full border border-white/14 bg-black/28 px-5 text-sm font-medium text-white/78 backdrop-blur-md transition hover:border-[#ffd400]/28 hover:bg-[#ffd400]/10 hover:text-[#ffd400]">{saved ? <Check className="h-4 w-4" /> : <Plus className="h-4 w-4" />}{saved ? "In My List" : "My List"}</button>
             </div>
           </div>
