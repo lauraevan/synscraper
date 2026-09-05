@@ -1,0 +1,124 @@
+/* SynFlix appearance engine. Loaded after the base site/player styles. */
+
+.synflix-site {
+  --site-accent: #ffd400;
+  --site-accent-rgb: 255 212 0;
+  --site-bg: #070706;
+  --site-bg-2: #0b0a07;
+  --site-surface: #11100c;
+  --site-logo-filter: none;
+  --synflix-yellow: var(--site-accent);
+  --synflix-yellow-soft: rgb(var(--site-accent-rgb) / .12);
+  --synflix-yellow-border: rgb(var(--site-accent-rgb) / .24);
+  background:
+    radial-gradient(circle at 82% 4%, rgb(var(--site-accent-rgb) / .055), transparent 27%),
+    linear-gradient(180deg, rgb(var(--site-accent-rgb) / .018), transparent 28%),
+    var(--site-bg) !important;
+}
+
+html[data-site-theme="aqua"] .synflix-site { --site-accent:#54e7f1; --site-accent-rgb:84 231 241; --site-bg:#041012; --site-bg-2:#07171a; --site-surface:#0a1d20; --site-logo-filter:hue-rotate(151deg) saturate(.9) brightness(1.08); }
+html[data-site-theme="autumn"] .synflix-site { --site-accent:#ff9d42; --site-accent-rgb:255 157 66; --site-bg:#100a05; --site-bg-2:#171008; --site-surface:#21150b; --site-logo-filter:hue-rotate(-28deg) saturate(.9); }
+html[data-site-theme="cherri"] .synflix-site { --site-accent:#ff5d8f; --site-accent-rgb:255 93 143; --site-bg:#12070c; --site-bg-2:#1a0911; --site-surface:#24101a; --site-logo-filter:hue-rotate(309deg) saturate(1.2); }
+html[data-site-theme="evergreen"] .synflix-site { --site-accent:#64d98b; --site-accent-rgb:100 217 139; --site-bg:#06100a; --site-bg-2:#09170f; --site-surface:#0c2014; --site-logo-filter:hue-rotate(84deg) saturate(.82); }
+html[data-site-theme="rose"] .synflix-site { --site-accent:#ff91ad; --site-accent-rgb:255 145 173; --site-bg:#11080b; --site-bg-2:#190c11; --site-surface:#211019; --site-logo-filter:hue-rotate(320deg) saturate(.8); }
+html[data-site-theme="violet"] .synflix-site { --site-accent:#a78bfa; --site-accent-rgb:167 139 250; --site-bg:#0b0814; --site-bg-2:#100c1d; --site-surface:#17112a; --site-logo-filter:hue-rotate(217deg) saturate(.85); }
+html[data-site-theme="purple"] .synflix-site { --site-accent:#8b5cf6; --site-accent-rgb:139 92 246; --site-bg:#090611; --site-bg-2:#10091c; --site-surface:#180d29; --site-logo-filter:hue-rotate(225deg) saturate(1.05); }
+html[data-site-theme="red"] .synflix-site { --site-accent:#ff4d55; --site-accent-rgb:255 77 85; --site-bg:#100506; --site-bg-2:#180708; --site-surface:#220c0e; --site-logo-filter:hue-rotate(328deg) saturate(1.18); }
+html[data-site-theme="monochrome"] .synflix-site { --site-accent:#f4f4f4; --site-accent-rgb:244 244 244; --site-bg:#080808; --site-bg-2:#0d0d0d; --site-surface:#151515; --site-logo-filter:grayscale(1) brightness(1.45); }
+html[data-site-theme="noir"] .synflix-site { --site-accent:#c8c8c8; --site-accent-rgb:200 200 200; --site-bg:#020202; --site-bg-2:#050505; --site-surface:#0c0c0c; --site-logo-filter:grayscale(1) brightness(.95); }
+html[data-site-theme="teal"] .synflix-site { --site-accent:#35d0ba; --site-accent-rgb:53 208 186; --site-bg:#04100f; --site-bg-2:#061817; --site-surface:#0a211e; --site-logo-filter:hue-rotate(119deg) saturate(.8); }
+
+.synflix-site .synflix-brand-logo { filter: var(--site-logo-filter) !important; }
+.synflix-site .synflix-brand-text,
+.synflix-site [class~="text-[#ffd400]"],
+.synflix-site [class*="text-[#ffd400]/"] { color: var(--site-accent) !important; }
+.synflix-site [class~="bg-[#ffd400]"] { background-color: var(--site-accent) !important; }
+.synflix-site [class*="bg-[#ffd400]/"] { background-color: rgb(var(--site-accent-rgb) / .09) !important; }
+.synflix-site [class~="border-[#ffd400]"],
+.synflix-site [class*="border-[#ffd400]/"] { border-color: rgb(var(--site-accent-rgb) / .28) !important; }
+.synflix-site [class*="ring-[#ffd400]"] { --tw-ring-color: rgb(var(--site-accent-rgb) / .45) !important; }
+.synflix-site [class*="fill-[#ffd400]"] { fill: var(--site-accent) !important; }
+.synflix-site [class*="from-[#ffd400]"] { --tw-gradient-from: var(--site-accent) var(--tw-gradient-from-position) !important; }
+.synflix-site [class~="bg-[#070707]"],
+.synflix-site [class~="bg-[#070706]"] { background-color: var(--site-bg) !important; }
+.synflix-site [class~="bg-[#111]"] { background-color: var(--site-surface) !important; }
+.synflix-site footer { background: var(--site-bg) !important; }
+.synflix-site ::selection { background: rgb(var(--site-accent-rgb) / .88) !important; color:#050505; }
+.synflix-site input:focus,
+.synflix-site select:focus,
+.synflix-site textarea:focus { border-color:rgb(var(--site-accent-rgb) / .52) !important; box-shadow:0 0 0 3px rgb(var(--site-accent-rgb) / .09) !important; }
+.synflix-site a:focus-visible,
+.synflix-site button:focus-visible,
+.synflix-site input:focus-visible,
+.synflix-site select:focus-visible { outline-color:rgb(var(--site-accent-rgb) / .86) !important; }
+.synflix-site article:hover > div:first-child { border-color:rgb(var(--site-accent-rgb) / .32) !important; }
+
+html[data-site-ambient="off"] .synflix-site { background:var(--site-bg) !important; }
+html[data-site-subtitles="off"] .synflix-site section[data-testid^="row-"] h2 + p { display:none !important; }
+html[data-site-density="compact"] .synflix-site section[data-testid^="row-"] { padding-top:.7rem !important; padding-bottom:.7rem !important; }
+html[data-site-density="compact"] .synflix-site article[data-testid^="movie-card-"] { width:142px !important; }
+html[data-site-density="compact"] .synflix-site article[data-testid^="movie-card-"] > div:last-child { padding-top:.45rem !important; }
+html[data-site-corners="soft"] .synflix-site article > div:first-child { border-radius:10px !important; }
+html[data-site-corners="square"] .synflix-site article > div:first-child,
+html[data-site-corners="square"] .synflix-site .synflix-preview-card { border-radius:3px !important; }
+html[data-site-contrast="high"] .synflix-site { filter:contrast(1.08); }
+html[data-site-contrast="high"] .synflix-site [class*="text-white/"] { color:rgb(255 255 255 / .82) !important; }
+html[data-site-scale="large"] .synflix-site nav a,
+html[data-site-scale="large"] .synflix-site footer,
+html[data-site-scale="large"] .synflix-site button { font-size:1.04em; }
+html[data-site-motion="reduced"] .synflix-site *,
+html[data-site-motion="reduced"] .synflix-site *::before,
+html[data-site-motion="reduced"] .synflix-site *::after { animation-duration:.001ms !important; animation-iteration-count:1 !important; transition-duration:.001ms !important; scroll-behavior:auto !important; }
+
+/* Player palettes */
+:root {
+  --player-accent:#fff;
+  --player-accent-rgb:255 255 255;
+  --player-panel:#0b0e13;
+  --player-panel-2:#151920;
+  --player-accent-opacity:.92;
+}
+html[data-player-theme="synflix"] { --player-accent:#ffd400; --player-accent-rgb:255 212 0; --player-panel:#100f08; --player-panel-2:#1c190b; }
+html[data-player-theme="aqua"] { --player-accent:#54e7f1; --player-accent-rgb:84 231 241; --player-panel:#071316; --player-panel-2:#0b2024; }
+html[data-player-theme="autumn"] { --player-accent:#ff9d42; --player-accent-rgb:255 157 66; --player-panel:#150d07; --player-panel-2:#24170c; }
+html[data-player-theme="cherri"] { --player-accent:#ff5d8f; --player-accent-rgb:255 93 143; --player-panel:#160912; --player-panel-2:#25101d; }
+html[data-player-theme="evergreen"] { --player-accent:#64d98b; --player-accent-rgb:100 217 139; --player-panel:#08140c; --player-panel-2:#102219; }
+html[data-player-theme="rose"] { --player-accent:#ff91ad; --player-accent-rgb:255 145 173; --player-panel:#150a0f; --player-panel-2:#25121a; }
+html[data-player-theme="violet"] { --player-accent:#a78bfa; --player-accent-rgb:167 139 250; --player-panel:#0e0a18; --player-panel-2:#191228; }
+html[data-player-theme="purple"] { --player-accent:#8b5cf6; --player-accent-rgb:139 92 246; --player-panel:#0c0815; --player-panel-2:#181027; }
+html[data-player-theme="red"] { --player-accent:#ff4d55; --player-accent-rgb:255 77 85; --player-panel:#150708; --player-panel-2:#240c0e; }
+html[data-player-theme="monochrome"] { --player-accent:#ededed; --player-accent-rgb:237 237 237; --player-panel:#0b0b0b; --player-panel-2:#171717; }
+html[data-player-theme="noir"] { --player-accent:#bdbdbd; --player-accent-rgb:189 189 189; --player-panel:#030303; --player-panel-2:#0b0b0b; }
+html[data-player-theme="teal"] { --player-accent:#35d0ba; --player-accent-rgb:53 208 186; --player-panel:#071412; --player-panel-2:#0d221f; }
+
+[data-testid="synapse-player-container"] [class~="text-[#eadb8a]"],
+[data-testid="synplayer-label"] [class~="text-[#eadb8a]"] { color:var(--player-accent) !important; }
+[data-testid="synapse-player-container"] [class~="bg-[#eadb8a]"] { background-color:var(--player-accent) !important; }
+[data-testid="synapse-player-container"] [class*="bg-[#eadb8a]/"] { background-color:rgb(var(--player-accent-rgb) / .12) !important; }
+[data-testid="synapse-player-container"] [class~="border-[#eadb8a]"],
+[data-testid="synapse-player-container"] [class*="border-[#eadb8a]/"] { border-color:rgb(var(--player-accent-rgb) / .44) !important; }
+[data-testid="synapse-player-container"] button:hover { color:var(--player-accent); }
+[data-testid="synapse-player-container"] .syn-range::-webkit-slider-thumb { background:var(--player-accent) !important; box-shadow:0 0 0 1px rgb(0 0 0 / .22),0 2px 10px rgb(var(--player-accent-rgb) / .18) !important; }
+[data-testid="synapse-player-container"] .syn-range::-moz-range-thumb { background:var(--player-accent) !important; }
+[data-testid="synapse-settings-panel"] input[type="range"],
+[data-testid="synapse-seek-bar"] { accent-color:var(--player-accent) !important; }
+[data-testid="synapse-player-container"] [class~="bg-white"] { background-color:var(--player-accent) !important; }
+[data-testid="synapse-player-container"] [class~="border-t-white"] { border-top-color:var(--player-accent) !important; }
+[data-testid="synapse-settings-panel"] { background:linear-gradient(180deg,color-mix(in srgb,var(--player-panel-2) 90%,transparent),color-mix(in srgb,var(--player-panel) 94%,transparent)) !important; border-color:rgb(var(--player-accent-rgb) / .13) !important; }
+[data-testid="synapse-source-popout"] > div { background:var(--player-panel) !important; border-color:rgb(var(--player-accent-rgb) / .14) !important; }
+[data-testid="synapse-source-popout"] [data-source-favorite="true"] { background:rgb(var(--player-accent-rgb) / .08) !important; }
+html[data-player-accent-strength="subtle"] { --player-accent-opacity:.55; }
+html[data-player-accent-strength="bold"] { --player-accent-opacity:1; }
+html[data-player-accent-strength="subtle"] [data-testid="synapse-player-container"] button:hover { color:rgb(var(--player-accent-rgb) / .7); }
+html[data-player-corners="soft"] [data-testid="synapse-player-container"] { border-radius:8px !important; }
+html[data-player-corners="square"] [data-testid="synapse-player-container"] { border-radius:0 !important; }
+html[data-player-corners="square"] [data-testid="synapse-settings-panel"],
+html[data-player-corners="square"] [data-testid="synapse-source-popout"] > div { border-radius:6px !important; }
+html[data-player-glass="solid"] [data-testid="synapse-settings-panel"] { backdrop-filter:none !important; -webkit-backdrop-filter:none !important; background:var(--player-panel) !important; }
+html[data-player-density="compact"] [data-testid="synapse-settings-panel"] > div:first-child { height:70px !important; min-height:70px !important; }
+html[data-player-density="compact"] [data-testid="synapse-settings-panel"] > div:nth-child(2) button { min-height:56px !important; height:56px !important; }
+html[data-player-contrast="high"] [data-testid="synapse-player-container"] { filter:contrast(1.06); }
+html[data-player-title="off"] [data-testid="synplayer-label"] { display:none !important; }
+html[data-player-motion="reduced"] [data-testid="synapse-player-container"] *,
+html[data-player-motion="reduced"] [data-testid="synapse-player-container"] *::before,
+html[data-player-motion="reduced"] [data-testid="synapse-player-container"] *::after { animation-duration:.001ms !important; animation-iteration-count:1 !important; transition-duration:.001ms !important; }
