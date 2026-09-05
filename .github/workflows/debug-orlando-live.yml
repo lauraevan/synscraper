@@ -1,4 +1,4 @@
-name: Debug Orlando live resolver
+name: Verify Orlando production bundle
 
 on:
   push:
@@ -7,40 +7,58 @@ on:
       - '.github/workflows/debug-orlando-live.yml'
 
 jobs:
-  debug:
+  verify:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-      - name: Install dependencies
-        run: pip install -r requirements.txt
-      - name: Resolve licensed Backrooms demo locally with metadata hint
-        env:
-          PYTHONPATH: backend
+      - name: Check live asset manifest
         run: |
+          set -euo pipefail
+          curl -fsSL --max-time 20 -H 'Cache-Control: no-cache' \
+            "https://synscraper-tffk.vercel.app/asset-manifest.json?probe=$(date +%s)" \
+            -o /tmp/asset-manifest.json
+          cat /tmp/asset-manifest.json
           python - <<'PY'
-          from providers.orlando import OrlandoResolver
-          print(OrlandoResolver(debug=True).resolve(
-              1083381,
-              media_type='movie',
-              metadata_hint={'title': 'Backrooms', 'year': '2026', 'imdbId': ''},
-          ))
+          import json
+          manifest = json.load(open('/tmp/asset-manifest.json'))
+          main = manifest['files']['main.js']
+          print(f'LIVE_MAIN_JS={main}')
+          if 'main.747bee83.js' not in main:
+              raise SystemExit(f'Production is still serving the wrong bundle: {main}')
+          open('/tmp/main-path', 'w').write(main)
           PY
-      - name: Resolve licensed Backrooms demo locally without metadata hint
-        env:
-          PYTHONPATH: backend
+
+      - name: Check live compiled player contains Orlando loader
         run: |
+          set -euo pipefail
+          MAIN_PATH="$(cat /tmp/main-path)"
+          curl -fsSL --max-time 30 -H 'Cache-Control: no-cache' \
+            "https://synscraper-tffk.vercel.app${MAIN_PATH}?probe=$(date +%s)" \
+            -o /tmp/main.js
           python - <<'PY'
-          from providers.orlando import OrlandoResolver
-          print(OrlandoResolver(debug=True).resolve(1083381, media_type='movie'))
+          text = open('/tmp/main.js', encoding='utf-8').read()
+          checks = {
+              'Orlando is in runtime provider queue': '["orlando","castle","vidlink"' in text,
+              'Orlando has dedicated 15s timeout': '"orlando"===e?15e3' in text,
+              'Orlando is in source catalog': 'provider:"orlando",name:"Orlando"' in text,
+          }
+          for label, ok in checks.items():
+              print(('PASS' if ok else 'FAIL') + ': ' + label)
+          if not all(checks.values()):
+              raise SystemExit('Live production bundle does not contain the Orlando loader fix')
           PY
-      - name: Probe production Orlando API with metadata hint
+
+      - name: Check live Orlando API
         run: |
-          set -x
-          curl -i -sS --max-time 25 'https://synscraper-tffk.vercel.app/api/streams?type=movie&id=1083381&provider=orlando&title=Backrooms&year=2026'
-      - name: Probe production Orlando API without metadata hint
-        run: |
-          set -x
-          curl -i -sS --max-time 25 'https://synscraper-tffk.vercel.app/api/streams?type=movie&id=1083381&provider=orlando'
+          set -euo pipefail
+          curl -fsSL --max-time 25 \
+            'https://synscraper-tffk.vercel.app/api/streams?type=movie&id=1083381&provider=orlando&title=Backrooms&year=2026' \
+            -o /tmp/orlando.json
+          python - <<'PY'
+          import json
+          payload = json.load(open('/tmp/orlando.json'))
+          servers = payload.get('servers') or []
+          print('ORLANDO_SERVER_COUNT=', len(servers))
+          print('QUALITIES=', [s.get('quality') for s in servers])
+          if not servers or not all(s.get('provider') == 'orlando' for s in servers):
+              raise SystemExit('Production Orlando API did not return Orlando servers')
+          PY
