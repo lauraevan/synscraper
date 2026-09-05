@@ -31,6 +31,10 @@
       "destination": "/index.html"
     },
     {
+      "source": "/settings",
+      "destination": "/index.html"
+    },
+    {
       "source": "/roulette",
       "destination": "/index.html"
     },
