@@ -27,7 +27,7 @@ PROVIDERS = [
     ("Zen", "vidzee", ("providers.vidzee", "VidzeeResolver")),
     ("Rock", "vidrock", ("providers.vidrock", "VidrockResolver")),
     ("Vidy", "vidy", ("providers.vidy", "VidyResolver")),
-    ("Orlando", "orlando", ("providers.vidy", "VidyResolver")),
+    ("Orlando", "orlando", ("providers.orlando", "OrlandoResolver")),
     ("CineJoy", "cinejoy", ("providers.cinejoy", "CineJoyResolver")),
     ("VidCore", "vidcore", ("providers.vidcore", "VidCoreResolver")),
     ("Vix", "vixsrc", ("providers.vixsrc", "VixSrcResolver")),
@@ -120,15 +120,15 @@ def _run_one(spec, provider_id, media_type, tmdb_id, season, episode, provider_h
         cls = _resolver_class(spec)
         r = cls()
         resolve_kwargs = {}
-        if provider_id in {"vidy", "orlando"}:
-            if provider_id == "orlando":
-                resolve_kwargs["provider"] = "orlando"
-            elif provider_hint:
+        if provider_id == "vidy":
+            if provider_hint:
                 resolve_kwargs["provider"] = provider_hint
             elif fast_mirrors:
                 resolve_kwargs["provider"] = "fast"
             if metadata_hint:
                 resolve_kwargs["metadata_hint"] = metadata_hint
+        elif provider_id == "orlando" and metadata_hint:
+            resolve_kwargs["metadata_hint"] = metadata_hint
         out = r.resolve(str(tmdb_id), media_type=media_type, season=season, episode=episode, **resolve_kwargs)
         data = json.loads(out) if isinstance(out, str) else out
         if data.get("status") != "success":
@@ -188,7 +188,7 @@ async def scrape_streams(media_type: str, tmdb_id, season=None, episode=None, pr
     async def run(name, pid, spec):
         try:
             provider_hint = mirror if pid == "vidy" and mirror else None
-            per_provider_timeout = 8.5 if provider_id else 9.0
+            per_provider_timeout = 14.0 if pid == "orlando" else (8.5 if provider_id else 9.0)
             streams = await asyncio.wait_for(
                 asyncio.to_thread(
                     _run_one, spec, pid, media_type, tmdb_id, season, episode,
