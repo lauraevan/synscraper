@@ -1,6 +1,7 @@
 import "@/App.css";
 import "@/synflix-site.css";
 import "@/theme-system.css";
+import "@/light-mode.css";
 import { useEffect } from "react";
 import { BrowserRouter, Routes, Route, useLocation, Link } from "react-router-dom";
 import { Navbar } from "@/components/Navbar";
@@ -52,8 +53,16 @@ function Shell() {
 
   useEffect(() => {
     document.title = isWatch ? "SynPlayer" : "SynFlix";
-    const meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) meta.setAttribute("content", isWatch ? "#000000" : "#070707");
+
+    const syncBrowserChrome = () => {
+      const meta = document.querySelector('meta[name="theme-color"]');
+      if (meta) {
+        const light = document.documentElement.dataset.siteMode === "light";
+        meta.setAttribute("content", isWatch ? "#000000" : light ? "#f5f3ed" : "#070707");
+      }
+    };
+    syncBrowserChrome();
+    window.addEventListener("synflix-preferences", syncBrowserChrome);
 
     let icon = document.querySelector('link[rel="icon"]');
     if (!icon) {
@@ -62,6 +71,8 @@ function Shell() {
       document.head.appendChild(icon);
     }
     icon.setAttribute("href", "/synflix-logo.webp");
+
+    return () => window.removeEventListener("synflix-preferences", syncBrowserChrome);
   }, [isWatch]);
 
   return (
