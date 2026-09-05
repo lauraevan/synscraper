@@ -7,7 +7,7 @@ import { titleOf } from "@/lib/format";
 import { SynapsePlayer } from "@/components/SynapsePlayer";
 import { Spinner } from "@/components/Spinner";
 
-export default function Watch() {
+export default function Watch({ embed = false }) {
     const { mediaType, id } = useParams();
     const [sp, setSp] = useSearchParams();
     const navigate = useNavigate();
@@ -39,6 +39,18 @@ export default function Watch() {
         enabled: mediaType === "tv",
     });
 
+    useEffect(() => {
+        if (!embed || !details) return;
+        window.parent?.postMessage({
+            type: "synplayer:ready",
+            mediaType,
+            id,
+            season,
+            episode,
+            title: titleOf(details),
+        }, "*");
+    }, [embed, details, mediaType, id, season, episode]);
+
     const epCount = seasonData?.episodes?.length || 0;
     const hasNext = mediaType === "tv" && episode < epCount;
     const validSeasons = (details?.seasons || []).filter((item) => item.season_number > 0);
@@ -50,15 +62,25 @@ export default function Watch() {
     const pickEpisode = (episodeNumber) => {
         setSp({ season: String(season), episode: String(episodeNumber) });
         setEpisodeMenuOpen(false);
+        if (embed) window.parent?.postMessage({ type: "synplayer:episodechange", mediaType, id, season, episode: episodeNumber }, "*");
     };
 
     const pickSeason = (seasonNumber) => {
         setSp({ season: String(seasonNumber), episode: "1" });
         setEpisodeMenuOpen(true);
+        if (embed) window.parent?.postMessage({ type: "synplayer:episodechange", mediaType, id, season: seasonNumber, episode: 1 }, "*");
+    };
+
+    const handleBack = () => {
+        if (embed) {
+            window.parent?.postMessage({ type: "synplayer:back", mediaType, id, season, episode }, "*");
+            return;
+        }
+        navigate(`/title/${mediaType}/${id}`);
     };
 
     if (isLoading || !details) {
-        return <div className="min-h-screen bg-black pt-16"><Spinner label="Preparing playback…" /></div>;
+        return <div className={`min-h-screen bg-black ${embed ? "grid place-items-center" : "pt-16"}`}><Spinner label="Preparing playback…" /></div>;
     }
 
     const meta = {
@@ -70,8 +92,8 @@ export default function Watch() {
     };
 
     return (
-        <main data-testid="watch-page" className="min-h-screen bg-black px-3 pb-6 pt-3 md:px-6 md:pt-6">
-            <div className="mx-auto max-w-[1600px]">
+        <main data-testid={embed ? "embed-player-page" : "watch-page"} className={embed ? "min-h-screen bg-black p-0" : "min-h-screen bg-black px-3 pb-6 pt-3 md:px-6 md:pt-6"}>
+            <div className={embed ? "w-full" : "mx-auto max-w-[1600px]"}>
                 <div className="relative">
                     <SynapsePlayer
                         key={`${mediaType}-${id}-${season}-${episode}`}
@@ -82,7 +104,7 @@ export default function Watch() {
                         episode={episode}
                         hasNext={hasNext}
                         onNextEpisode={nextEpisode}
-                        onBack={() => navigate(`/title/${mediaType}/${id}`)}
+                        onBack={handleBack}
                     />
 
                     {mediaType === "tv" && seasonData?.episodes?.length > 0 && (
