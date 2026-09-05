@@ -1,0 +1,30 @@
+name: Debug Orlando live resolver
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/debug-orlando-live.yml'
+
+jobs:
+  debug:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Resolve licensed Backrooms demo through Orlando
+        env:
+          PYTHONPATH: backend
+        run: |
+          python - <<'PY'
+          from providers.orlando import OrlandoResolver
+          print(OrlandoResolver(debug=True).resolve(
+              1083381,
+              media_type='movie',
+              metadata_hint={'title': 'Backrooms', 'year': '2026', 'imdbId': ''},
+          ))
+          PY
