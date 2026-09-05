@@ -1,0 +1,126 @@
+/* SynFlix light appearance. Intentionally scoped to the site shell so SynPlayer keeps its own theme. */
+html[data-site-mode="light"] .synflix-site {
+  --site-bg: #f5f3ed;
+  --site-bg-2: #eeece5;
+  --site-surface: #ffffff;
+  color: #181816;
+  background:
+    radial-gradient(circle at 82% 4%, rgb(var(--site-accent-rgb) / .09), transparent 29%),
+    linear-gradient(180deg, rgb(var(--site-accent-rgb) / .035), transparent 32%),
+    var(--site-bg) !important;
+}
+
+html[data-site-mode="light"][data-site-theme="monochrome"] .synflix-site {
+  --site-accent: #232323;
+  --site-accent-rgb: 35 35 35;
+  --site-logo-filter: grayscale(1) brightness(.32);
+}
+html[data-site-mode="light"][data-site-theme="noir"] .synflix-site {
+  --site-accent: #111111;
+  --site-accent-rgb: 17 17 17;
+  --site-logo-filter: grayscale(1) brightness(.24);
+}
+
+html[data-site-mode="light"] .synflix-site main,
+html[data-site-mode="light"] .synflix-site footer {
+  background-color: transparent !important;
+}
+
+html[data-site-mode="light"] .synflix-site header {
+  border-bottom: 1px solid rgba(20,20,18,.08) !important;
+  background: rgba(248,247,243,.92) !important;
+  box-shadow: 0 8px 28px rgba(25,22,14,.04);
+  -webkit-backdrop-filter: blur(22px) saturate(135%) !important;
+  backdrop-filter: blur(22px) saturate(135%) !important;
+}
+html[data-site-mode="light"] .synflix-site header nav {
+  border-color: rgba(20,20,18,.08) !important;
+  background: rgba(255,255,255,.62) !important;
+}
+html[data-site-mode="light"] .synflix-site header [class~="text-white"],
+html[data-site-mode="light"] .synflix-site header [class*="text-white/"] {
+  color: rgba(24,24,22,.66) !important;
+}
+html[data-site-mode="light"] .synflix-site header [class*="bg-black/"] {
+  background-color: rgba(255,255,255,.7) !important;
+}
+html[data-site-mode="light"] .synflix-site header [class*="border-white/"] {
+  border-color: rgba(20,20,18,.1) !important;
+}
+
+html[data-site-mode="light"] .synflix-site [class~="text-white"] { color: #181816 !important; }
+html[data-site-mode="light"] .synflix-site [class*="text-white/"] { color: rgba(24,24,22,.56) !important; }
+html[data-site-mode="light"] .synflix-site [class*="border-white/"] { border-color: rgba(20,20,18,.095) !important; }
+html[data-site-mode="light"] .synflix-site [class*="bg-white/"] { background-color: rgba(20,20,18,.035) !important; }
+html[data-site-mode="light"] .synflix-site [class*="bg-black/"] { background-color: rgba(255,255,255,.68) !important; }
+html[data-site-mode="light"] .synflix-site [class~="bg-black"] { background-color: #fff !important; }
+html[data-site-mode="light"] .synflix-site [class~="bg-[#111]"] { background-color: #fff !important; }
+html[data-site-mode="light"] .synflix-site [class~="bg-[#070707]"],
+html[data-site-mode="light"] .synflix-site [class~="bg-[#070706]"] { background-color: var(--site-bg) !important; }
+
+html[data-site-mode="light"] .synflix-site article > div:first-child,
+html[data-site-mode="light"] .synflix-site .synflix-preview-card,
+html[data-site-mode="light"] .synflix-site section[class*="rounded-"] {
+  box-shadow: 0 12px 34px rgba(35,31,20,.045);
+}
+html[data-site-mode="light"] .synflix-site article:hover > div:first-child {
+  box-shadow: 0 18px 44px rgba(35,31,20,.11) !important;
+}
+html[data-site-mode="light"] .synflix-site input,
+html[data-site-mode="light"] .synflix-site select,
+html[data-site-mode="light"] .synflix-site textarea {
+  color: #181816 !important;
+}
+html[data-site-mode="light"] .synflix-site select option {
+  background: #fff !important;
+  color: #181816 !important;
+}
+html[data-site-mode="light"] .synflix-site footer {
+  border-color: rgba(20,20,18,.08) !important;
+  background: #efede6 !important;
+}
+
+/* Keep image-led cinematic surfaces dark even when the surrounding site is light. */
+html[data-site-mode="light"] .synflix-site [data-testid="hero-banner"],
+html[data-site-mode="light"] .synflix-site [data-testid="title-page"] > section:first-child,
+html[data-site-mode="light"] .synflix-site [data-testid="person-page"] > section:first-child,
+html[data-site-mode="light"] .synflix-site [data-testid="roulette-page"] {
+  color: #fff !important;
+}
+html[data-site-mode="light"] .synflix-site [data-testid="hero-banner"] [class~="text-white"],
+html[data-site-mode="light"] .synflix-site [data-testid="title-page"] > section:first-child [class~="text-white"],
+html[data-site-mode="light"] .synflix-site [data-testid="person-page"] > section:first-child [class~="text-white"],
+html[data-site-mode="light"] .synflix-site [data-testid="roulette-page"] [class~="text-white"] {
+  color: #fff !important;
+}
+html[data-site-mode="light"] .synflix-site [data-testid="hero-banner"] [class*="text-white/"],
+html[data-site-mode="light"] .synflix-site [data-testid="title-page"] > section:first-child [class*="text-white/"],
+html[data-site-mode="light"] .synflix-site [data-testid="person-page"] > section:first-child [class*="text-white/"],
+html[data-site-mode="light"] .synflix-site [data-testid="roulette-page"] [class*="text-white/"] {
+  color: rgba(255,255,255,.64) !important;
+}
+html[data-site-mode="light"] .synflix-site [data-testid="hero-banner"] [class*="bg-black/"],
+html[data-site-mode="light"] .synflix-site [data-testid="title-page"] > section:first-child [class*="bg-black/"],
+html[data-site-mode="light"] .synflix-site [data-testid="person-page"] > section:first-child [class*="bg-black/"],
+html[data-site-mode="light"] .synflix-site [data-testid="roulette-page"] [class*="bg-black/"] {
+  background-color: rgba(0,0,0,.34) !important;
+}
+html[data-site-mode="light"] .synflix-site [data-testid="hero-banner"] [class*="border-white/"],
+html[data-site-mode="light"] .synflix-site [data-testid="title-page"] > section:first-child [class*="border-white/"],
+html[data-site-mode="light"] .synflix-site [data-testid="person-page"] > section:first-child [class*="border-white/"],
+html[data-site-mode="light"] .synflix-site [data-testid="roulette-page"] [class*="border-white/"] {
+  border-color: rgba(255,255,255,.15) !important;
+}
+html[data-site-mode="light"] .synflix-site [data-testid="roulette-page"] {
+  background: #070707 !important;
+}
+
+/* Settings gets a crisp paper-like treatment in light mode. */
+html[data-site-mode="light"] .synflix-site [data-testid="settings-page"] aside,
+html[data-site-mode="light"] .synflix-site [data-testid="settings-page"] section {
+  background-color: rgba(255,255,255,.7) !important;
+  border-color: rgba(20,20,18,.08) !important;
+}
+html[data-site-mode="light"] .synflix-site [data-testid="settings-page"] aside button:not([data-active="true"]):hover {
+  background: rgba(20,20,18,.04) !important;
+}
