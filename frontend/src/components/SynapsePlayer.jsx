@@ -38,6 +38,7 @@ const readPreferredSourceKey = () => typeof window !== "undefined"
 
 const SOURCE_CATALOG = [
     { provider: "vidy", name: "Miami" },
+    { provider: "orlando", name: "Orlando" },
     { provider: "castle", name: "Houston" },
     { provider: "vidlink", name: "Nova" },
     { provider: "vidnest", name: "Nest" },
