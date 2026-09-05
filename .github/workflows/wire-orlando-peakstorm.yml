@@ -1,0 +1,79 @@
+name: Wire Orlando Peakstorm resolver
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/wire-orlando-peakstorm.yml'
+      - 'backend/providers/orlando.py'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Wire Orlando resolver
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('backend/scraper.py')
+          text = path.read_text()
+
+          text = text.replace(
+              '("Orlando", "orlando", ("providers.vidy", "VidyResolver")),',
+              '("Orlando", "orlando", ("providers.orlando", "OrlandoResolver")),',
+          )
+
+          old = '''        if provider_id in {"vidy", "orlando"}:
+              if provider_id == "orlando":
+                  resolve_kwargs["provider"] = "orlando"
+              elif provider_hint:
+                  resolve_kwargs["provider"] = provider_hint
+              elif fast_mirrors:
+                  resolve_kwargs["provider"] = "fast"
+              if metadata_hint:
+                  resolve_kwargs["metadata_hint"] = metadata_hint
+          '''
+          new = '''        if provider_id == "vidy":
+              if provider_hint:
+                  resolve_kwargs["provider"] = provider_hint
+              elif fast_mirrors:
+                  resolve_kwargs["provider"] = "fast"
+              if metadata_hint:
+                  resolve_kwargs["metadata_hint"] = metadata_hint
+          elif provider_id == "orlando" and metadata_hint:
+              resolve_kwargs["metadata_hint"] = metadata_hint
+          '''
+          if old not in text and 'provider_id in {"vidy", "orlando"}' in text:
+              raise SystemExit('Could not find exact Orlando/Vidy resolver kwargs block')
+          text = text.replace(old, new)
+
+          text = text.replace(
+              '            per_provider_timeout = 8.5 if provider_id else 9.0',
+              '            per_provider_timeout = 14.0 if pid == "orlando" else (8.5 if provider_id else 9.0)',
+          )
+
+          path.write_text(text)
+          PY
+
+      - name: Syntax check
+        run: python -m py_compile backend/scraper.py backend/providers/orlando.py
+
+      - name: Commit wiring
+        run: |
+          if git diff --quiet; then
+            echo "Orlando wiring already applied"
+            exit 0
+          fi
+          git config user.name "Polaris"
+          git config user.email "264532369+lauraevan@users.noreply.github.com"
+          git add backend/scraper.py
+          git commit -m "Use dedicated Orlando Peakstorm resolver"
+          git push
