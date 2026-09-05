@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useParams, useSearchParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { ChevronDown, ListVideo } from "lucide-react";
-import { getDetails, getSeason } from "@/lib/api";
+import { getDetails, getSeason, img } from "@/lib/api";
 import { titleOf } from "@/lib/format";
 import { SynapsePlayer } from "@/components/SynapsePlayer";
 import { Spinner } from "@/components/Spinner";
@@ -101,7 +101,7 @@ export default function Watch() {
                             </button>
 
                             {episodeMenuOpen && (
-                                <div className="absolute right-0 top-[48px] w-[min(360px,calc(100vw-32px))] overflow-hidden rounded-2xl border border-white/12 bg-[#08090c]/95 shadow-[0_24px_70px_rgba(0,0,0,.72)] backdrop-blur-2xl md:top-[52px]">
+                                <div className="absolute right-0 top-[48px] w-[min(390px,calc(100vw-32px))] overflow-hidden rounded-2xl border border-white/12 bg-[#08090c]/95 shadow-[0_24px_70px_rgba(0,0,0,.72)] backdrop-blur-2xl md:top-[52px]">
                                     <div className="flex items-center justify-between gap-3 border-b border-white/[0.08] px-3.5 py-3">
                                         <div>
                                             <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#ffd400]/65">Now playing</p>
@@ -121,7 +121,7 @@ export default function Watch() {
                                         )}
                                     </div>
 
-                                    <div className="synflix-episode-menu-scroll max-h-[320px] overflow-y-auto p-2">
+                                    <div className="synflix-episode-menu-scroll max-h-[340px] overflow-y-auto p-2">
                                         {seasonData.episodes.map((ep) => {
                                             const selected = ep.episode_number === episode;
                                             return (
@@ -130,9 +130,17 @@ export default function Watch() {
                                                     type="button"
                                                     data-testid={`watch-ep-${ep.episode_number}`}
                                                     onClick={() => pickEpisode(ep.episode_number)}
-                                                    className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition ${selected ? "bg-[#ffd400]/10" : "hover:bg-white/[0.05]"}`}
+                                                    className={`flex w-full items-center gap-3 rounded-xl px-2.5 py-2.5 text-left transition ${selected ? "bg-[#ffd400]/10" : "hover:bg-white/[0.05]"}`}
                                                 >
-                                                    <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg border text-[10px] font-bold ${selected ? "border-[#ffd400]/30 bg-[#ffd400]/10 text-[#ffd400]" : "border-white/[0.08] bg-white/[0.03] text-white/45"}`}>{ep.episode_number}</span>
+                                                    <span className={`relative h-[46px] w-[82px] shrink-0 overflow-hidden rounded-lg border bg-[#101114] ${selected ? "border-[#ffd400]/35" : "border-white/[0.08]"}`}>
+                                                        {ep.still_path ? (
+                                                            <img src={img(ep.still_path, "w300")} alt="" loading="lazy" className="absolute inset-0 h-full w-full object-cover" />
+                                                        ) : (
+                                                            <span className="absolute inset-0 bg-[linear-gradient(135deg,#17191f,#090a0d)]" />
+                                                        )}
+                                                        <span className="absolute inset-0 bg-gradient-to-r from-black/55 via-black/15 to-transparent" />
+                                                        <span className={`absolute bottom-1 left-1.5 text-[15px] font-black leading-none drop-shadow-[0_1px_3px_rgba(0,0,0,.95)] ${selected ? "text-[#ffd400]" : "text-white"}`}>{ep.episode_number}</span>
+                                                    </span>
                                                     <span className="min-w-0 flex-1">
                                                         <span className={`block truncate text-[13px] font-medium ${selected ? "text-[#ffd400]" : "text-white/82"}`}>{ep.name || `Episode ${ep.episode_number}`}</span>
                                                         <span className="mt-0.5 block truncate text-[10px] text-white/30">{ep.runtime ? `${ep.runtime} min` : `Season ${season}`}</span>
