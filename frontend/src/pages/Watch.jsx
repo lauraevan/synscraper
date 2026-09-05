@@ -1,6 +1,7 @@
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams, useSearchParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
+import { ChevronDown, ListVideo } from "lucide-react";
 import { getDetails, getSeason } from "@/lib/api";
 import { titleOf } from "@/lib/format";
 import { SynapsePlayer } from "@/components/SynapsePlayer";
@@ -10,10 +11,22 @@ export default function Watch() {
     const { mediaType, id } = useParams();
     const [sp, setSp] = useSearchParams();
     const navigate = useNavigate();
+    const [episodeMenuOpen, setEpisodeMenuOpen] = useState(false);
+    const episodeMenuRef = useRef(null);
     const season = Number(sp.get("season") || 1);
     const episode = Number(sp.get("episode") || 1);
 
     useEffect(() => { window.scrollTo(0, 0); }, []);
+
+    useEffect(() => {
+        const close = (event) => {
+            if (episodeMenuRef.current && !episodeMenuRef.current.contains(event.target)) setEpisodeMenuOpen(false);
+        };
+        document.addEventListener("pointerdown", close);
+        return () => document.removeEventListener("pointerdown", close);
+    }, []);
+
+    useEffect(() => setEpisodeMenuOpen(false), [season, episode]);
 
     const { data: details, isLoading } = useQuery({
         queryKey: ["details", mediaType, id],
@@ -28,9 +41,20 @@ export default function Watch() {
 
     const epCount = seasonData?.episodes?.length || 0;
     const hasNext = mediaType === "tv" && episode < epCount;
+    const validSeasons = (details?.seasons || []).filter((item) => item.season_number > 0);
 
     const nextEpisode = () => {
         if (hasNext) setSp({ season: String(season), episode: String(episode + 1) });
+    };
+
+    const pickEpisode = (episodeNumber) => {
+        setSp({ season: String(season), episode: String(episodeNumber) });
+        setEpisodeMenuOpen(false);
+    };
+
+    const pickSeason = (seasonNumber) => {
+        setSp({ season: String(seasonNumber), episode: "1" });
+        setEpisodeMenuOpen(true);
     };
 
     if (isLoading || !details) {
@@ -46,42 +70,83 @@ export default function Watch() {
     };
 
     return (
-        <main data-testid="watch-page" className="min-h-screen bg-black px-3 pb-14 pt-3 md:px-6 md:pt-6">
+        <main data-testid="watch-page" className="min-h-screen bg-black px-3 pb-6 pt-3 md:px-6 md:pt-6">
             <div className="mx-auto max-w-[1600px]">
-                <SynapsePlayer
-                    key={`${mediaType}-${id}-${season}-${episode}`}
-                    mediaType={mediaType}
-                    id={id}
-                    meta={meta}
-                    season={season}
-                    episode={episode}
-                    hasNext={hasNext}
-                    onNextEpisode={nextEpisode}
-                    onBack={() => navigate(`/title/${mediaType}/${id}`)}
-                />
+                <div className="relative">
+                    <SynapsePlayer
+                        key={`${mediaType}-${id}-${season}-${episode}`}
+                        mediaType={mediaType}
+                        id={id}
+                        meta={meta}
+                        season={season}
+                        episode={episode}
+                        hasNext={hasNext}
+                        onNextEpisode={nextEpisode}
+                        onBack={() => navigate(`/title/${mediaType}/${id}`)}
+                    />
 
-                {mediaType === "tv" && seasonData?.episodes?.length > 0 && (
-                    <div className="mx-auto mt-9 max-w-6xl" data-testid="watch-episode-strip">
-                        <h2 className="mb-3 text-sm font-semibold text-white/75">Season {season}</h2>
-                        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
-                            {seasonData.episodes.map((ep) => (
-                                <button
-                                    key={ep.id}
-                                    data-testid={`watch-ep-${ep.episode_number}`}
-                                    onClick={() => setSp({ season: String(season), episode: String(ep.episode_number) })}
-                                    className={`rounded-xl border p-3 text-left text-sm transition-all ${
-                                        ep.episode_number === episode
-                                            ? "border-white/30 bg-white/[0.08]"
-                                            : "border-white/10 bg-white/[0.025] hover:border-white/20 hover:bg-white/[0.05]"
-                                    }`}
-                                >
-                                    <span className="font-mono text-[10px] text-white/25">EP {ep.episode_number}</span>
-                                    <p className="mt-1 truncate font-medium text-white/70">{ep.name}</p>
-                                </button>
-                            ))}
+                    {mediaType === "tv" && seasonData?.episodes?.length > 0 && (
+                        <div ref={episodeMenuRef} className="absolute right-3 top-3 z-[80] md:right-5 md:top-5" data-testid="player-episode-menu">
+                            <button
+                                type="button"
+                                onClick={() => setEpisodeMenuOpen((open) => !open)}
+                                className={`inline-flex h-10 items-center gap-2 rounded-full border px-3.5 text-xs font-semibold backdrop-blur-xl transition md:h-11 md:px-4 ${episodeMenuOpen ? "border-[#ffd400]/35 bg-[#ffd400]/12 text-[#ffd400]" : "border-white/15 bg-black/55 text-white/88 hover:border-white/28 hover:bg-black/72"}`}
+                                aria-label="Episodes"
+                                aria-expanded={episodeMenuOpen}
+                            >
+                                <ListVideo className="h-4 w-4" />
+                                <span>Episodes</span>
+                                <span className="text-white/42">S{season} E{episode}</span>
+                                <ChevronDown className={`h-3.5 w-3.5 transition-transform duration-200 ${episodeMenuOpen ? "rotate-180" : ""}`} />
+                            </button>
+
+                            {episodeMenuOpen && (
+                                <div className="absolute right-0 top-[48px] w-[min(360px,calc(100vw-32px))] overflow-hidden rounded-2xl border border-white/12 bg-[#08090c]/95 shadow-[0_24px_70px_rgba(0,0,0,.72)] backdrop-blur-2xl md:top-[52px]">
+                                    <div className="flex items-center justify-between gap-3 border-b border-white/[0.08] px-3.5 py-3">
+                                        <div>
+                                            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#ffd400]/65">Now playing</p>
+                                            <p className="mt-0.5 truncate text-sm font-semibold text-white/90">Season {season} · Episode {episode}</p>
+                                        </div>
+                                        {validSeasons.length > 1 && (
+                                            <select
+                                                value={season}
+                                                onChange={(event) => pickSeason(Number(event.target.value))}
+                                                className="max-w-[128px] rounded-full border border-white/10 bg-white/[0.05] px-2.5 py-1.5 text-[11px] font-medium text-white/80 outline-none focus:border-[#ffd400]/35"
+                                                aria-label="Season"
+                                            >
+                                                {validSeasons.map((item) => (
+                                                    <option key={item.id} value={item.season_number} className="bg-[#111]">{item.name || `Season ${item.season_number}`}</option>
+                                                ))}
+                                            </select>
+                                        )}
+                                    </div>
+
+                                    <div className="synflix-episode-menu-scroll max-h-[320px] overflow-y-auto p-2">
+                                        {seasonData.episodes.map((ep) => {
+                                            const selected = ep.episode_number === episode;
+                                            return (
+                                                <button
+                                                    key={ep.id}
+                                                    type="button"
+                                                    data-testid={`watch-ep-${ep.episode_number}`}
+                                                    onClick={() => pickEpisode(ep.episode_number)}
+                                                    className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition ${selected ? "bg-[#ffd400]/10" : "hover:bg-white/[0.05]"}`}
+                                                >
+                                                    <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg border text-[10px] font-bold ${selected ? "border-[#ffd400]/30 bg-[#ffd400]/10 text-[#ffd400]" : "border-white/[0.08] bg-white/[0.03] text-white/45"}`}>{ep.episode_number}</span>
+                                                    <span className="min-w-0 flex-1">
+                                                        <span className={`block truncate text-[13px] font-medium ${selected ? "text-[#ffd400]" : "text-white/82"}`}>{ep.name || `Episode ${ep.episode_number}`}</span>
+                                                        <span className="mt-0.5 block truncate text-[10px] text-white/30">{ep.runtime ? `${ep.runtime} min` : `Season ${season}`}</span>
+                                                    </span>
+                                                    {selected && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#ffd400]" />}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            )}
                         </div>
-                    </div>
-                )}
+                    )}
+                </div>
             </div>
         </main>
     );
