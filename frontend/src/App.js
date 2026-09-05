@@ -12,6 +12,8 @@ import Search from "@/pages/Search";
 import MyList from "@/pages/MyList";
 import Demo from "@/pages/Demo";
 import Docs from "@/pages/Docs";
+import Privacy from "@/pages/Privacy";
+import Terms from "@/pages/Terms";
 
 function Footer() {
   return (
@@ -28,6 +30,8 @@ function Footer() {
           <Link to="/browse/movie" className="transition hover:text-[#ffd400]">Movies</Link>
           <Link to="/browse/tv" className="transition hover:text-[#ffd400]">TV</Link>
           <Link to="/my-list" className="transition hover:text-[#ffd400]">My List</Link>
+          <Link to="/privacy" className="transition hover:text-[#ffd400]">Privacy</Link>
+          <Link to="/terms" className="transition hover:text-[#ffd400]">Terms</Link>
           <Link to="/demo" className="transition hover:text-[#ffd400]">Demo</Link>
           <Link to="/docs" className="transition hover:text-[#ffd400]">Docs</Link>
         </div>
@@ -61,6 +65,8 @@ function Shell() {
         <Route path="/" element={<Home />} />
         <Route path="/demo" element={<Demo />} />
         <Route path="/docs" element={<Docs />} />
+        <Route path="/privacy" element={<Privacy />} />
+        <Route path="/terms" element={<Terms />} />
         <Route path="/browse/:mediaType" element={<Browse />} />
         <Route path="/title/:mediaType/:id" element={<Title />} />
         <Route path="/watch/:mediaType/:id" element={<Watch />} />
