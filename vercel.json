@@ -23,6 +23,10 @@
       "destination": "/index.html"
     },
     {
+      "source": "/api",
+      "destination": "/index.html"
+    },
+    {
       "source": "/privacy",
       "destination": "/index.html"
     },
@@ -60,6 +64,10 @@
     },
     {
       "source": "/watch/:path*",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/embed/:path*",
       "destination": "/index.html"
     }
   ]
