@@ -21,6 +21,7 @@ export const PLAYER_THEMES = [
 
 export const DEFAULT_PREFERENCES = {
   siteTheme: "synflix",
+  siteMode: "dark",
   siteDensity: "comfortable",
   siteCorners: "round",
   siteAmbient: true,
@@ -39,6 +40,7 @@ export const DEFAULT_PREFERENCES = {
 };
 
 const STORAGE_KEY = "synflix-preferences-v1";
+let systemModeListenerInstalled = false;
 
 export const getPreferences = () => {
   if (typeof window === "undefined") return { ...DEFAULT_PREFERENCES };
@@ -50,10 +52,30 @@ export const getPreferences = () => {
   }
 };
 
+const resolveSiteMode = (mode) => {
+  if (mode !== "system") return mode === "light" ? "light" : "dark";
+  if (typeof window === "undefined" || !window.matchMedia) return "dark";
+  return window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+};
+
+const installSystemModeListener = () => {
+  if (systemModeListenerInstalled || typeof window === "undefined" || !window.matchMedia) return;
+  const query = window.matchMedia("(prefers-color-scheme: light)");
+  const sync = () => {
+    const current = getPreferences();
+    if (current.siteMode === "system") applyPreferences(current);
+  };
+  if (query.addEventListener) query.addEventListener("change", sync);
+  else if (query.addListener) query.addListener(sync);
+  systemModeListenerInstalled = true;
+};
+
 export const applyPreferences = (prefs = getPreferences()) => {
   if (typeof document === "undefined") return prefs;
   const root = document.documentElement;
   root.dataset.siteTheme = prefs.siteTheme;
+  root.dataset.siteModePreference = prefs.siteMode;
+  root.dataset.siteMode = resolveSiteMode(prefs.siteMode);
   root.dataset.siteDensity = prefs.siteDensity;
   root.dataset.siteCorners = prefs.siteCorners;
   root.dataset.siteAmbient = prefs.siteAmbient ? "on" : "off";
@@ -69,6 +91,7 @@ export const applyPreferences = (prefs = getPreferences()) => {
   root.dataset.playerContrast = prefs.playerContrast;
   root.dataset.playerTitle = prefs.playerTitle ? "on" : "off";
   root.dataset.playerAccentStrength = prefs.playerAccentStrength;
+  installSystemModeListener();
   return prefs;
 };
 
