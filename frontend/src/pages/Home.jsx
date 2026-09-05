@@ -41,13 +41,13 @@ export default function Home() {
       <Hero items={heroItems} />
       <div className="-mt-2 space-y-1">
         <Row title="Trending now" subtitle="What people are watching this week" items={trending} testId="row-trending" />
-        <TopTenRow items={topMoviesToday} />
         <CinematicRow title="Popular movies" subtitle="Big-screen favorites, presented in a wider cinematic rail." items={popularMovies} testId="row-popular-movies" />
         <Row title="Now playing" items={nowPlaying} fallbackType="movie" testId="row-now-playing" />
         <Row title="Popular TV" items={popularTv} fallbackType="tv" testId="row-popular-tv" />
         <CinematicRow title="Top rated movies" subtitle="Critically loved films, flipped for a different rhythm." items={topMovies} reverse testId="row-top-rated-movies" />
         <Row title="Coming soon" items={upcoming} fallbackType="movie" testId="row-upcoming" />
         <Row title="Top rated TV" items={topTv} fallbackType="tv" testId="row-top-rated-tv" />
+        <TopTenRow items={topMoviesToday} />
       </div>
     </main>
   );
