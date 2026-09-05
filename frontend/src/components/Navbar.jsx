@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Bookmark, Dices, Film, Home, Menu, Search, Tv2, X } from "lucide-react";
+import { Bookmark, Dices, Film, Home, Menu, Search, Settings, Tv2, X } from "lucide-react";
 
 const NAV_ITEMS = [
   { to: "/", label: "Home", icon: Home, exact: true },
@@ -8,6 +8,7 @@ const NAV_ITEMS = [
   { to: "/browse/tv", label: "TV", icon: Tv2 },
   { to: "/roulette", label: "Roulette", icon: Dices },
   { to: "/my-list", label: "My List", icon: Bookmark },
+  { to: "/settings", label: "Settings", icon: Settings },
 ];
 
 export const Navbar = () => {
@@ -57,7 +58,7 @@ export const Navbar = () => {
 
         <nav className="hidden items-center gap-1 rounded-full border border-[#ffd400]/10 bg-black/30 p-1 md:flex">
           {NAV_ITEMS.map((item) => (
-            <Link key={item.to} to={item.to} className={`rounded-full px-4 py-2 text-[13px] font-medium transition ${active(item) ? "bg-[#ffd400] text-black" : "text-white/52 hover:bg-[#ffd400]/10 hover:text-[#ffd400]"}`}>
+            <Link key={item.to} to={item.to} className={`rounded-full px-3.5 py-2 text-[13px] font-medium transition ${active(item) ? "bg-[#ffd400] text-black" : "text-white/52 hover:bg-[#ffd400]/10 hover:text-[#ffd400]"}`}>
               {item.label}
             </Link>
           ))}
