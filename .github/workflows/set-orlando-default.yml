@@ -1,4 +1,4 @@
-name: Set Orlando default source
+name: Build Orlando-first production bundle
 
 on:
   push:
@@ -10,18 +10,34 @@ permissions:
   contents: write
 
 jobs:
-  patch:
+  build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Patch source priority
-        run: python .github/scripts/set_orlando_default.py
-      - name: Commit source priority change
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install Yarn
+        run: npm install -g yarn@1.22.22
+      - name: Install frontend
+        run: yarn --cwd frontend install --frozen-lockfile
+      - name: Build frontend
+        env:
+          CI: 'false'
+          GENERATE_SOURCEMAP: 'false'
+        run: yarn --cwd frontend build
+      - name: Sync production public bundle
         run: |
+          rm -rf public
+          cp -R frontend/build public
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add frontend/src/components/SynapsePlayer.jsx backend/scraper.py
-          git commit -m "Make Orlando default with Miami fallback"
+          git add public
+          if git diff --cached --quiet; then
+            echo "Production bundle is already current"
+            exit 0
+          fi
+          git commit -m "Build Orlando-first production bundle"
           git push origin HEAD:main
