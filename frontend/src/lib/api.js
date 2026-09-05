@@ -43,6 +43,10 @@ export const searchAll = (q, page = 1) =>
     cached(`search:${q}:${page}`, 20_000, () => http.get("/search", { params: { q, page } }).then((r) => r.data));
 export const getDetails = (mediaType, id) =>
     cached(`details:${mediaType}:${id}`, 300_000, () => http.get(`/details/${mediaType}/${id}`).then((r) => r.data));
+export const getTitleImages = (mediaType, id) =>
+    cached(`title-images:${mediaType}:${id}`, 3_600_000, () => http.get(`/tmdb/${mediaType}/${id}/images`, {
+        params: { include_image_language: "en,null" },
+    }).then((r) => r.data));
 export const getSeason = (id, season) =>
     cached(`season:${id}:${season}`, 180_000, () => http.get(`/tv/${id}/season/${season}`).then((r) => r.data));
 export const getGenres = (mediaType) =>
