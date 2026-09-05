@@ -101,11 +101,11 @@ export default function Title() {
           <h2 className="text-xl font-semibold tracking-[-0.025em] text-white md:text-2xl">Cast</h2>
           <div className="scrollbar-none mt-5 flex gap-4 overflow-x-auto pb-2">
             {cast.map((person) => (
-              <div key={person.id} className="w-24 shrink-0 text-center">
-                <div className="mx-auto h-24 w-24 overflow-hidden rounded-full border border-white/[0.08] bg-white/[0.03] transition hover:border-[#ffd400]/30">{person.profile_path ? <img src={img(person.profile_path, "w185")} alt={person.name} className="h-full w-full object-cover" /> : <div className="grid h-full w-full place-items-center text-xl font-semibold text-[#ffd400]/25">{person.name?.[0]}</div>}</div>
-                <p className="mt-2 truncate text-xs font-medium text-white/70">{person.name}</p>
+              <button key={person.id} type="button" onClick={() => navigate(`/person/${person.id}`)} className="group w-24 shrink-0 text-center" aria-label={`View ${person.name}`}>
+                <div className="mx-auto h-24 w-24 overflow-hidden rounded-full border border-white/[0.08] bg-white/[0.03] transition duration-300 group-hover:-translate-y-1 group-hover:border-[#ffd400]/42 group-hover:shadow-[0_12px_30px_rgba(0,0,0,.35)]">{person.profile_path ? <img src={img(person.profile_path, "w185")} alt={person.name} className="h-full w-full object-cover" /> : <div className="grid h-full w-full place-items-center text-xl font-semibold text-[#ffd400]/25">{person.name?.[0]}</div>}</div>
+                <p className="mt-2 truncate text-xs font-medium text-white/70 transition group-hover:text-[#ffd400]">{person.name}</p>
                 <p className="mt-0.5 truncate text-[10px] text-white/28">{person.character}</p>
-              </div>
+              </button>
             ))}
           </div>
         </section>
