@@ -38,7 +38,7 @@ function Footer() {
           <Link to="/roulette" className="transition hover:text-[#ffd400]">Roulette</Link>
           <Link to="/my-list" className="transition hover:text-[#ffd400]">My List</Link>
           <Link to="/settings" className="transition hover:text-[#ffd400]">Settings</Link>
-          <Link to="/api" className="transition hover:text-[#ffd400]">API</Link>
+          <Link to="/synplayer-api" className="transition hover:text-[#ffd400]">API</Link>
           <Link to="/privacy" className="transition hover:text-[#ffd400]">Privacy</Link>
           <Link to="/terms" className="transition hover:text-[#ffd400]">Terms</Link>
           <Link to="/demo" className="transition hover:text-[#ffd400]">Demo</Link>
@@ -86,7 +86,7 @@ function Shell() {
         <Route path="/" element={<Home />} />
         <Route path="/demo" element={<Demo />} />
         <Route path="/docs" element={<Docs />} />
-        <Route path="/api" element={<Api />} />
+        <Route path="/synplayer-api" element={<Api />} />
         <Route path="/privacy" element={<Privacy />} />
         <Route path="/terms" element={<Terms />} />
         <Route path="/settings" element={<Settings />} />
