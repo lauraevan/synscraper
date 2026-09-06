@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Bookmark, Dices, FileText, Film, Home, Menu, Radio, Search, Settings, Shield, SlidersHorizontal, Sparkles, Tv2, X } from "lucide-react";
+import { InstallSynFlix } from "@/components/InstallSynFlix";
 
 const NAV_ITEMS = [
   { to: "/", label: "Home", icon: Home, exact: true },
@@ -81,7 +82,7 @@ export const Navbar = () => {
     : "border-[#2a2e36] bg-[linear-gradient(135deg,#11151c_0%,#0d1016_48%,#090b0f_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,.045),0_14px_34px_rgba(0,0,0,.28)]";
 
   return (
-    <header className="pointer-events-none fixed inset-x-0 top-0 z-50">
+    <header className="synflix-navbar pointer-events-none fixed inset-x-0 top-0 z-50">
       <div className="mx-auto w-full max-w-[1160px] px-3.5 pt-3.5 md:px-4 md:pt-4">
         <div className={`pointer-events-auto grid h-[60px] grid-cols-[auto_1fr_auto] items-center rounded-[31px] border px-4 backdrop-blur-xl transition-all duration-300 md:h-[68px] md:rounded-[35px] md:px-6 ${shellTone}`}>
           <Link
@@ -197,17 +198,17 @@ export const Navbar = () => {
               )}
             </div>
 
-            <button onClick={() => setMobileOpen((v) => !v)} className="grid h-9 w-9 place-items-center rounded-full text-white/82 transition hover:bg-white/[0.05] md:hidden" aria-label="Menu">
-              {mobileOpen ? <X className="h-[18px] w-[18px]" /> : <Menu className="h-[18px] w-[18px]" />}
+            <button onClick={() => setMobileOpen((v) => !v)} className="grid h-10 w-10 place-items-center rounded-full text-white/82 transition hover:bg-white/[0.05] md:hidden" aria-label="Menu" aria-expanded={mobileOpen}>
+              {mobileOpen ? <X className="h-[19px] w-[19px]" /> : <Menu className="h-[19px] w-[19px]" />}
             </button>
           </div>
         </div>
 
         {mobileOpen && (
-          <div className="pointer-events-auto mt-2 rounded-[22px] border border-[#2a303b] bg-[#0b0f15]/[0.98] p-3 shadow-[0_22px_60px_rgba(0,0,0,.58)] backdrop-blur-xl md:hidden">
-            <form onSubmit={submit} className="mb-3 flex h-10 items-center gap-2 rounded-[14px] border border-white/[0.09] bg-[#11151c] px-3 focus-within:border-[#ffd400]/35">
+          <div className="pointer-events-auto mt-2 max-h-[calc(100dvh-92px)] overflow-y-auto overscroll-contain rounded-[22px] border border-[#2a303b] bg-[#0b0f15]/[0.98] p-3 shadow-[0_22px_60px_rgba(0,0,0,.58)] backdrop-blur-xl md:hidden">
+            <form onSubmit={submit} className="mb-3 flex h-11 items-center gap-2 rounded-[14px] border border-white/[0.09] bg-[#11151c] px-3 focus-within:border-[#ffd400]/35">
               <Search className="h-4 w-4 text-white/45" />
-              <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search SynFlix" className="min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-white/28" />
+              <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search SynFlix" className="min-w-0 flex-1 bg-transparent text-base text-white outline-none placeholder:text-white/28" />
             </form>
 
             <nav className="grid grid-cols-2 gap-2">
@@ -218,7 +219,7 @@ export const Navbar = () => {
                   ? "border-white/[0.14] bg-white/[0.06] text-white"
                   : "border-[#ffd400]/22 bg-[#ffd400]/[0.08] text-[#ffd400]";
                 return (
-                  <Link key={item.to} to={item.to} className={`flex items-center gap-2.5 rounded-[14px] border px-3 py-3 text-xs font-medium transition ${selected ? selectedTone : "border-white/[0.07] bg-[#11151c] text-white/64"}`}>
+                  <Link key={item.to} to={item.to} className={`flex min-h-12 items-center gap-2.5 rounded-[14px] border px-3 py-3 text-xs font-medium transition ${selected ? selectedTone : "border-white/[0.07] bg-[#11151c] text-white/64"}`}>
                     <Icon className={`h-4 w-4 ${item.live && selected ? "text-red-400" : ""}`} />{item.label}
                   </Link>
                 );
@@ -229,11 +230,12 @@ export const Navbar = () => {
               {UTILITY_ITEMS.filter((item) => !item.divider).map((item) => {
                 const Icon = item.icon;
                 return (
-                  <Link key={item.to} to={item.to} className="flex items-center gap-3 rounded-[11px] px-3 py-2.5 text-sm text-white/64 transition hover:bg-white/[0.04] hover:text-white">
+                  <Link key={item.to} to={item.to} className="flex min-h-11 items-center gap-3 rounded-[11px] px-3 py-2.5 text-sm text-white/64 transition hover:bg-white/[0.04] hover:text-white">
                     <Icon className="h-4 w-4" />{item.label}
                   </Link>
                 );
               })}
+              <InstallSynFlix />
             </div>
           </div>
         )}

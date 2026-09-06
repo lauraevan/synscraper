@@ -25,3 +25,11 @@ root.render(
     </QueryClientProvider>
   </React.StrictMode>,
 );
+
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/service-worker.js").catch(() => {
+      // SynFlix still works as a normal website if service workers are unavailable.
+    });
+  });
+}

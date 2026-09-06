@@ -1,0 +1,256 @@
+/* Phone / installable-app support. Keep this file intentionally independent of desktop styling. */
+
+:root {
+  --synflix-safe-top: env(safe-area-inset-top, 0px);
+  --synflix-safe-right: env(safe-area-inset-right, 0px);
+  --synflix-safe-bottom: env(safe-area-inset-bottom, 0px);
+  --synflix-safe-left: env(safe-area-inset-left, 0px);
+}
+
+html,
+body,
+#root,
+.App {
+  min-height: 100%;
+}
+
+@supports (min-height: 100dvh) {
+  #root,
+  .App,
+  .synflix-site {
+    min-height: 100dvh;
+  }
+}
+
+.synflix-navbar > div:first-child {
+  padding-left: max(0.875rem, calc(var(--synflix-safe-left) + 0.5rem));
+  padding-right: max(0.875rem, calc(var(--synflix-safe-right) + 0.5rem));
+  padding-top: max(0.875rem, calc(var(--synflix-safe-top) + 0.5rem));
+}
+
+.synflix-mobile-dock {
+  position: fixed;
+  z-index: 46;
+  left: max(0.65rem, calc(var(--synflix-safe-left) + 0.45rem));
+  right: max(0.65rem, calc(var(--synflix-safe-right) + 0.45rem));
+  bottom: max(0.55rem, calc(var(--synflix-safe-bottom) + 0.35rem));
+  display: none;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  align-items: stretch;
+  gap: 0.2rem;
+  min-height: 62px;
+  padding: 0.38rem 0.42rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 22px;
+  background: rgba(10, 12, 16, 0.94);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.52), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  -webkit-backdrop-filter: blur(24px) saturate(140%);
+  backdrop-filter: blur(24px) saturate(140%);
+}
+
+.synflix-mobile-dock a {
+  min-width: 0;
+  min-height: 50px;
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.2rem;
+  color: rgba(255, 255, 255, 0.46);
+  font-size: 9px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.01em;
+  transition: background 150ms ease, color 150ms ease, transform 120ms ease;
+}
+
+.synflix-mobile-dock a svg {
+  width: 18px;
+  height: 18px;
+  stroke-width: 2;
+}
+
+.synflix-mobile-dock a[data-active="true"] {
+  color: #ffd400;
+  background: rgba(255, 212, 0, 0.08);
+}
+
+.synflix-mobile-dock a:active {
+  transform: scale(0.95);
+}
+
+@media (max-width: 767px) {
+  html,
+  body {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    overflow-x: hidden;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
+  body {
+    overscroll-behavior-x: none;
+  }
+
+  button,
+  a,
+  [role="button"] {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+
+  .synflix-mobile-dock {
+    display: grid;
+  }
+
+  .synflix-site > footer {
+    padding-bottom: calc(7.5rem + var(--synflix-safe-bottom)) !important;
+  }
+
+  .synflix-site main,
+  .synflix-site section,
+  .synflix-site article,
+  .synflix-site aside {
+    max-width: 100vw;
+  }
+
+  .synflix-site img,
+  .synflix-site video,
+  .synflix-site iframe {
+    max-width: 100%;
+  }
+
+  /* Live TV gets a full-width player and a shorter, thumb-friendly guide. */
+  [data-testid="live-tv-page"] {
+    padding-top: calc(6.1rem + var(--synflix-safe-top)) !important;
+  }
+
+  [data-testid="live-tv-page"] [data-testid="live-tv-player"] {
+    width: calc(100% + 2rem);
+    margin-left: -1rem;
+    margin-right: -1rem;
+    border-left: 0 !important;
+    border-right: 0 !important;
+    border-radius: 0 !important;
+  }
+
+  [data-testid="live-tv-page"] aside {
+    margin-top: 0.25rem;
+  }
+
+  [data-testid="live-tv-page"] aside > div:last-child {
+    max-height: min(52dvh, 540px) !important;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  [data-testid="live-tv-page"] aside button {
+    min-height: 58px;
+  }
+
+  /* SynPlayer settings behave like a native bottom sheet on phones. */
+  [data-testid="synapse-settings-panel"] {
+    top: auto !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    max-height: min(84dvh, 760px) !important;
+    border-left: 0 !important;
+    border-right: 0 !important;
+    border-bottom: 0 !important;
+    border-radius: 24px 24px 0 0 !important;
+    padding-bottom: var(--synflix-safe-bottom) !important;
+    transform: none !important;
+    animation: synflix-mobile-sheet-in 190ms cubic-bezier(0.16, 1, 0.3, 1) both !important;
+  }
+
+  [data-testid="synapse-settings-panel"] > div:first-child {
+    height: 72px !important;
+    min-height: 72px !important;
+  }
+
+  [data-testid="synapse-settings-panel"] > div:nth-child(2) {
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Better phone defaults for oversized horizontal rails/cards. */
+  .synflix-site [class*="overflow-x-auto"] {
+    -webkit-overflow-scrolling: touch;
+    scroll-snap-type: x proximity;
+    overscroll-behavior-inline: contain;
+  }
+
+  .synflix-site [class*="overflow-x-auto"] > * {
+    scroll-snap-align: start;
+  }
+}
+
+@media (max-width: 390px) {
+  .synflix-mobile-dock {
+    left: max(0.4rem, calc(var(--synflix-safe-left) + 0.25rem));
+    right: max(0.4rem, calc(var(--synflix-safe-right) + 0.25rem));
+    min-height: 58px;
+    border-radius: 20px;
+  }
+
+  .synflix-mobile-dock a {
+    min-height: 46px;
+    font-size: 8px;
+  }
+
+  .synflix-mobile-dock a svg {
+    width: 17px;
+    height: 17px;
+  }
+}
+
+@media (max-width: 950px) and (orientation: landscape) and (max-height: 520px) {
+  .synflix-mobile-dock {
+    min-height: 50px;
+    padding-block: 0.2rem;
+  }
+
+  .synflix-mobile-dock a {
+    min-height: 42px;
+    flex-direction: row;
+    gap: 0.35rem;
+  }
+
+  [data-testid="synapse-settings-panel"] {
+    max-height: 100dvh !important;
+    border-radius: 18px 18px 0 0 !important;
+  }
+}
+
+@media (display-mode: standalone) {
+  body {
+    background: #070707;
+  }
+
+  .synflix-navbar > div:first-child {
+    padding-top: max(0.75rem, calc(var(--synflix-safe-top) + 0.35rem));
+  }
+}
+
+@keyframes synflix-mobile-sheet-in {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
