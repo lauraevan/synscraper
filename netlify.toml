@@ -1,6 +1,10 @@
 [build]
-  publish = "public"
-  command = "echo 'Using prebuilt SynFlix frontend bundle'"
+  base = "frontend"
+  command = "yarn build"
+  publish = "build"
+
+[build.environment]
+  NODE_VERSION = "20"
 
 # Keep the current Python API on the existing production backend while
 # Netlify serves the SynFlix frontend during the Vercel build-limit window.
