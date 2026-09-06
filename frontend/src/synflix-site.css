@@ -192,21 +192,85 @@
   }
 }
 
-/* Scroll-driven section entrances when supported; zero JS observers/timers. */
+/* Heavy alternating slide-ins for homepage rails. Still transform + opacity only. */
 @supports (animation-timeline: view()) {
   .synflix-site [data-testid="home-page"] > div > section {
-    animation-name: synflix-section-in;
     animation-duration: 1ms;
     animation-fill-mode: both;
     animation-timing-function: linear;
     animation-timeline: view();
-    animation-range: entry 4% cover 24%;
+    animation-range: entry 2% cover 27%;
   }
 
-  @keyframes synflix-section-in {
-    from { opacity: .18; transform: translate3d(0, 34px, 0) scale(.985); }
+  .synflix-site [data-testid="home-page"] > div > section:nth-child(odd) {
+    animation-name: synflix-section-left;
+  }
+
+  .synflix-site [data-testid="home-page"] > div > section:nth-child(even) {
+    animation-name: synflix-section-right;
+  }
+
+  @keyframes synflix-section-left {
+    from { opacity: .05; transform: translate3d(-92px, 22px, 0) scale(.965); }
     to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
   }
+
+  @keyframes synflix-section-right {
+    from { opacity: .05; transform: translate3d(92px, 22px, 0) scale(.965); }
+    to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+  }
+}
+
+/* Route-level and Live TV panel slides. */
+.synflix-site > main:not([data-testid="home-page"]) {
+  animation: synflix-page-slide 640ms cubic-bezier(.16, 1, .3, 1) both;
+  backface-visibility: hidden;
+}
+
+.synflix-live-slide-left {
+  animation: synflix-heavy-left 760ms cubic-bezier(.16, 1, .3, 1) both;
+  backface-visibility: hidden;
+}
+
+.synflix-live-slide-right {
+  animation: synflix-heavy-right 820ms cubic-bezier(.16, 1, .3, 1) both;
+  backface-visibility: hidden;
+}
+
+.synflix-live-slide-left:nth-of-type(3),
+.synflix-live-slide-right:nth-of-type(3) {
+  animation-delay: 90ms;
+}
+
+.synflix-modal-slide {
+  animation: synflix-modal-in 430ms cubic-bezier(.16, 1, .3, 1) both;
+  backface-visibility: hidden;
+}
+
+@keyframes synflix-page-slide {
+  from { opacity: 0; transform: translate3d(54px, 0, 0) scale(.985); }
+  to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+}
+
+@keyframes synflix-heavy-left {
+  from { opacity: 0; transform: translate3d(-110px, 18px, 0) scale(.965); }
+  to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+}
+
+@keyframes synflix-heavy-right {
+  from { opacity: 0; transform: translate3d(110px, 18px, 0) scale(.965); }
+  to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+}
+
+@keyframes synflix-modal-in {
+  from { opacity: 0; transform: translate3d(0, 38px, 0) scale(.94); }
+  to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+}
+
+/* Live TV keeps its long lists cheap when they sit below the fold. */
+.synflix-site [data-testid="live-tv-page"] section:last-of-type {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 420px;
 }
 
 @media (prefers-reduced-motion: reduce) {
