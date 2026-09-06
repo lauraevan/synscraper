@@ -1,302 +1,139 @@
-/* SynFlix Desktop v1.1 — flatter media-center polish.
-   This file intentionally loads after desktop-app.css so the desktop shell can
-   stay stable while the visual language evolves. */
+/* SynFlix Desktop — Stremio-inspired v2 visual pass. Loads after desktop-app.css. */
+:root[data-synflix-desktop="true"] body{background:#090813!important;overflow:hidden}
+.synflix-desktop-app{--desktop-titlebar:26px;--desktop-toolbar:60px;--desktop-sidebar:78px;--desktop-accent:#8a6dff;--desktop-accent-2:#5f62ff;min-width:900px;background:#090813;color:#f7f6fb}
 
-:root[data-synflix-desktop="true"] body {
-  background:#08090d;
-}
+/* borderless desktop chrome */
+.synflix-desktop-titlebar{height:26px;border:0;background:#0a0914;box-shadow:none;backdrop-filter:none}
+.synflix-desktop-titlebrand{padding:0}
+.synflix-desktop-window-controls{opacity:.42;transition:opacity .15s ease}
+.synflix-desktop-titlebar:hover .synflix-desktop-window-controls{opacity:1}
+.synflix-desktop-window-controls button{width:40px;color:rgba(255,255,255,.55)}
+.synflix-desktop-window-controls button:hover,.synflix-desktop-window-controls button:focus-visible{background:rgba(255,255,255,.055)}
+.synflix-desktop-window-controls .synflix-desktop-close:hover{background:#c42b1c}
+.synflix-desktop-window-controls svg{width:10px;height:10px}
 
-.synflix-desktop-app {
-  --desktop-titlebar:28px;
-  --desktop-toolbar:52px;
-  --desktop-sidebar:58px;
-  --desktop-accent:#9b94ff;
-  --desktop-accent-2:#746dff;
-  min-width:880px;
-  background:#08090d;
-}
+/* narrow Stremio-like rail */
+.synflix-desktop-sidebar{top:var(--desktop-titlebar);width:var(--desktop-sidebar);border:0;background:linear-gradient(180deg,#11101f 0%,#0c0b17 70%,#090913 100%);box-shadow:14px 0 45px rgba(0,0,0,.18)}
+.synflix-desktop-logo{width:48px;height:48px;margin-top:17px;border:0!important;border-radius:8px;background:transparent!important}
+.synflix-desktop-logo img{width:36px;height:36px;filter:drop-shadow(0 0 12px rgba(112,77,255,.26))}
+.synflix-desktop-logo:hover,.synflix-desktop-logo:focus-visible{opacity:.92;box-shadow:none!important}
+.synflix-desktop-side-nav{margin-top:26px;gap:16px}
+.synflix-desktop-side-bottom{margin-bottom:24px;gap:16px}
+.synflix-desktop-side-nav a,.synflix-desktop-side-bottom a{width:42px;height:42px;border:0!important;border-radius:0!important;background:transparent!important;color:#555665;box-shadow:none!important;transform:none!important;transition:color .14s ease,opacity .14s ease}
+.synflix-desktop-side-nav a::before,.synflix-desktop-side-bottom a::before{display:none!important}
+.synflix-desktop-side-nav a:hover,.synflix-desktop-side-bottom a:hover{border:0!important;background:transparent!important;color:#b9b8c5;transform:none!important}
+.synflix-desktop-side-nav a[data-active="true"],.synflix-desktop-side-bottom a[data-active="true"]{border:0!important;background:transparent!important;color:#8e6fff!important}
+.synflix-desktop-side-nav svg,.synflix-desktop-side-bottom svg{width:23px;height:23px;stroke-width:1.7}
+.synflix-desktop-side-nav a::after,.synflix-desktop-side-bottom a::after{left:52px;border:0;border-radius:5px;background:#1a1828;padding:6px 8px;font-size:10px;box-shadow:0 8px 24px rgba(0,0,0,.32)}
+.synflix-desktop-side-nav a:focus-visible,.synflix-desktop-side-bottom a:focus-visible{outline:1px solid rgba(142,111,255,.8)!important;outline-offset:-5px;border-radius:7px!important}
 
-/* Shell */
-.synflix-desktop-titlebar {
-  border-bottom-color:rgba(255,255,255,.035);
-  background:rgba(7,8,12,.97);
-  backdrop-filter:blur(18px) saturate(130%);
-}
-.synflix-desktop-titlebrand { padding-left:9px; gap:5px; color:rgba(255,255,255,.43); font-size:9px; }
-.synflix-desktop-titlebrand img { width:13px; height:13px; }
-.synflix-desktop-window-controls button { width:42px; color:rgba(255,255,255,.5); }
-.synflix-desktop-window-controls button:hover,.synflix-desktop-window-controls button:focus-visible { background:rgba(255,255,255,.055); }
-.synflix-desktop-window-controls svg { width:10px; height:10px; }
+/* search / utility strip */
+.synflix-desktop-toolbar{left:var(--desktop-sidebar);top:var(--desktop-titlebar);height:var(--desktop-toolbar);grid-template-columns:minmax(80px,1fr) minmax(300px,420px) minmax(150px,1fr);gap:20px;border:0;background:linear-gradient(180deg,rgba(14,12,27,.96),rgba(12,11,24,.92));padding:0 24px 0 32px;backdrop-filter:blur(20px) saturate(120%)}
+.synflix-desktop-search{height:38px;gap:10px;border:1px solid rgba(255,255,255,.055);border-radius:12px;background:rgba(255,255,255,.075);padding:0 12px 0 16px;box-shadow:none}
+.synflix-desktop-search:focus-within{border-color:rgba(142,111,255,.42);background:rgba(255,255,255,.09);box-shadow:0 0 0 1px rgba(142,111,255,.1)}
+.synflix-desktop-search input{order:1;font-size:12px;color:#d9d8e2}
+.synflix-desktop-search>svg{order:2;width:16px;height:16px;color:#757584}
+.synflix-desktop-search kbd{display:none}
+.synflix-desktop-toolbar-actions{gap:13px}
+.synflix-desktop-toolbar-actions>button,.synflix-desktop-profile{width:28px!important;height:32px!important;padding:0!important;border:0!important;border-radius:0!important;background:transparent!important;color:#5d5e6d;box-shadow:none!important}
+.synflix-desktop-toolbar-actions>button:hover,.synflix-desktop-profile:hover{color:#b9b8c5;background:transparent!important}
+.synflix-desktop-toolbar-actions>button:focus-visible,.synflix-desktop-profile:focus-visible{outline:1px solid rgba(142,111,255,.8);outline-offset:3px;box-shadow:none!important}
+.synflix-desktop-toolbar-actions>button svg,.synflix-desktop-profile>svg{width:17px;height:17px;stroke-width:1.65}
+.synflix-desktop-profile-name,.desktop-avatar{display:none!important}
 
-.synflix-desktop-sidebar {
-  border-right-color:rgba(255,255,255,.05);
-  background:#0a0b10;
-  box-shadow:none;
-}
-.synflix-desktop-logo {
-  width:40px;
-  height:40px;
-  margin-top:10px;
-  border-radius:7px;
-}
-.synflix-desktop-logo img { width:28px; height:28px; }
-.synflix-desktop-logo:hover,.synflix-desktop-logo:focus-visible { background:transparent; opacity:.86; }
-.synflix-desktop-side-nav,.synflix-desktop-side-bottom { gap:5px; }
-.synflix-desktop-side-nav { margin-top:14px; }
-.synflix-desktop-side-bottom { margin-bottom:12px; }
+/* canvas */
+.synflix-desktop-content{margin-left:var(--desktop-sidebar);padding-top:calc(var(--desktop-titlebar) + var(--desktop-toolbar));min-height:100vh;background:radial-gradient(circle at 82% 12%,rgba(74,49,154,.12),transparent 34rem),linear-gradient(180deg,#0e0c1c 0%,#0a0915 46%,#090812 100%);overflow:auto}
+.desktop-page{min-height:calc(100vh - var(--desktop-titlebar) - var(--desktop-toolbar));padding:28px 54px 60px;background:transparent!important;color:#f7f6fb}
+.desktop-home-page{padding-top:20px}
+.desktop-page-heading{margin-bottom:22px}
+.desktop-page-heading h1{font-size:29px;font-weight:560;letter-spacing:-.035em}
+.desktop-page-heading p{color:#777787}
+.desktop-eyebrow{color:#8174c7}
 
-/* Navigation is intentionally icon-only. Active pages change icon color only. */
-.synflix-desktop-side-nav a,.synflix-desktop-side-bottom a {
-  width:40px;
-  height:40px;
-  border:0 !important;
-  border-radius:0 !important;
-  background:transparent !important;
-  color:rgba(255,255,255,.38);
-  box-shadow:none !important;
-  transform:none !important;
-  transition:color .14s ease,opacity .14s ease;
-}
-.synflix-desktop-side-nav a::before,.synflix-desktop-side-bottom a::before { display:none !important; }
-.synflix-desktop-side-nav a:hover,.synflix-desktop-side-bottom a:hover {
-  border:0 !important;
-  background:transparent !important;
-  color:rgba(255,255,255,.8);
-}
-.synflix-desktop-side-nav a:focus-visible,.synflix-desktop-side-bottom a:focus-visible {
-  outline:2px solid rgba(155,148,255,.8) !important;
-  outline-offset:-4px;
-  border-radius:7px !important;
-  color:white;
-}
-.synflix-desktop-side-nav a[data-active="true"],.synflix-desktop-side-bottom a[data-active="true"] {
-  border:0 !important;
-  background:transparent !important;
-  color:#a9a3ff;
-}
-.synflix-desktop-side-nav svg,.synflix-desktop-side-bottom svg { width:19px; height:19px; stroke-width:1.9; }
-.synflix-desktop-side-nav a::after,.synflix-desktop-side-bottom a::after {
-  left:calc(100% + 8px);
-  border-radius:6px;
-  background:rgba(15,16,22,.98);
-  padding:6px 8px;
-  font-size:10px;
-}
+/* section rhythm from the references */
+.desktop-media-section{margin-top:48px}
+.desktop-home-page>.desktop-media-section:first-child{margin-top:16px}
+.desktop-section-header{align-items:center;margin-bottom:16px}
+.desktop-section-header h2{margin:0;color:#eeedf4;font-size:25px;font-weight:430;letter-spacing:-.025em}
+.desktop-section-header p{display:none}
+.desktop-see-all{margin-left:auto;color:#6f6f7f;font-size:11px;font-weight:500;text-decoration:none;white-space:nowrap;transition:color .15s ease}
+.desktop-see-all:hover{color:#b4b1cc}
+.desktop-see-all span{margin-left:4px;font-size:18px;line-height:0;vertical-align:-1px}
 
-.synflix-desktop-toolbar {
-  grid-template-columns:minmax(90px,1fr) minmax(340px,560px) minmax(150px,1fr);
-  gap:15px;
-  border-bottom-color:rgba(255,255,255,.045);
-  background:rgba(9,10,15,.9);
-  padding:0 14px 0 18px;
-  backdrop-filter:blur(22px) saturate(135%);
-}
-.synflix-desktop-search {
-  height:34px;
-  gap:8px;
-  border-color:rgba(255,255,255,.07);
-  border-radius:8px;
-  background:rgba(255,255,255,.035);
-  padding:0 9px 0 11px;
-  box-shadow:none;
-}
-.synflix-desktop-search:focus-within {
-  border-color:rgba(155,148,255,.42);
-  background:rgba(255,255,255,.05);
-  box-shadow:0 0 0 1px rgba(155,148,255,.12);
-}
-.synflix-desktop-search input { font-size:12px; }
-.synflix-desktop-toolbar-actions { gap:5px; }
-.synflix-desktop-toolbar-actions>button,.synflix-desktop-profile {
-  height:34px;
-  border-radius:7px;
-}
-.synflix-desktop-toolbar-actions>button { width:34px; }
-.synflix-desktop-toolbar-actions>button:hover,.synflix-desktop-profile:hover {
-  background:rgba(255,255,255,.04);
-  border-color:rgba(255,255,255,.06);
-}
-.synflix-desktop-profile { gap:7px; padding:0 7px 0 4px; }
-.synflix-desktop-profile-name { font-size:10px; }
+/* posters are the UI; no caption cards */
+.desktop-poster-rail{display:grid;grid-auto-flow:column;grid-auto-columns:168px;gap:24px;overflow-x:auto;padding:4px 4px 12px;scrollbar-width:none;scroll-snap-type:x proximity}
+.desktop-poster-rail::-webkit-scrollbar,.desktop-continue-rail::-webkit-scrollbar{display:none}
+.desktop-poster-card{position:relative;min-width:0;scroll-snap-align:start}
+.desktop-poster-art-wrap{position:relative}
+.desktop-poster-art{position:relative;display:block;width:100%;aspect-ratio:2/3;overflow:hidden;border:1px solid rgba(255,255,255,.045)!important;border-radius:9px!important;background:#171524!important;box-shadow:0 13px 30px rgba(0,0,0,.28)!important;transition:transform .16s ease,border-color .16s ease,box-shadow .16s ease}
+.desktop-poster-art img{width:100%;height:100%;object-fit:cover;display:block}
+.desktop-poster-card:hover .desktop-poster-art,.desktop-poster-art:focus-visible{transform:translateY(-2px) scale(1.018)!important;border-color:rgba(255,255,255,.74)!important;box-shadow:0 17px 36px rgba(0,0,0,.36)!important;outline:none}
+.desktop-poster-play{position:absolute;left:50%;top:50%;display:grid;width:52px;height:52px;place-items:center;transform:translate(-50%,-50%) scale(.94);border:2px solid rgba(255,255,255,.92);border-radius:50%;background:rgba(8,7,17,.28);color:white;opacity:0;backdrop-filter:blur(3px);transition:opacity .14s ease,transform .14s ease}
+.desktop-poster-play svg{width:24px;height:24px;fill:white;stroke:none;margin-left:3px}
+.desktop-poster-card:hover .desktop-poster-play,.desktop-poster-art:focus-visible .desktop-poster-play{opacity:1;transform:translate(-50%,-50%) scale(1)}
+.desktop-poster-save{position:absolute;right:8px;top:8px;display:grid;width:28px;height:28px;place-items:center;border:0;border-radius:6px;background:rgba(13,11,25,.7);color:white;opacity:0;backdrop-filter:blur(8px);transition:opacity .12s ease,background .12s ease}
+.desktop-poster-card:hover .desktop-poster-save,.desktop-poster-save:focus-visible{opacity:1}
+.desktop-poster-save:hover{background:#745cff}
+.desktop-poster-save svg{width:14px;height:14px}
+.desktop-poster-meta,.desktop-poster-title,.desktop-poster-subline,.desktop-poster-rating,.desktop-poster-hover{display:none!important}
+.desktop-poster-fallback{display:grid;width:100%;height:100%;place-items:center;background:linear-gradient(145deg,#211d38,#11101d);color:#8c88a4;font-size:34px;font-weight:600}
 
-/* Page canvas */
-.synflix-desktop-content { background:#08090d; }
-.desktop-page {
-  padding:25px 28px 46px;
-  background:#08090d;
-}
-.desktop-page-heading { margin-bottom:19px; }
-.desktop-page-heading h1 { font-size:29px; font-weight:680; }
-.desktop-page-heading p { margin-top:7px; color:rgba(255,255,255,.34); }
-.desktop-eyebrow { color:rgba(177,171,255,.72); }
+/* Continue Watching uses portrait art just like the reference */
+.desktop-continue-section{margin-top:22px!important}
+.desktop-continue-rail{display:grid;grid-auto-flow:column;grid-auto-columns:188px;gap:24px;overflow-x:auto;padding:4px 4px 12px;scrollbar-width:none;scroll-snap-type:x proximity}
+.desktop-continue-card{display:block;width:100%;padding:0;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;scroll-snap-align:start;color:white;text-align:left}
+.desktop-continue-art{position:relative;width:100%;aspect-ratio:2/3;overflow:hidden;border:1px solid rgba(255,255,255,.055);border-radius:9px;background:#171524;box-shadow:0 13px 30px rgba(0,0,0,.28);transition:transform .16s ease,border-color .16s ease}
+.desktop-continue-art img{width:100%;height:100%;object-fit:cover;display:block}
+.desktop-continue-card:hover .desktop-continue-art,.desktop-continue-card:focus-visible .desktop-continue-art{transform:translateY(-2px) scale(1.018);border-color:rgba(255,255,255,.75);outline:none}
+.desktop-continue-play{position:absolute;left:50%;top:50%;display:grid;width:54px;height:54px;place-items:center;transform:translate(-50%,-50%);border:2px solid rgba(255,255,255,.92);border-radius:50%;background:rgba(9,8,20,.26);color:white;backdrop-filter:blur(3px)}
+.desktop-continue-play svg{width:25px;height:25px;fill:white;stroke:none;margin-left:4px}
+.desktop-progress-track{position:absolute;left:10px;right:10px;bottom:8px;height:4px;border-radius:4px;background:rgba(255,255,255,.42);overflow:hidden;box-shadow:0 1px 5px rgba(0,0,0,.4)}
+.desktop-progress-track span{display:block;height:100%;border-radius:inherit;background:white}
+.desktop-continue-copy{display:none!important}
 
-/* Controls: still curved, just less bubbly. */
-.desktop-primary-button,.desktop-secondary-button,.desktop-soft-button,.desktop-danger-button {
-  min-height:36px;
-  border-radius:7px;
-  padding:0 13px;
-}
-.desktop-primary-button {
-  background:linear-gradient(180deg,#8e86ff,#7169ef);
-  box-shadow:0 6px 18px rgba(83,73,235,.18);
-}
-.desktop-primary-button:hover,.desktop-primary-button:focus-visible {
-  box-shadow:0 0 0 1px rgba(155,148,255,.28),0 7px 20px rgba(83,73,235,.22);
-}
-.desktop-secondary-button,.desktop-soft-button { background:rgba(255,255,255,.045); }
+/* Home hover/focus spotlight: clean home until a title is selected, detailed hero afterwards. */
+.desktop-stremio-spotlight{position:relative;min-height:360px;margin:-20px -54px 8px;overflow:hidden;background:#0d0b18;isolation:isolate}
+.desktop-stremio-spotlight::before{content:"";position:absolute;inset:0;z-index:-2;background-image:var(--desktop-spotlight-image);background-size:cover;background-position:center 28%;transform:scale(1.01)}
+.desktop-stremio-spotlight::after{content:"";position:absolute;inset:0;z-index:-1;background:linear-gradient(90deg,rgba(15,13,28,.98) 0%,rgba(15,13,28,.9) 31%,rgba(15,13,28,.43) 55%,rgba(15,13,28,.09) 82%),linear-gradient(0deg,#0a0915 0%,rgba(10,9,21,.12) 34%,transparent 67%)}
+.desktop-stremio-spotlight-copy{width:min(620px,58%);padding:54px 0 48px 118px}
+.desktop-stremio-spotlight h1{margin:0 0 26px;color:#f5f4f8;font-size:39px;font-weight:650;letter-spacing:-.04em}
+.desktop-stremio-meta{display:flex;align-items:center;gap:28px;color:#b6b4bf;font-size:12px}
+.desktop-stremio-meta b,.desktop-title-meta b{display:inline-block;margin-left:4px;border-radius:2px;background:#dbad2e;padding:1px 3px;color:#17130b;font-size:7px;font-weight:900;vertical-align:2px}
+.desktop-stremio-spotlight p{max-width:600px;margin:22px 0 0;color:#d0ced7;font-size:15px;line-height:1.55}
+.desktop-stremio-cast{margin-top:20px;color:#767482;font-size:12px}
+.desktop-home-page.has-spotlight .desktop-continue-section{margin-top:10px!important}
 
-/* Home hero — wide, cinematic, flatter than the old card. */
-.desktop-feature {
-  min-height:350px;
-  border-radius:10px;
-  border-color:rgba(255,255,255,.055);
-  box-shadow:0 18px 50px rgba(0,0,0,.25);
-}
-.desktop-feature-copy { min-height:350px; width:min(590px,62%); padding:34px 36px; }
-.desktop-feature h2 { font-size:40px; }
-.desktop-feature-copy>p { color:rgba(255,255,255,.5); }
-.desktop-media-section { margin-top:27px; }
-.desktop-section-header { margin-bottom:11px; }
-.desktop-section-header h2 { font-size:15px; }
+/* Detail page reproduces the selected-title reference */
+.desktop-title-page{padding-top:0}
+.desktop-title-hero{position:relative;min-height:390px;margin:0 -54px 0;overflow:hidden;border:0!important;border-radius:0!important;background:#0d0b18;box-shadow:none!important;isolation:isolate}
+.desktop-title-hero::before{content:"";position:absolute;inset:0;z-index:-2;background-image:var(--desktop-title-image);background-size:cover;background-position:center 25%;transform:scale(1.01)}
+.desktop-title-hero::after{content:"";position:absolute;inset:0;z-index:-1;background:linear-gradient(90deg,rgba(15,13,28,.99) 0%,rgba(15,13,28,.91) 32%,rgba(15,13,28,.44) 56%,rgba(15,13,28,.08) 82%),linear-gradient(0deg,#0a0915 0%,rgba(10,9,21,.12) 32%,transparent 68%)}
+.desktop-title-shade{display:none!important}
+.desktop-title-copy{display:flex;min-height:390px;width:min(650px,60%);flex-direction:column;justify-content:center;padding:46px 0 46px 118px}
+.desktop-title-copy h1{margin:0 0 26px;color:#f6f5f9;font-size:40px;font-weight:650;letter-spacing:-.04em}
+.desktop-title-meta{display:flex;align-items:center;gap:28px;color:#b8b6c0;font-size:12px}
+.desktop-title-meta span{display:inline-flex;align-items:center;gap:4px}
+.desktop-title-meta svg{display:none}
+.desktop-title-genres{display:none!important}
+.desktop-title-overview{max-width:600px;margin:22px 0 0;color:#d0ced7;font-size:15px;line-height:1.55}
+.desktop-title-cast{margin-top:20px;color:#777583;font-size:12px}
+.desktop-title-actions{display:flex;gap:8px;margin-top:20px;opacity:0;transform:translateY(4px);transition:opacity .15s ease,transform .15s ease}
+.desktop-title-hero:hover .desktop-title-actions,.desktop-title-hero:focus-within .desktop-title-actions{opacity:1;transform:none}
+.desktop-primary-button,.desktop-secondary-button,.desktop-soft-button,.desktop-danger-button{min-height:34px;border-radius:6px;padding:0 12px;font-size:10px}
+.desktop-primary-button{border:1px solid rgba(255,255,255,.1);background:#765eff;box-shadow:none}
+.desktop-secondary-button,.desktop-soft-button{border:1px solid rgba(255,255,255,.08);background:rgba(16,14,28,.55);backdrop-filter:blur(8px)}
 
-/* Posters / rails */
-.desktop-poster-rail { grid-auto-columns:142px; gap:12px; }
-.desktop-poster-art {
-  border-radius:6px !important;
-  border-color:rgba(255,255,255,.055) !important;
-  box-shadow:0 8px 22px rgba(0,0,0,.18) !important;
-}
-.desktop-poster-card:hover .desktop-poster-art {
-  transform:translateY(-3px) scale(1.012) !important;
-  border-color:rgba(155,148,255,.3) !important;
-  box-shadow:0 13px 30px rgba(0,0,0,.3) !important;
-}
-.desktop-poster-action,.desktop-poster-play {
-  border-radius:6px !important;
-}
-.desktop-poster-card h3 { font-size:11px !important; }
+/* Supporting pages inherit the same flatter, darker language. */
+.desktop-discover-grid,.desktop-library-grid{gap:24px 18px!important;grid-template-columns:repeat(auto-fill,minmax(150px,1fr))!important}
+.desktop-segmented,.desktop-select,.desktop-inline-search,.desktop-search-large{border-color:rgba(255,255,255,.06)!important;border-radius:7px!important;background:rgba(255,255,255,.045)!important;box-shadow:none!important}
+.desktop-segmented button,.desktop-genre-strip button,.desktop-preference-genres button{border-radius:5px!important}
+.desktop-segmented button[data-active="true"],.desktop-genre-strip button[data-active="true"],.desktop-preference-genres button[data-active="true"]{background:rgba(138,109,255,.12)!important;color:#b7a9ff!important}
+.desktop-profile-card,.desktop-profile-add,.desktop-settings-card,.desktop-empty-state{border-color:rgba(255,255,255,.05)!important;border-radius:8px!important;background:rgba(255,255,255,.025)!important;box-shadow:none!important}
+.desktop-avatar,.desktop-avatar--large,.desktop-avatar--tiny{display:grid!important;border-radius:8px!important}
+.desktop-episode{border-color:rgba(255,255,255,.05)!important;border-radius:7px!important;background:rgba(255,255,255,.025)!important}
+.desktop-episode:hover{border-color:rgba(138,109,255,.22)!important;background:rgba(255,255,255,.04)!important}
+.desktop-episode-art{border-radius:6px!important}
 
-.desktop-continue-rail,.desktop-continue-grid { gap:12px !important; }
-.desktop-continue-card {
-  border-radius:8px !important;
-  border-color:rgba(255,255,255,.055) !important;
-  box-shadow:0 9px 24px rgba(0,0,0,.2) !important;
-}
-.desktop-remove-progress { border-radius:6px !important; }
-
-/* Discover + Library */
-.desktop-discover-grid,.desktop-library-grid {
-  gap:19px 13px !important;
-  grid-template-columns:repeat(auto-fill,minmax(136px,1fr)) !important;
-}
-.desktop-discover-actions,.desktop-library-controls { gap:7px !important; }
-.desktop-segmented {
-  border-radius:7px !important;
-  background:rgba(255,255,255,.035) !important;
-  border-color:rgba(255,255,255,.065) !important;
-}
-.desktop-segmented button { border-radius:5px !important; }
-.desktop-segmented button[data-active="true"] {
-  background:rgba(155,148,255,.13) !important;
-  color:#c1bcff !important;
-  box-shadow:none !important;
-}
-.desktop-select,.desktop-inline-search {
-  border-radius:7px !important;
-  background:rgba(255,255,255,.035) !important;
-  border-color:rgba(255,255,255,.065) !important;
-}
-.desktop-genre-strip { gap:6px !important; }
-.desktop-genre-strip button,.desktop-preference-genres button {
-  border-radius:6px !important;
-  background:transparent !important;
-  border-color:rgba(255,255,255,.07) !important;
-}
-.desktop-genre-strip button[data-active="true"],.desktop-preference-genres button[data-active="true"] {
-  background:rgba(155,148,255,.1) !important;
-  border-color:rgba(155,148,255,.26) !important;
-  color:#bbb5ff !important;
-}
-.desktop-empty-state { border-radius:8px !important; background:rgba(255,255,255,.018) !important; }
-
-/* Dedicated Search */
-.desktop-search-large {
-  border-radius:8px !important;
-  border-color:rgba(255,255,255,.07) !important;
-  background:rgba(255,255,255,.035) !important;
-  box-shadow:none !important;
-}
-.desktop-search-large button { border-radius:6px !important; }
-.desktop-search-hint { border-radius:8px !important; }
-
-/* Profiles */
-.desktop-profile-grid { gap:14px !important; }
-.desktop-profile-card,.desktop-profile-add {
-  border-radius:9px !important;
-  border-color:rgba(255,255,255,.06) !important;
-  background:rgba(255,255,255,.022) !important;
-  box-shadow:none !important;
-}
-.desktop-profile-card[data-active="true"] {
-  border-color:rgba(155,148,255,.25) !important;
-  background:rgba(155,148,255,.045) !important;
-}
-.desktop-profile-main { border-radius:9px !important; }
-.desktop-profile-edit { border-radius:6px !important; }
-.desktop-avatar { border-radius:8px !important; }
-.desktop-avatar--large { border-radius:14px !important; }
-.desktop-avatar--tiny { border-radius:6px !important; }
-.desktop-profile-editor {
-  border-radius:10px !important;
-  border-color:rgba(255,255,255,.08) !important;
-  background:#0e1017 !important;
-  box-shadow:0 24px 70px rgba(0,0,0,.48) !important;
-}
-.desktop-form-field input { border-radius:7px !important; }
-.desktop-avatar-picker button { border-radius:8px !important; }
-
-/* Settings */
-.desktop-settings-layout { gap:12px !important; }
-.desktop-settings-card {
-  border-radius:9px !important;
-  border-color:rgba(255,255,255,.06) !important;
-  background:rgba(255,255,255,.022) !important;
-  box-shadow:none !important;
-}
-.desktop-settings-icon { border-radius:7px !important; background:rgba(155,148,255,.08) !important; }
-.desktop-setting-row { border-radius:7px !important; }
-
-/* Title details / episodes */
-.desktop-back-button { border-radius:6px !important; background:transparent !important; }
-.desktop-title-hero {
-  border-radius:10px !important;
-  border-color:rgba(255,255,255,.055) !important;
-  box-shadow:0 18px 50px rgba(0,0,0,.27) !important;
-}
-.desktop-title-genres span { border-radius:5px !important; }
-.desktop-episode {
-  border-radius:8px !important;
-  background:rgba(255,255,255,.022) !important;
-  border-color:rgba(255,255,255,.055) !important;
-}
-.desktop-episode:hover { background:rgba(255,255,255,.038) !important; border-color:rgba(155,148,255,.18) !important; }
-.desktop-episode-art { border-radius:6px !important; }
-
-/* Keep keyboard accessibility obvious without turning active navigation into boxes. */
-.desktop-primary-button:focus-visible,.desktop-secondary-button:focus-visible,.desktop-soft-button:focus-visible,
-.desktop-poster-card a:focus-visible,.desktop-poster-card button:focus-visible,
-.desktop-genre-strip button:focus-visible,.desktop-segmented button:focus-visible,
-.desktop-profile-main:focus-visible,.desktop-profile-edit:focus-visible,.desktop-setting-row:focus-within {
-  outline:2px solid rgba(155,148,255,.82) !important;
-  outline-offset:2px;
-}
-
-@media (max-width:1100px) {
-  .synflix-desktop-toolbar { grid-template-columns:80px minmax(300px,1fr) 145px; }
-  .desktop-page { padding-left:22px; padding-right:22px; }
-  .desktop-feature-copy { width:68%; }
-}
-
-@media (prefers-reduced-motion:reduce) {
-  .desktop-poster-card:hover .desktop-poster-art { transform:none !important; }
-}
+@media(max-width:1180px){.synflix-desktop-app{--desktop-sidebar:70px}.synflix-desktop-toolbar{grid-template-columns:80px minmax(280px,390px) 150px;padding-left:22px}.desktop-page{padding-left:38px;padding-right:38px}.desktop-poster-rail{grid-auto-columns:150px;gap:18px}.desktop-continue-rail{grid-auto-columns:166px;gap:18px}.desktop-stremio-spotlight{margin-left:-38px;margin-right:-38px}.desktop-stremio-spotlight-copy,.desktop-title-copy{padding-left:82px}.desktop-title-hero{margin-left:-38px;margin-right:-38px}}
+@media(max-width:980px){.synflix-desktop-toolbar{grid-template-columns:30px minmax(260px,1fr) 135px}.desktop-page{padding-left:28px;padding-right:28px}.desktop-poster-rail{grid-auto-columns:138px;gap:15px}.desktop-continue-rail{grid-auto-columns:152px;gap:15px}.desktop-section-header h2{font-size:21px}.desktop-stremio-spotlight{margin-left:-28px;margin-right:-28px}.desktop-stremio-spotlight-copy,.desktop-title-copy{width:66%;padding-left:54px}.desktop-title-hero{margin-left:-28px;margin-right:-28px}}
+@media(prefers-reduced-motion:reduce){.desktop-poster-card:hover .desktop-poster-art,.desktop-continue-card:hover .desktop-continue-art{transform:none!important}.desktop-title-actions{transition:none}}
