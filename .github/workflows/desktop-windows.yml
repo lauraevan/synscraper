@@ -28,6 +28,11 @@ jobs:
         with:
           node-version: 20
 
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
 
@@ -35,6 +40,12 @@ jobs:
         uses: swatinem/rust-cache@v2
         with:
           workspaces: desktop/src-tauri -> target
+
+      - name: Create Windows app icon from SynFlix logo
+        shell: pwsh
+        run: |
+          python -m pip install --disable-pip-version-check pillow
+          python -c "from pathlib import Path; from PIL import Image; p=Path('desktop/src-tauri/icons'); p.mkdir(parents=True, exist_ok=True); im=Image.open('frontend/public/synflix-logo.webp').convert('RGBA'); im.save(p/'icon.ico', format='ICO', sizes=[(16,16),(24,24),(32,32),(48,48),(64,64),(128,128),(256,256)]); im.resize((512,512), Image.Resampling.LANCZOS).save(p/'icon.png')"
 
       - name: Install frontend dependencies
         shell: pwsh
