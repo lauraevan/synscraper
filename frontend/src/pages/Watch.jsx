@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams, useSearchParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { ChevronDown, ListVideo } from "lucide-react";
+import { ArrowLeft, ChevronDown, ListVideo } from "lucide-react";
 import { getDetails, getSeason, img } from "@/lib/api";
 import { titleOf } from "@/lib/format";
 import { SynapsePlayer } from "@/components/SynapsePlayer";
@@ -94,6 +94,25 @@ export default function Watch({ embed = false }) {
     return (
         <main data-testid={embed ? "embed-player-page" : "watch-page"} className={embed ? "min-h-screen bg-black p-0" : "min-h-screen bg-black px-3 pb-6 pt-3 md:px-6 md:pt-6"}>
             <div className={embed ? "w-full" : "mx-auto max-w-[1600px]"}>
+                {!embed && (
+                    <div className="mb-3 flex min-h-11 items-center justify-between gap-3 md:mb-4">
+                        <button
+                            type="button"
+                            onClick={handleBack}
+                            data-testid="watch-back-button"
+                            className="group inline-flex h-11 items-center gap-2 rounded-full border border-white/[0.12] bg-white/[0.045] px-4 text-sm font-semibold text-white/82 backdrop-blur-xl transition hover:border-white/[0.22] hover:bg-white/[0.08] hover:text-white active:scale-[0.98]"
+                            aria-label="Go back"
+                        >
+                            <ArrowLeft className="h-4 w-4 transition-transform duration-200 group-hover:-translate-x-0.5" />
+                            <span>Back</span>
+                        </button>
+                        <div className="min-w-0 text-right">
+                            <p className="truncate text-[13px] font-medium text-white/78 md:text-sm">{titleOf(details)}</p>
+                            <p className="mt-0.5 text-[10px] uppercase tracking-[0.14em] text-white/28">SynPlayer</p>
+                        </div>
+                    </div>
+                )}
+
                 <div className="relative">
                     <SynapsePlayer
                         key={`${mediaType}-${id}-${season}-${episode}`}

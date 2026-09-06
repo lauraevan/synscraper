@@ -1,13 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Bookmark, ChevronDown, Dices, FileText, Film, Home, Radio, Search, Settings, Shield, SlidersHorizontal, Sparkles, Tv2, X } from "lucide-react";
+import { Bookmark, ChevronDown, Dices, FileText, Film, Home, Search, Settings, Shield, SlidersHorizontal, Sparkles, Tv2, X } from "lucide-react";
 import { InstallSynFlix } from "@/components/InstallSynFlix";
 
 const NAV_ITEMS = [
   { to: "/", label: "Home", icon: Home, exact: true },
   { to: "/browse/movie", label: "Movies", icon: Film },
   { to: "/browse/tv", label: "TV", icon: Tv2 },
-  { to: "/live", label: "Live TV", icon: Radio, live: true },
   { to: "/search?q=anime", label: "Anime", icon: Sparkles, anime: true },
   { to: "/roulette", label: "Roulette", icon: Dices },
 ];
@@ -99,10 +98,7 @@ export const Navbar = () => {
             <span className="grid h-10 w-10 shrink-0 place-items-center">
               <img src="/synflix-logo.webp" alt="" className="synflix-brand-logo h-10 w-10 object-contain transition-transform duration-300 group-active:scale-90" />
             </span>
-            <span
-              className={`whitespace-nowrap text-[15px] font-bold tracking-[-0.035em] text-[#ffd400] transition-all duration-300 ease-out ${brandOpen ? "ml-2 max-w-[78px] translate-x-0 opacity-100" : "ml-0 max-w-0 -translate-x-2 opacity-0"}`}
-              aria-hidden={!brandOpen}
-            >
+            <span className={`whitespace-nowrap text-[15px] font-bold tracking-[-0.035em] text-[#ffd400] transition-all duration-300 ease-out ${brandOpen ? "ml-2 max-w-[78px] translate-x-0 opacity-100" : "ml-0 max-w-0 -translate-x-2 opacity-0"}`} aria-hidden={!brandOpen}>
               SynFlix
             </span>
           </Link>
@@ -110,21 +106,14 @@ export const Navbar = () => {
           <nav className="hidden h-full items-center justify-center gap-2 md:flex lg:gap-3 xl:gap-4">
             {NAV_ITEMS.map((item) => {
               const selected = active(item);
-              const tone = selected ? "text-white" : "text-white/58 hover:text-white/90";
-
               return (
                 <Link
                   key={item.to}
                   to={item.to}
-                  className={`group relative inline-flex h-full items-center whitespace-nowrap text-[12px] font-semibold tracking-[-0.02em] transition-colors duration-200 lg:text-[13px] xl:text-[14px] ${tone}`}
+                  className={`group relative inline-flex h-full items-center whitespace-nowrap text-[12px] font-semibold tracking-[-0.02em] transition-colors duration-200 lg:text-[13px] xl:text-[14px] ${selected ? "text-white" : "text-white/58 hover:text-white/90"}`}
                 >
-                  {item.live && (
-                    <span className={`mr-1.5 h-1.5 w-1.5 rounded-full transition-colors duration-200 ${selected ? "bg-red-400" : "bg-red-400/55 group-hover:bg-red-400/80"}`} />
-                  )}
                   <span>{item.label}</span>
-                  <span
-                    className={`absolute bottom-[10px] left-1/2 h-[2px] -translate-x-1/2 rounded-full transition-all duration-200 ${item.live ? "bg-white/75" : "bg-[#ffd400]"} ${selected ? "w-4 opacity-100" : "w-0 opacity-0 group-hover:w-2.5 group-hover:opacity-55"}`}
-                  />
+                  <span className={`absolute bottom-[10px] left-1/2 h-[2px] -translate-x-1/2 rounded-full bg-[#ffd400] transition-all duration-200 ${selected ? "w-4 opacity-100" : "w-0 opacity-0 group-hover:w-2.5 group-hover:opacity-55"}`} />
                 </Link>
               );
             })}
@@ -154,12 +143,7 @@ export const Navbar = () => {
               className="hidden h-10 w-[168px] items-center gap-2 rounded-full border border-white/[0.10] bg-white/[0.055] px-3 shadow-[inset_0_1px_0_rgba(255,255,255,.06)] transition focus-within:border-[#ffd400]/30 focus-within:bg-white/[0.075] lg:flex xl:w-[220px]"
             >
               <Search className="h-4 w-4 shrink-0 text-white/42" />
-              <input
-                value={q}
-                onChange={(e) => setQ(e.target.value)}
-                placeholder="Search SynFlix"
-                className="h-9 min-w-0 flex-1 bg-transparent text-[13px] text-white outline-none placeholder:text-white/30"
-              />
+              <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search SynFlix" className="h-9 min-w-0 flex-1 bg-transparent text-[13px] text-white outline-none placeholder:text-white/30" />
               {q && (
                 <button type="button" onClick={() => setQ("")} className="grid h-7 w-7 shrink-0 place-items-center rounded-full text-white/36 hover:bg-white/[0.07] hover:text-white/72" aria-label="Clear search">
                   <X className="h-3.5 w-3.5" />
@@ -186,11 +170,7 @@ export const Navbar = () => {
                     const Icon = item.icon;
                     const selected = location.pathname === item.to || location.pathname.startsWith(`${item.to}/`);
                     return (
-                      <Link
-                        key={item.to}
-                        to={item.to}
-                        className={`flex items-center gap-3 rounded-[13px] px-3 py-3 transition ${selected ? "bg-[#ffd400]/[0.08]" : "hover:bg-white/[0.055]"}`}
-                      >
+                      <Link key={item.to} to={item.to} className={`flex items-center gap-3 rounded-[13px] px-3 py-3 transition ${selected ? "bg-[#ffd400]/[0.08]" : "hover:bg-white/[0.055]"}`}>
                         <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-[10px] border ${selected ? "border-[#ffd400]/20 bg-[#ffd400]/[0.07] text-[#ffd400]" : "border-white/[0.07] bg-white/[0.045] text-white/48"}`}><Icon className="h-4 w-4" /></span>
                         <span className="min-w-0">
                           <span className="block text-[13px] font-medium text-white/84">{item.label}</span>
@@ -217,12 +197,9 @@ export const Navbar = () => {
               {NAV_ITEMS.map((item) => {
                 const Icon = item.icon;
                 const selected = active(item);
-                const selectedTone = item.live
-                  ? "border-white/[0.14] bg-white/[0.07] text-white"
-                  : "border-[#ffd400]/22 bg-[#ffd400]/[0.08] text-[#ffd400]";
                 return (
-                  <Link key={item.to} to={item.to} className={`flex min-h-12 items-center gap-2.5 rounded-[14px] border px-3 py-3 text-xs font-medium transition ${selected ? selectedTone : "border-white/[0.07] bg-white/[0.035] text-white/64"}`}>
-                    <Icon className={`h-4 w-4 ${item.live && selected ? "text-red-400" : ""}`} />{item.label}
+                  <Link key={item.to} to={item.to} className={`flex min-h-12 items-center gap-2.5 rounded-[14px] border px-3 py-3 text-xs font-medium transition ${selected ? "border-[#ffd400]/22 bg-[#ffd400]/[0.08] text-[#ffd400]" : "border-white/[0.07] bg-white/[0.035] text-white/64"}`}>
+                    <Icon className="h-4 w-4" />{item.label}
                   </Link>
                 );
               })}

@@ -18,7 +18,6 @@ import MyList from "@/pages/MyList";
 import Demo from "@/pages/Demo";
 import Docs from "@/pages/Docs";
 import Api from "@/pages/Api";
-import LiveTV from "@/pages/LiveTV";
 import Privacy from "@/pages/Privacy";
 import Terms from "@/pages/Terms";
 import Person from "@/pages/Person";
@@ -39,7 +38,6 @@ function Footer() {
         <div className="flex flex-wrap gap-x-6 gap-y-3 text-sm text-white/38">
           <Link to="/browse/movie" className="transition hover:text-[#ffd400]">Movies</Link>
           <Link to="/browse/tv" className="transition hover:text-[#ffd400]">TV</Link>
-          <Link to="/live" className="transition hover:text-[#ffd400]">Live TV</Link>
           <Link to="/roulette" className="transition hover:text-[#ffd400]">Roulette</Link>
           <Link to="/my-list" className="transition hover:text-[#ffd400]">My List</Link>
           <Link to="/settings" className="transition hover:text-[#ffd400]">Settings</Link>
@@ -61,7 +59,7 @@ function Shell() {
   const isPlayerSurface = isWatch || isEmbed;
 
   useEffect(() => {
-    document.title = isPlayerSurface ? "SynPlayer" : location.pathname === "/live" ? "Live TV · SynFlix" : "SynFlix";
+    document.title = isPlayerSurface ? "SynPlayer" : "SynFlix";
 
     const syncBrowserChrome = () => {
       const meta = document.querySelector('meta[name="theme-color"]');
@@ -92,7 +90,6 @@ function Shell() {
         <Route path="/demo" element={<Demo />} />
         <Route path="/docs" element={<Docs />} />
         <Route path="/synplayer-api" element={<Api />} />
-        <Route path="/live" element={<LiveTV />} />
         <Route path="/privacy" element={<Privacy />} />
         <Route path="/terms" element={<Terms />} />
         <Route path="/settings" element={<Settings />} />

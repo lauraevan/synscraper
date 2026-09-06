@@ -1,4 +1,4 @@
-import { Bookmark, Film, Home, Radio, Search } from "lucide-react";
+import { Bookmark, Film, Home, Search, Tv2 } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 
 const ITEMS = [
@@ -6,7 +6,7 @@ const ITEMS = [
   { to: "/browse/movie", label: "Movies", icon: Film },
   { to: "/search", label: "Search", icon: Search },
   { to: "/my-list", label: "My List", icon: Bookmark },
-  { to: "/live", label: "Live", icon: Radio },
+  { to: "/browse/tv", label: "TV", icon: Tv2 },
 ];
 
 export function MobileDock() {

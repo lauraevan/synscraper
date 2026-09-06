@@ -27,10 +27,6 @@
       "destination": "/index.html"
     },
     {
-      "source": "/live",
-      "destination": "/index.html"
-    },
-    {
       "source": "/privacy",
       "destination": "/index.html"
     },
