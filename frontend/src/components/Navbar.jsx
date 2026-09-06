@@ -104,27 +104,21 @@ export const Navbar = () => {
           <nav className="hidden h-full items-center justify-center gap-3 md:flex lg:gap-5 xl:gap-6">
             {NAV_ITEMS.map((item) => {
               const selected = active(item);
-              const liveTone = item.live
-                ? selected
-                  ? "h-9 rounded-full border border-[#ffd400]/25 bg-[#ffd400]/[0.10] px-3 text-[#ffd400]"
-                  : "h-9 rounded-full border border-white/[0.08] bg-white/[0.025] px-3 text-white/68 hover:border-[#ffd400]/20 hover:bg-[#ffd400]/[0.055] hover:text-white"
-                : selected
-                  ? "text-white"
-                  : "text-white/58 hover:text-white/90";
+              const tone = selected ? "text-white" : "text-white/58 hover:text-white/90";
 
               return (
                 <Link
                   key={item.to}
                   to={item.to}
-                  className={`group relative inline-flex items-center whitespace-nowrap text-[13px] font-semibold tracking-[-0.02em] transition-all duration-200 lg:text-[14px] ${item.live ? "" : "h-full"} ${liveTone}`}
+                  className={`group relative inline-flex h-full items-center whitespace-nowrap text-[13px] font-semibold tracking-[-0.02em] transition-colors duration-200 lg:text-[14px] ${tone}`}
                 >
                   {item.live && (
-                    <span className={`mr-1.5 h-1.5 w-1.5 rounded-full transition-all duration-200 ${selected ? "bg-[#ffd400]" : "bg-[#ffd400]/70 group-hover:bg-[#ffd400]"}`} />
+                    <span className={`mr-1.5 h-1.5 w-1.5 rounded-full transition-colors duration-200 ${selected ? "bg-red-400" : "bg-red-400/55 group-hover:bg-red-400/80"}`} />
                   )}
                   <span>{item.label}</span>
-                  {!item.live && (
-                    <span className={`absolute bottom-[10px] left-1/2 h-[2px] -translate-x-1/2 rounded-full bg-[#ffd400] transition-all duration-200 ${selected ? "w-4 opacity-100" : "w-0 opacity-0 group-hover:w-2.5 group-hover:opacity-55"}`} />
-                  )}
+                  <span
+                    className={`absolute bottom-[10px] left-1/2 h-[2px] -translate-x-1/2 rounded-full transition-all duration-200 ${item.live ? "bg-white/75" : "bg-[#ffd400]"} ${selected ? "w-4 opacity-100" : "w-0 opacity-0 group-hover:w-2.5 group-hover:opacity-55"}`}
+                  />
                 </Link>
               );
             })}
@@ -219,9 +213,13 @@ export const Navbar = () => {
             <nav className="grid grid-cols-2 gap-2">
               {NAV_ITEMS.map((item) => {
                 const Icon = item.icon;
+                const selected = active(item);
+                const selectedTone = item.live
+                  ? "border-white/[0.14] bg-white/[0.06] text-white"
+                  : "border-[#ffd400]/22 bg-[#ffd400]/[0.08] text-[#ffd400]";
                 return (
-                  <Link key={item.to} to={item.to} className={`flex items-center gap-2.5 rounded-[14px] border px-3 py-3 text-xs font-medium transition ${active(item) ? "border-[#ffd400]/22 bg-[#ffd400]/[0.08] text-[#ffd400]" : "border-white/[0.07] bg-[#11151c] text-white/64"}`}>
-                    <Icon className="h-4 w-4" />{item.label}
+                  <Link key={item.to} to={item.to} className={`flex items-center gap-2.5 rounded-[14px] border px-3 py-3 text-xs font-medium transition ${selected ? selectedTone : "border-white/[0.07] bg-[#11151c] text-white/64"}`}>
+                    <Icon className={`h-4 w-4 ${item.live && selected ? "text-red-400" : ""}`} />{item.label}
                   </Link>
                 );
               })}
