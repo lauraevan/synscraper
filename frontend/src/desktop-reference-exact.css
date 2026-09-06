@@ -1,0 +1,406 @@
+/* SynFlix Desktop — reference-locked Stremio-style layout.
+   Loaded after desktop-v2-polish.css. These rules intentionally flatten the
+   desktop app and match the supplied reference proportions as closely as the
+   responsive webview allows. */
+
+:root[data-synflix-desktop="true"] body {
+  background:#0b0a18 !important;
+  overflow:hidden;
+}
+
+.synflix-desktop-app {
+  --desktop-titlebar:24px;
+  --desktop-toolbar:66px;
+  --desktop-sidebar:82px;
+  --desktop-accent:#8d6cff;
+  --desktop-canvas:#0d0c20;
+  min-width:900px;
+  background:var(--desktop-canvas) !important;
+  font-family:"Inter",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+
+/* The reference has no visible Windows chrome. Keep the drag strip and reveal
+   native window buttons only when the user intentionally reaches the top edge. */
+.synflix-desktop-titlebar {
+  height:var(--desktop-titlebar) !important;
+  border:0 !important;
+  background:#0b0a19 !important;
+  box-shadow:none !important;
+}
+.synflix-desktop-window-controls { opacity:0 !important; transition:opacity .12s ease !important; }
+.synflix-desktop-titlebar:hover .synflix-desktop-window-controls,
+.synflix-desktop-window-controls:focus-within { opacity:.72 !important; }
+.synflix-desktop-window-controls button { width:38px !important; background:transparent !important; }
+.synflix-desktop-titlebrand { padding:0 !important; }
+
+/* Left rail: icon color is the only selected-state treatment. */
+.synflix-desktop-sidebar {
+  top:var(--desktop-titlebar) !important;
+  width:var(--desktop-sidebar) !important;
+  border:0 !important;
+  background:linear-gradient(180deg,#111024 0%,#0c0b1b 74%,#0a0916 100%) !important;
+  box-shadow:14px 0 42px rgba(0,0,0,.16) !important;
+}
+.synflix-desktop-logo {
+  width:52px !important;
+  height:52px !important;
+  margin-top:11px !important;
+  border:0 !important;
+  border-radius:0 !important;
+  background:transparent !important;
+  box-shadow:none !important;
+}
+.synflix-desktop-logo img {
+  width:36px !important;
+  height:36px !important;
+  object-fit:contain;
+  filter:drop-shadow(0 0 10px rgba(111,76,255,.25));
+}
+.synflix-desktop-side-nav {
+  margin-top:24px !important;
+  gap:15px !important;
+}
+.synflix-desktop-side-bottom {
+  margin-bottom:22px !important;
+  gap:15px !important;
+}
+.synflix-desktop-side-nav a,
+.synflix-desktop-side-bottom a {
+  width:44px !important;
+  height:44px !important;
+  border:0 !important;
+  border-radius:0 !important;
+  background:transparent !important;
+  color:#555566 !important;
+  box-shadow:none !important;
+  transform:none !important;
+}
+.synflix-desktop-side-nav a::before,
+.synflix-desktop-side-bottom a::before { display:none !important; }
+.synflix-desktop-side-nav a:hover,
+.synflix-desktop-side-bottom a:hover { color:#a7a5b4 !important; background:transparent !important; }
+.synflix-desktop-side-nav a[data-active="true"],
+.synflix-desktop-side-bottom a[data-active="true"] { color:#8e6dff !important; background:transparent !important; }
+.synflix-desktop-side-nav svg,
+.synflix-desktop-side-bottom svg { width:23px !important; height:23px !important; stroke-width:1.65 !important; }
+.synflix-desktop-side-nav a:focus-visible,
+.synflix-desktop-side-bottom a:focus-visible {
+  outline:1px solid rgba(142,109,255,.9) !important;
+  outline-offset:-5px !important;
+  border-radius:6px !important;
+}
+
+/* Top search / utility strip. */
+.synflix-desktop-toolbar {
+  top:var(--desktop-titlebar) !important;
+  left:var(--desktop-sidebar) !important;
+  height:var(--desktop-toolbar) !important;
+  grid-template-columns:minmax(100px,1fr) minmax(350px,430px) minmax(170px,1fr) !important;
+  gap:18px !important;
+  border:0 !important;
+  background:#0d0c20 !important;
+  padding:0 27px 0 36px !important;
+  backdrop-filter:none !important;
+  transition:opacity .12s ease,transform .12s ease !important;
+}
+.synflix-desktop-search {
+  height:38px !important;
+  border:1px solid rgba(255,255,255,.045) !important;
+  border-radius:17px !important;
+  background:rgba(255,255,255,.075) !important;
+  padding:0 12px 0 18px !important;
+  box-shadow:none !important;
+}
+.synflix-desktop-search input {
+  order:1 !important;
+  color:#d7d5df !important;
+  font-size:12px !important;
+}
+.synflix-desktop-search input::placeholder { color:#727181 !important; opacity:1; }
+.synflix-desktop-search>svg {
+  order:2 !important;
+  width:16px !important;
+  height:16px !important;
+  color:#6f6e7d !important;
+}
+.synflix-desktop-toolbar-actions { gap:10px !important; }
+.synflix-desktop-toolbar-actions>button,
+.synflix-desktop-profile {
+  width:27px !important;
+  height:32px !important;
+  padding:0 !important;
+  border:0 !important;
+  border-radius:0 !important;
+  background:transparent !important;
+  color:#5e5e6f !important;
+  box-shadow:none !important;
+}
+.synflix-desktop-toolbar-actions>button:hover,
+.synflix-desktop-profile:hover { color:#aaa8b7 !important; }
+.synflix-desktop-toolbar-actions>button svg,
+.synflix-desktop-profile>svg { width:17px !important; height:17px !important; stroke-width:1.55 !important; }
+
+/* Main canvas proportions. */
+.synflix-desktop-content {
+  margin-left:var(--desktop-sidebar) !important;
+  padding-top:calc(var(--desktop-titlebar) + var(--desktop-toolbar)) !important;
+  min-height:100vh;
+  background:linear-gradient(180deg,#0e0d22 0%,#0c0b1d 55%,#0a0917 100%) !important;
+  overflow:auto !important;
+  transition:padding-top .12s ease !important;
+}
+.desktop-page {
+  min-height:calc(100vh - var(--desktop-titlebar) - var(--desktop-toolbar));
+  padding:29px 48px 68px !important;
+  background:transparent !important;
+}
+.desktop-home-page { padding-top:22px !important; }
+
+/* Home is intentionally just the three rows from the reference. */
+.desktop-home-page>.desktop-media-section { margin-top:54px !important; }
+.desktop-home-page>.desktop-continue-section { margin-top:12px !important; }
+.desktop-section-header {
+  min-height:32px;
+  align-items:center !important;
+  margin-bottom:13px !important;
+}
+.desktop-section-header h2 {
+  margin:0 !important;
+  color:#f0eef5 !important;
+  font-size:24px !important;
+  line-height:1.15 !important;
+  font-weight:430 !important;
+  letter-spacing:-.025em !important;
+}
+.desktop-see-all {
+  margin-left:auto;
+  color:#777585 !important;
+  font-size:10px !important;
+  font-weight:500 !important;
+  text-decoration:none !important;
+}
+.desktop-see-all:hover { color:#bab7c8 !important; }
+.desktop-see-all span { margin-left:3px; font-size:17px; vertical-align:-1px; }
+
+/* Poster-only shelves. */
+.desktop-poster-rail {
+  display:grid !important;
+  grid-auto-flow:column !important;
+  grid-auto-columns:166px !important;
+  gap:24px !important;
+  overflow-x:auto !important;
+  padding:3px 3px 10px !important;
+  scrollbar-width:none !important;
+}
+.desktop-poster-rail::-webkit-scrollbar,
+.desktop-continue-rail::-webkit-scrollbar { display:none !important; }
+.desktop-poster-card { min-width:0; }
+.desktop-poster-art-wrap { position:relative; }
+.desktop-poster-art {
+  width:100% !important;
+  aspect-ratio:2/3 !important;
+  border:1px solid rgba(255,255,255,.035) !important;
+  border-radius:8px !important;
+  background:#171529 !important;
+  box-shadow:0 12px 28px rgba(0,0,0,.24) !important;
+  transform:none !important;
+  transition:border-color .12s ease,box-shadow .12s ease,transform .12s ease !important;
+}
+.desktop-poster-art img { width:100%; height:100%; object-fit:cover; display:block; }
+.desktop-poster-card:hover .desktop-poster-art,
+.desktop-poster-card[data-selected="true"] .desktop-poster-art,
+.desktop-poster-art:focus-visible {
+  border-color:rgba(255,255,255,.82) !important;
+  box-shadow:0 0 0 1px rgba(255,255,255,.18),0 15px 34px rgba(0,0,0,.32) !important;
+  transform:translateY(-1px) !important;
+  outline:none !important;
+}
+.desktop-poster-play {
+  left:50% !important;
+  top:50% !important;
+  width:50px !important;
+  height:50px !important;
+  border:2px solid rgba(255,255,255,.94) !important;
+  border-radius:50% !important;
+  background:rgba(8,7,18,.24) !important;
+  color:white !important;
+  opacity:0 !important;
+  transform:translate(-50%,-50%) !important;
+  backdrop-filter:blur(2px) !important;
+}
+.desktop-poster-play svg { width:23px !important; height:23px !important; fill:white; stroke:none; margin-left:3px; }
+.desktop-poster-card:hover .desktop-poster-play,
+.desktop-poster-card[data-selected="true"] .desktop-poster-play,
+.desktop-poster-art:focus-visible .desktop-poster-play { opacity:1 !important; }
+.desktop-poster-save {
+  right:7px !important;
+  top:7px !important;
+  width:26px !important;
+  height:26px !important;
+  border:0 !important;
+  border-radius:5px !important;
+  background:rgba(10,9,20,.62) !important;
+  opacity:0 !important;
+}
+.desktop-poster-card:hover .desktop-poster-save,
+.desktop-poster-save:focus-visible { opacity:1 !important; }
+.desktop-poster-meta,.desktop-poster-title,.desktop-poster-subline,.desktop-poster-rating,.desktop-poster-hover { display:none !important; }
+
+/* Continue Watching is wider and permanently shows the play control + progress. */
+.desktop-continue-rail {
+  display:grid !important;
+  grid-auto-flow:column !important;
+  grid-auto-columns:186px !important;
+  gap:24px !important;
+  overflow-x:auto !important;
+  padding:3px 3px 10px !important;
+  scrollbar-width:none !important;
+}
+.desktop-continue-card {
+  width:100% !important;
+  padding:0 !important;
+  border:0 !important;
+  border-radius:0 !important;
+  background:transparent !important;
+  box-shadow:none !important;
+  color:white !important;
+}
+.desktop-continue-art {
+  width:100% !important;
+  aspect-ratio:2/3 !important;
+  border:1px solid rgba(255,255,255,.045) !important;
+  border-radius:8px !important;
+  background:#171529 !important;
+  box-shadow:0 12px 28px rgba(0,0,0,.24) !important;
+  transform:none !important;
+  transition:border-color .12s ease,box-shadow .12s ease,transform .12s ease !important;
+}
+.desktop-continue-card:hover .desktop-continue-art,
+.desktop-continue-card[data-selected="true"] .desktop-continue-art,
+.desktop-continue-card:focus-visible .desktop-continue-art {
+  border-color:rgba(255,255,255,.88) !important;
+  box-shadow:0 0 0 1px rgba(255,255,255,.16),0 15px 34px rgba(0,0,0,.32) !important;
+  transform:translateY(-1px) !important;
+  outline:none !important;
+}
+.desktop-continue-art img { width:100%; height:100%; object-fit:cover; display:block; }
+.desktop-continue-play {
+  left:50% !important;
+  top:50% !important;
+  width:52px !important;
+  height:52px !important;
+  border:2px solid rgba(255,255,255,.95) !important;
+  border-radius:50% !important;
+  background:rgba(8,7,18,.22) !important;
+  backdrop-filter:blur(2px) !important;
+}
+.desktop-continue-play svg { width:24px !important; height:24px !important; fill:white !important; stroke:none !important; margin-left:3px; }
+.desktop-progress-track {
+  left:10px !important;
+  right:10px !important;
+  bottom:8px !important;
+  height:4px !important;
+  border-radius:4px !important;
+  background:rgba(255,255,255,.34) !important;
+  box-shadow:none !important;
+}
+.desktop-progress-track span { background:white !important; }
+.desktop-continue-copy { display:none !important; }
+
+/* Selected-title state from reference #1. The search strip disappears and the
+   backdrop occupies the entire upper app area while the sidebar stays fixed. */
+.synflix-desktop-app:has(.desktop-home-page.has-spotlight) .synflix-desktop-toolbar {
+  opacity:0 !important;
+  pointer-events:none !important;
+  transform:translateY(-5px) !important;
+}
+.synflix-desktop-app:has(.desktop-home-page.has-spotlight) .synflix-desktop-content {
+  padding-top:var(--desktop-titlebar) !important;
+}
+.desktop-home-page.has-spotlight {
+  padding-top:0 !important;
+}
+.desktop-stremio-spotlight {
+  position:relative !important;
+  min-height:376px !important;
+  margin:0 -48px 0 !important;
+  overflow:hidden !important;
+  background:#0c0b19 !important;
+  isolation:isolate !important;
+}
+.desktop-stremio-spotlight::before {
+  content:"";
+  position:absolute;
+  inset:0;
+  z-index:-2;
+  background-image:var(--desktop-spotlight-image);
+  background-size:cover;
+  background-position:center 30%;
+  transform:scale(1.005);
+}
+.desktop-stremio-spotlight::after {
+  content:"";
+  position:absolute;
+  inset:0;
+  z-index:-1;
+  background:
+    linear-gradient(90deg,rgba(13,12,28,.99) 0%,rgba(13,12,28,.92) 28%,rgba(13,12,28,.56) 49%,rgba(13,12,28,.13) 79%),
+    linear-gradient(0deg,#0b0a19 0%,rgba(11,10,25,.20) 34%,transparent 67%);
+}
+.desktop-stremio-spotlight-copy {
+  width:min(610px,57%) !important;
+  padding:46px 0 42px 118px !important;
+}
+.desktop-stremio-spotlight h1 {
+  margin:0 0 24px !important;
+  color:#f7f6f9 !important;
+  font-size:39px !important;
+  line-height:1 !important;
+  font-weight:650 !important;
+  letter-spacing:-.04em !important;
+}
+.desktop-stremio-meta {
+  display:flex !important;
+  align-items:center !important;
+  gap:27px !important;
+  color:#b7b5c0 !important;
+  font-size:12px !important;
+}
+.desktop-stremio-meta b {
+  display:inline-block !important;
+  margin-left:4px !important;
+  border-radius:2px !important;
+  background:#d7aa2d !important;
+  padding:1px 3px !important;
+  color:#17130a !important;
+  font-size:7px !important;
+  font-weight:900 !important;
+  vertical-align:2px !important;
+}
+.desktop-stremio-spotlight p {
+  max-width:590px !important;
+  margin:21px 0 0 !important;
+  color:#d3d1da !important;
+  font-size:15px !important;
+  line-height:1.5 !important;
+}
+.desktop-stremio-cast {
+  margin-top:19px !important;
+  color:#757382 !important;
+  font-size:12px !important;
+}
+.desktop-home-page.has-spotlight>.desktop-continue-section {
+  margin-top:10px !important;
+}
+
+@media (max-width:1120px) {
+  .desktop-page { padding-left:38px !important; padding-right:38px !important; }
+  .desktop-stremio-spotlight { margin-left:-38px !important; margin-right:-38px !important; }
+  .desktop-stremio-spotlight-copy { padding-left:94px !important; width:62% !important; }
+  .desktop-poster-rail { grid-auto-columns:150px !important; gap:18px !important; }
+  .desktop-continue-rail { grid-auto-columns:168px !important; gap:18px !important; }
+}
+
+@media (prefers-reduced-motion:reduce) {
+  .synflix-desktop-toolbar,.synflix-desktop-content,.desktop-poster-art,.desktop-continue-art { transition:none !important; }
+}
