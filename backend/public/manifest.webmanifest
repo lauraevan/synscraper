@@ -1,0 +1,48 @@
+{
+  "name": "SynFlix",
+  "short_name": "SynFlix",
+  "description": "SynFlix movies, TV, Live TV, watchlists, and SynPlayer in an app-like home-screen experience.",
+  "start_url": "/",
+  "scope": "/",
+  "id": "/",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "background_color": "#070707",
+  "theme_color": "#070707",
+  "orientation": "any",
+  "categories": ["entertainment", "video"],
+  "icons": [
+    {
+      "src": "/synflix-logo.webp",
+      "sizes": "256x256",
+      "type": "image/webp",
+      "purpose": "any"
+    },
+    {
+      "src": "/synflix-logo.webp",
+      "sizes": "256x256",
+      "type": "image/webp",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Movies",
+      "short_name": "Movies",
+      "url": "/browse/movie",
+      "icons": [{ "src": "/synflix-logo.webp", "sizes": "256x256", "type": "image/webp" }]
+    },
+    {
+      "name": "Live TV",
+      "short_name": "Live TV",
+      "url": "/live",
+      "icons": [{ "src": "/synflix-logo.webp", "sizes": "256x256", "type": "image/webp" }]
+    },
+    {
+      "name": "My List",
+      "short_name": "My List",
+      "url": "/my-list",
+      "icons": [{ "src": "/synflix-logo.webp", "sizes": "256x256", "type": "image/webp" }]
+    }
+  ]
+}
