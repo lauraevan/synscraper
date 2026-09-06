@@ -41,17 +41,6 @@ export default function DesktopHome() {
 
   const popularMovies = withType(data?.popular_movies, "movie");
   const popularTv = withType(data?.popular_tv, "tv");
-  const selectedType = selected ? mediaTypeOf(selected, "movie") : null;
-
-  const { data: selectedDetails } = useQuery({
-    queryKey: ["desktop-home-preview", selectedType, selected?.id],
-    queryFn: () => getDetails(selectedType, selected.id),
-    enabled: Boolean(selected?.id && selectedType),
-    staleTime: 300_000,
-  });
-
-  const spotlight = selectedDetails ? { ...selectedDetails, media_type: selectedType } : selected;
-  const selectedKey = selected ? `${selectedType}:${selected.id}` : null;
 
   const fallbackContinue = previewMode() && !continueItems.length
     ? [...popularMovies.slice(0, 4), ...popularTv.slice(0, 3)].map((item, index) => ({
@@ -62,6 +51,21 @@ export default function DesktopHome() {
     : [];
   const continueDisplay = continueItems.length ? continueItems : fallbackContinue;
 
+  // The TV reference always keeps a featured title visible. Hover/focus moves the
+  // feature, Escape returns to the first Continue Watching item (or popular title).
+  const previewTarget = selected || continueDisplay[0] || popularMovies[0] || popularTv[0] || null;
+  const previewType = previewTarget ? mediaTypeOf(previewTarget, "movie") : null;
+
+  const { data: previewDetails } = useQuery({
+    queryKey: ["desktop-home-preview", previewType, previewTarget?.id],
+    queryFn: () => getDetails(previewType, previewTarget.id),
+    enabled: Boolean(previewTarget?.id && previewType),
+    staleTime: 300_000,
+  });
+
+  const spotlight = previewDetails ? { ...previewDetails, media_type: previewType } : previewTarget;
+  const selectedKey = previewTarget ? `${previewType}:${previewTarget.id}` : null;
+
   if (isLoading && !data) {
     return <div className="desktop-page desktop-loading"><span className="desktop-loader" /></div>;
   }
@@ -70,18 +74,23 @@ export default function DesktopHome() {
   const genres = spotlight?.genres?.slice(0, 3).map((genre) => genre.name).filter(Boolean) || [];
   const runtime = spotlight?.runtime ? `${spotlight.runtime} min` : null;
   const rating = Number(spotlight?.vote_average) > 0 ? Number(spotlight.vote_average).toFixed(1) : null;
+  const spotlightImage = spotlight?.backdrop_path || spotlight?.poster_path || "";
 
   return (
-    <div className={`desktop-page desktop-home-page ${spotlight ? "has-spotlight" : ""}`} data-testid="desktop-home-page">
+    <div className={`desktop-page desktop-home-page reference-tv-home ${spotlight ? "has-spotlight" : ""}`} data-testid="desktop-home-page">
       {spotlight ? (
-        <section className="desktop-stremio-spotlight" style={{ "--desktop-spotlight-image": `url(https://image.tmdb.org/t/p/original${spotlight.backdrop_path || ""})` }}>
+        <section
+          className="desktop-stremio-spotlight"
+          style={{ "--desktop-spotlight-image": spotlightImage ? `url(https://image.tmdb.org/t/p/original${spotlightImage})` : "none" }}
+          aria-label={`Featured: ${titleOf(spotlight)}`}
+        >
           <div className="desktop-stremio-spotlight-copy">
             <h1>{titleOf(spotlight)}</h1>
             <div className="desktop-stremio-meta">
               {runtime ? <span>{runtime}</span> : null}
               {yearOf(spotlight) ? <span>{yearOf(spotlight)}</span> : null}
               {rating ? <span>{rating} <b>TMDB</b></span> : null}
-              <span>{genres.length ? genres.join(" | ") : selectedType === "tv" ? "Series" : "Movie"}</span>
+              <span>{genres.length ? genres.join(" | ") : previewType === "tv" ? "Series" : "Movie"}</span>
             </div>
             {spotlight.overview ? <p>{spotlight.overview}</p> : null}
             {cast.length ? <div className="desktop-stremio-cast">{cast.join(", ")}</div> : null}

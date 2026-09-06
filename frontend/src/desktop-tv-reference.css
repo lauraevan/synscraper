@@ -1,0 +1,150 @@
+/* Additional desktop pass based on the user's TV / Tears of Steel reference.
+   Keep the left rail fixed, keep a featured backdrop visible at all times on
+   Home, and let Continue Watching overlap the lower hero like a media center. */
+
+/* Reference uses a neutral/white active icon; the purple stays in the logo. */
+.synflix-desktop-side-nav a[data-active="true"],
+.synflix-desktop-side-bottom a[data-active="true"] {
+  color:#f1f0f5 !important;
+}
+
+/* Home has no visible search strip in the reference. */
+.synflix-desktop-app:has(.reference-tv-home) .synflix-desktop-toolbar {
+  opacity:0 !important;
+  pointer-events:none !important;
+  transform:translateY(-6px) !important;
+}
+.synflix-desktop-app:has(.reference-tv-home) .synflix-desktop-content {
+  padding-top:var(--desktop-titlebar) !important;
+}
+
+.reference-tv-home {
+  padding-top:0 !important;
+}
+.reference-tv-home .desktop-stremio-spotlight {
+  min-height:470px !important;
+  margin:0 -48px !important;
+  background:#0b0a18 !important;
+}
+.reference-tv-home .desktop-stremio-spotlight::before {
+  background-size:cover !important;
+  background-position:center 28% !important;
+  filter:saturate(.86) brightness(.82);
+}
+.reference-tv-home .desktop-stremio-spotlight::after {
+  background:
+    linear-gradient(90deg,rgba(12,11,24,.995) 0%,rgba(12,11,24,.95) 25%,rgba(12,11,24,.68) 45%,rgba(12,11,24,.20) 72%,rgba(12,11,24,.08) 100%),
+    linear-gradient(0deg,#0b0a18 0%,rgba(11,10,24,.84) 18%,rgba(11,10,24,.10) 57%,rgba(11,10,24,.03) 100%) !important;
+}
+.reference-tv-home .desktop-stremio-spotlight-copy {
+  width:min(560px,52%) !important;
+  padding:42px 0 150px 48px !important;
+}
+.reference-tv-home .desktop-stremio-spotlight h1 {
+  margin-bottom:18px !important;
+  font-size:34px !important;
+  line-height:1.04 !important;
+  font-weight:650 !important;
+}
+.reference-tv-home .desktop-stremio-meta {
+  gap:24px !important;
+  font-size:11px !important;
+  color:#b6b4bf !important;
+}
+.reference-tv-home .desktop-stremio-spotlight p {
+  max-width:500px !important;
+  margin-top:18px !important;
+  color:#d4d2d9 !important;
+  font-size:14px !important;
+  line-height:1.48 !important;
+}
+.reference-tv-home .desktop-stremio-cast {
+  margin-top:13px !important;
+  color:#75737e !important;
+  font-size:11px !important;
+}
+
+/* Pull Continue Watching into the backdrop, matching the TV reference. */
+.reference-tv-home .desktop-continue-section {
+  position:relative !important;
+  z-index:3 !important;
+  margin-top:-118px !important;
+}
+.reference-tv-home .desktop-continue-section .desktop-section-header {
+  margin-bottom:12px !important;
+}
+.reference-tv-home .desktop-continue-section .desktop-section-header h2 {
+  font-size:22px !important;
+  font-weight:450 !important;
+}
+.reference-tv-home .desktop-continue-rail {
+  grid-auto-columns:172px !important;
+  gap:16px !important;
+  padding:4px 3px 12px !important;
+}
+.reference-tv-home .desktop-continue-art {
+  border-radius:7px !important;
+  border-color:rgba(255,255,255,.06) !important;
+  box-shadow:0 11px 26px rgba(0,0,0,.32) !important;
+}
+.reference-tv-home .desktop-continue-card[data-selected="true"] .desktop-continue-art,
+.reference-tv-home .desktop-continue-card:hover .desktop-continue-art,
+.reference-tv-home .desktop-continue-card:focus-visible .desktop-continue-art {
+  border:2px solid rgba(255,255,255,.96) !important;
+  box-shadow:0 0 0 1px rgba(255,255,255,.08),0 14px 30px rgba(0,0,0,.34) !important;
+  transform:none !important;
+}
+
+/* The TV shot uses the progress line as the persistent affordance; keep the
+   play glyph available only on intentional hover/focus. */
+.reference-tv-home .desktop-continue-play {
+  opacity:0 !important;
+  transform:translate(-50%,-50%) scale(.94) !important;
+  transition:opacity .12s ease,transform .12s ease !important;
+}
+.reference-tv-home .desktop-continue-card:hover .desktop-continue-play,
+.reference-tv-home .desktop-continue-card:focus-visible .desktop-continue-play {
+  opacity:1 !important;
+  transform:translate(-50%,-50%) scale(1) !important;
+}
+.reference-tv-home .desktop-progress-track {
+  left:10px !important;
+  right:10px !important;
+  bottom:8px !important;
+  height:4px !important;
+  background:rgba(255,255,255,.34) !important;
+}
+.reference-tv-home .desktop-progress-track span {
+  background:#fff !important;
+}
+
+/* Shelves below the hero stay clean and slightly tighter than the previous pass. */
+.reference-tv-home > .desktop-media-section:not(.desktop-continue-section) {
+  margin-top:46px !important;
+}
+.reference-tv-home .desktop-poster-rail {
+  grid-auto-columns:164px !important;
+  gap:22px !important;
+}
+
+@media (max-width:1180px) {
+  .reference-tv-home .desktop-stremio-spotlight-copy {
+    width:58% !important;
+    padding-left:38px !important;
+  }
+  .reference-tv-home .desktop-continue-rail {
+    grid-auto-columns:158px !important;
+    gap:14px !important;
+  }
+  .reference-tv-home .desktop-poster-rail {
+    grid-auto-columns:154px !important;
+    gap:18px !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reference-tv-home .desktop-continue-play,
+  .reference-tv-home .desktop-continue-art {
+    transition:none !important;
+  }
+}
