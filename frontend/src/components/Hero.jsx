@@ -71,18 +71,23 @@ export const Hero = ({ items = [] }) => {
   };
 
   return (
-    <section data-testid="hero-banner" className="relative h-[76vh] min-h-[570px] max-h-[880px] overflow-hidden">
-      {featured.map((feature, index) => (
-        <div key={feature.id} className="absolute inset-0 transition-opacity duration-1000 ease-out" style={{ opacity: index === idx ? 1 : 0 }}>
-          <img src={backdrop(feature.backdrop_path, "original")} alt={titleOf(feature)} className="h-full w-full object-cover object-center" />
-        </div>
-      ))}
+    <section data-testid="hero-banner" className="relative h-[76vh] min-h-[570px] max-h-[880px] overflow-hidden bg-[#070706]">
+      <div key={item.id} className="absolute inset-0 overflow-hidden">
+        <img
+          src={backdrop(item.backdrop_path, "w1280")}
+          alt={titleOf(item)}
+          className="synflix-hero-image h-full w-full object-cover object-center"
+          loading="eager"
+          decoding="async"
+          fetchPriority="high"
+        />
+      </div>
 
       <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(7,7,6,.97)_0%,rgba(7,7,6,.78)_30%,rgba(7,7,6,.22)_65%,rgba(7,7,6,.08)_100%)]" />
       <div className="absolute inset-0 bg-[linear-gradient(0deg,#070706_0%,rgba(7,7,6,.78)_10%,rgba(7,7,6,.06)_44%,rgba(7,7,6,.16)_100%)]" />
 
       <div className="relative mx-auto flex h-full max-w-[1500px] items-end px-5 pb-20 pt-28 md:px-8 md:pb-24">
-        <div key={item.id} className="max-w-[720px] syn-fade-up">
+        <div key={item.id} className="synflix-hero-copy max-w-[720px]">
           <div className="flex min-h-[92px] items-end md:min-h-[126px]">
             {heroLogo ? (
               <img
@@ -106,20 +111,20 @@ export const Hero = ({ items = [] }) => {
           {item.overview && <p className="mt-5 max-w-[620px] line-clamp-3 text-[14px] leading-6 text-white/56 md:text-[15px] md:leading-7">{item.overview}</p>}
 
           <div className="mt-7 flex flex-wrap items-center gap-2.5">
-            <button data-testid="hero-play-button" onClick={() => navigate(`/watch/${mt}/${item.id}${mt === "tv" ? "?season=1&episode=1" : ""}`)} className="inline-flex h-11 items-center gap-2 rounded-full bg-[#ffd400] px-5 text-sm font-semibold text-black transition hover:bg-[#ffe04a] active:scale-[.98]">
+            <button data-testid="hero-play-button" onClick={() => navigate(`/watch/${mt}/${item.id}${mt === "tv" ? "?season=1&episode=1" : ""}`)} className="inline-flex h-11 items-center gap-2 rounded-full bg-[#ffd400] px-5 text-sm font-semibold text-black transition-transform duration-200 hover:scale-[1.035] active:scale-[.98]">
               <Play className="h-4 w-4 fill-current" /> Play
             </button>
-            <button data-testid="hero-info-button" onClick={() => navigate(`/title/${mt}/${item.id}`)} className="inline-flex h-11 items-center gap-2 rounded-full border border-[#ffd400]/18 bg-black/28 px-5 text-sm font-medium text-white/82 backdrop-blur-md transition hover:border-[#ffd400]/38 hover:bg-[#ffd400]/10 hover:text-[#ffd400]">
+            <button data-testid="hero-info-button" onClick={() => navigate(`/title/${mt}/${item.id}`)} className="inline-flex h-11 items-center gap-2 rounded-full border border-[#ffd400]/18 bg-black/28 px-5 text-sm font-medium text-white/82 backdrop-blur-md transition-transform duration-200 hover:scale-[1.025] hover:border-[#ffd400]/38 hover:bg-[#ffd400]/10 hover:text-[#ffd400]">
               <Info className="h-4 w-4" /> Details
             </button>
-            <button data-testid="hero-watchlist-button" onClick={save} className="grid h-11 w-11 place-items-center rounded-full border border-[#ffd400]/18 bg-black/28 text-white/78 backdrop-blur-md transition hover:border-[#ffd400]/38 hover:bg-[#ffd400]/10 hover:text-[#ffd400]" aria-label={saved ? "Remove from My List" : "Add to My List"}>
+            <button data-testid="hero-watchlist-button" onClick={save} className="grid h-11 w-11 place-items-center rounded-full border border-[#ffd400]/18 bg-black/28 text-white/78 backdrop-blur-md transition-transform duration-200 hover:scale-[1.05] hover:border-[#ffd400]/38 hover:bg-[#ffd400]/10 hover:text-[#ffd400]" aria-label={saved ? "Remove from My List" : "Add to My List"}>
               {saved ? <Check className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
             </button>
           </div>
 
           {featured.length > 1 && (
             <div className="mt-9 flex items-center gap-2">
-              {featured.map((feature, index) => <button key={feature.id} onClick={() => setIdx(index)} className={`h-[3px] rounded-full transition-all ${index === idx ? "w-8 bg-[#ffd400]" : "w-4 bg-white/22 hover:bg-[#ffd400]/45"}`} aria-label={`Show ${titleOf(feature)}`} />)}
+              {featured.map((feature, index) => <button key={feature.id} onClick={() => setIdx(index)} className={`h-[3px] rounded-full transition-[width,background-color] duration-300 ${index === idx ? "w-8 bg-[#ffd400]" : "w-4 bg-white/22 hover:bg-[#ffd400]/45"}`} aria-label={`Show ${titleOf(feature)}`} />)}
             </div>
           )}
         </div>
