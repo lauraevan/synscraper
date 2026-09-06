@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { Check, ChevronLeft, Play, Plus, Star } from "lucide-react";
+import { Check, ChevronLeft, Play, Plus, Skull, Star } from "lucide-react";
 import { getDetails, getSeason, getStreams, img } from "@/lib/api";
 import { titleOf, yearOf, runtimeStr, ratingStr } from "@/lib/format";
 import { Row } from "@/components/Row";
@@ -54,6 +54,10 @@ export default function Title() {
   const { data, isLoading } = useQuery({ queryKey: ["details", mediaType, id], queryFn: () => getDetails(mediaType, id) });
   const [saved, setSaved] = useState(false);
 
+  const detailTitle = data ? titleOf(data) : "";
+  const jumpYear = Number(String(data?.release_date || "").slice(0, 4)) || undefined;
+  const isHorror = mediaType === "movie" && (data?.genres || []).some((genre) => genre?.id === 27 || String(genre?.name || "").toLowerCase() === "horror");
+
   const { data: uhdSources } = useQuery({
     queryKey: ["title-uhd", mediaType, id],
     queryFn: () => getStreams(
@@ -71,6 +75,20 @@ export default function Title() {
     ).catch(() => null),
     enabled: !!data?.id,
     staleTime: 5 * 60_000,
+    retry: 0,
+  });
+
+  const { data: jumpScares } = useQuery({
+    queryKey: ["jumpscares", detailTitle, jumpYear],
+    queryFn: async () => {
+      const params = new URLSearchParams({ title: detailTitle });
+      if (jumpYear) params.set("year", String(jumpYear));
+      const response = await fetch(`/api/jumpscares?${params.toString()}`);
+      if (!response.ok) return { found: false };
+      return response.json();
+    },
+    enabled: isHorror && !!detailTitle,
+    staleTime: 6 * 60 * 60_000,
     retry: 0,
   });
 
@@ -106,6 +124,17 @@ export default function Title() {
               {yearOf(data) && <span>{yearOf(data)}</span>}
               {mediaType === "movie" && data.runtime ? <span>{runtimeStr(data.runtime)}</span> : null}
               {mediaType === "tv" && data.number_of_seasons ? <span>{data.number_of_seasons} Season{data.number_of_seasons > 1 ? "s" : ""}</span> : null}
+              {isHorror && jumpScares?.found && (
+                <span
+                  data-testid="jumpscare-counter"
+                  title={`Jump-scare count from Where's The Jump?${jumpScares.rating != null ? ` · intensity ${jumpScares.rating}/5` : ""}`}
+                  className="inline-flex h-6 items-center gap-1.5 rounded-[5px] border border-red-400/20 bg-black/58 px-2 text-[10px] font-medium text-white/78"
+                >
+                  <Skull className="h-3 w-3 text-red-400/85" />
+                  <strong className="font-semibold text-white">{jumpScares.count}</strong>
+                  jumpscare{jumpScares.count === 1 ? "" : "s"}
+                </span>
+              )}
               {hasUhd && <span data-testid="title-4k-uhd-badge" className="inline-flex h-6 items-center rounded-[5px] border border-white/35 bg-black/70 px-2 text-[9px] font-black uppercase tracking-[0.11em] text-white shadow-[0_4px_16px_rgba(0,0,0,.25)]">4K UHD</span>}
             </div>
             <div className="mt-3 flex flex-wrap gap-2">{genres.slice(0, 4).map((g) => <span key={g} className="rounded-full border border-[#ffd400]/18 bg-[#ffd400]/[0.05] px-2.5 py-1 text-[10px] font-medium text-[#ffd400]/72 backdrop-blur-sm">{g}</span>)}</div>

@@ -1,0 +1,97 @@
+/* Final visual polish loaded after the legacy styles so newer UI choices win cleanly. */
+
+/* Homepage: UHD should feel like a capability callout, not wallpaper. Hide the mass-applied badges
+   and keep just a handful in the two movie-forward rails plus one Top 10 title. */
+[data-testid="home-page"] [data-testid^="movie-card-"]::after,
+[data-testid="home-page"] [data-testid="row-popular-movies"] article::after,
+[data-testid="home-page"] [data-testid="row-top-rated-movies"] article::after,
+[data-testid="home-page"] [data-testid="top-ten-row"] article > div:first-child > div:last-child::after {
+    content: none !important;
+}
+
+[data-testid="home-page"] [data-testid="row-popular-movies"] article:nth-of-type(2)::after,
+[data-testid="home-page"] [data-testid="row-popular-movies"] article:nth-of-type(7)::after,
+[data-testid="home-page"] [data-testid="row-top-rated-movies"] article:nth-of-type(3)::after,
+[data-testid="home-page"] [data-testid="row-top-rated-movies"] article:nth-of-type(8)::after,
+[data-testid="home-page"] [data-testid="top-ten-row"] article:nth-of-type(4) > div:first-child > div:last-child::after {
+    content: "4K UHD" !important;
+}
+
+/* Live TV: make the page read like a real TV guide rather than a stack of generated cards. */
+[data-testid="live-tv-page"] {
+    background:
+        radial-gradient(circle at 50% -18%, rgba(255,255,255,0.035), transparent 34%),
+        #080808 !important;
+}
+
+[data-testid="live-tv-page"] [data-testid="live-tv-player"] {
+    border-radius: 16px !important;
+    border-color: rgba(255,255,255,0.105) !important;
+    box-shadow: 0 24px 70px rgba(0,0,0,0.34) !important;
+}
+
+[data-testid="live-tv-page"] header {
+    border-bottom-color: rgba(255,255,255,0.095) !important;
+}
+
+[data-testid="live-tv-page"] aside {
+    border-color: rgba(255,255,255,0.085) !important;
+}
+
+[data-testid="live-tv-page"] aside > div:first-child + div {
+    transition: border-color 160ms ease, background-color 160ms ease;
+}
+
+[data-testid="live-tv-page"] aside button {
+    -webkit-tap-highlight-color: transparent;
+}
+
+[data-testid="live-tv-page"] aside button:focus-visible,
+[data-testid="live-tv-page"] header button:focus-visible {
+    outline: 2px solid rgba(255,255,255,0.45);
+    outline-offset: 2px;
+}
+
+[data-testid="live-tv-page"] aside button[class*="hover:bg-white"] {
+    transition: background-color 150ms ease, color 150ms ease, transform 150ms ease;
+}
+
+[data-testid="live-tv-page"] aside button[class*="hover:bg-white"]:hover {
+    transform: translateX(2px);
+}
+
+[data-testid="live-tv-page"] select {
+    color-scheme: dark;
+}
+
+@media (min-width: 1024px) {
+    [data-testid="live-tv-page"] aside {
+        position: sticky;
+        top: 96px;
+        align-self: start;
+        max-height: calc(100vh - 118px);
+        padding-bottom: 4px;
+    }
+
+    [data-testid="live-tv-page"] aside > div:last-child {
+        max-height: calc(100vh - 285px) !important;
+    }
+}
+
+@media (max-width: 1023px) {
+    [data-testid="live-tv-page"] aside {
+        margin-top: 2px;
+        border-top: 1px solid rgba(255,255,255,0.085);
+        padding-top: 20px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    [data-testid="live-tv-page"] aside button[class*="hover:bg-white"] {
+        transition: none !important;
+    }
+
+    [data-testid="live-tv-page"] aside button[class*="hover:bg-white"]:hover {
+        transform: none !important;
+    }
+}

@@ -2,6 +2,7 @@ import "@/App.css";
 import "@/synflix-site.css";
 import "@/theme-system.css";
 import "@/light-mode.css";
+import "@/synflix-polish.css";
 import { useEffect } from "react";
 import { BrowserRouter, Routes, Route, useLocation, Link } from "react-router-dom";
 import { Navbar } from "@/components/Navbar";
