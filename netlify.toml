@@ -1,0 +1,22 @@
+[build]
+  publish = "public"
+  command = "echo 'Using prebuilt SynFlix frontend bundle'"
+
+# Keep the current Python API on the existing production backend while
+# Netlify serves the SynFlix frontend during the Vercel build-limit window.
+[[redirects]]
+  from = "/api/*"
+  to = "https://synscraper-tffk.vercel.app/api/:splat"
+  status = 200
+  force = true
+
+# React Router SPA fallback. Keep this after the API proxy.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+[[headers]]
+  for = "/static/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
