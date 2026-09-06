@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getDetails, getHome } from "@/lib/api";
 import { mediaTypeOf, titleOf, yearOf } from "@/lib/format";
-import { getContinue, getWatchlist, toggleWatchlist } from "@/lib/storage";
+import { getContinue } from "@/lib/storage";
 import { DesktopContinueCard, DesktopRail } from "@/components/DesktopMedia";
 
 const withType = (items = [], type) => items.map((item) => ({ ...item, media_type: item.media_type || type }));
@@ -17,16 +17,12 @@ function previewMode() {
 }
 
 export default function DesktopHome() {
-  const [watchlist, setWatchlist] = useState(() => getWatchlist());
   const [continueItems, setContinueItems] = useState(() => getContinue());
   const [selected, setSelected] = useState(null);
   const { data, isLoading } = useQuery({ queryKey: ["desktop-home"], queryFn: getHome, staleTime: 60_000 });
 
   useEffect(() => {
-    const sync = () => {
-      setWatchlist(getWatchlist());
-      setContinueItems(getContinue());
-    };
+    const sync = () => setContinueItems(getContinue());
     window.addEventListener("synflix-library-change", sync);
     window.addEventListener("synflix-desktop-profile", sync);
     return () => {
@@ -35,32 +31,40 @@ export default function DesktopHome() {
     };
   }, []);
 
-  const trending = data?.trending || [];
+  useEffect(() => {
+    const onKey = (event) => {
+      if (event.key === "Escape" && selected) setSelected(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [selected]);
+
   const popularMovies = withType(data?.popular_movies, "movie");
   const popularTv = withType(data?.popular_tv, "tv");
-  const savedKeys = useMemo(() => new Set(watchlist.map((item) => `${item.media_type}:${item.id}`)), [watchlist]);
-
   const selectedType = selected ? mediaTypeOf(selected, "movie") : null;
+
   const { data: selectedDetails } = useQuery({
     queryKey: ["desktop-home-preview", selectedType, selected?.id],
     queryFn: () => getDetails(selectedType, selected.id),
     enabled: Boolean(selected?.id && selectedType),
     staleTime: 300_000,
   });
+
   const spotlight = selectedDetails ? { ...selectedDetails, media_type: selectedType } : selected;
+  const selectedKey = selected ? `${selectedType}:${selected.id}` : null;
 
-  const toggle = (item) => {
-    const type = mediaTypeOf(item, "movie");
-    toggleWatchlist({ ...item, media_type: type, title: titleOf(item) });
-    setWatchlist(getWatchlist());
-  };
-
-  const previewFallback = previewMode() && !continueItems.length
-    ? [...popularMovies.slice(0, 4), ...popularTv.slice(0, 3)].map((item, index) => ({ ...item, position: (index + 1) * 640, duration: 7200 }))
+  const fallbackContinue = previewMode() && !continueItems.length
+    ? [...popularMovies.slice(0, 4), ...popularTv.slice(0, 3)].map((item, index) => ({
+        ...item,
+        position: (index + 1) * 700,
+        duration: 7200,
+      }))
     : [];
-  const continueDisplay = continueItems.length ? continueItems : previewFallback;
+  const continueDisplay = continueItems.length ? continueItems : fallbackContinue;
 
-  if (isLoading && !data) return <div className="desktop-page desktop-loading"><span className="desktop-loader" /></div>;
+  if (isLoading && !data) {
+    return <div className="desktop-page desktop-loading"><span className="desktop-loader" /></div>;
+  }
 
   const cast = spotlight?.credits?.cast?.slice(0, 4).map((person) => person.name).filter(Boolean) || [];
   const genres = spotlight?.genres?.slice(0, 3).map((genre) => genre.name).filter(Boolean) || [];
@@ -77,7 +81,7 @@ export default function DesktopHome() {
               {runtime ? <span>{runtime}</span> : null}
               {yearOf(spotlight) ? <span>{yearOf(spotlight)}</span> : null}
               {rating ? <span>{rating} <b>TMDB</b></span> : null}
-              {genres.length ? <span>{genres.join(" | ")}</span> : <span>{selectedType === "tv" ? "Series" : "Movie"}</span>}
+              <span>{genres.length ? genres.join(" | ") : selectedType === "tv" ? "Series" : "Movie"}</span>
             </div>
             {spotlight.overview ? <p>{spotlight.overview}</p> : null}
             {cast.length ? <div className="desktop-stremio-cast">{cast.join(", ")}</div> : null}
@@ -87,15 +91,25 @@ export default function DesktopHome() {
 
       {continueDisplay.length ? (
         <section className="desktop-media-section desktop-continue-section">
-          <header className="desktop-section-header"><h2>Continue Watching</h2><span className="desktop-see-all">See All <span aria-hidden="true">›</span></span></header>
-          <div className="desktop-continue-rail">{continueDisplay.slice(0, 10).map((item) => <DesktopContinueCard key={`${item.media_type}:${item.id}`} item={item} onPreview={setSelected} />)}</div>
+          <header className="desktop-section-header">
+            <h2>Continue Watching</h2>
+            <span className="desktop-see-all">See All <span aria-hidden="true">›</span></span>
+          </header>
+          <div className="desktop-continue-rail">
+            {continueDisplay.slice(0, 10).map((item) => (
+              <DesktopContinueCard
+                key={`${item.media_type}:${item.id}`}
+                item={item}
+                onPreview={setSelected}
+                selected={selectedKey === `${item.media_type}:${item.id}`}
+              />
+            ))}
+          </div>
         </section>
       ) : null}
 
-      <DesktopRail title="Popular Movies" items={popularMovies} fallbackType="movie" savedKeys={savedKeys} onToggle={toggle} onPreview={setSelected} seeAll="/browse/movie" />
-      <DesktopRail title="Popular Series" items={popularTv} fallbackType="tv" savedKeys={savedKeys} onToggle={toggle} onPreview={setSelected} seeAll="/browse/tv" />
-      {watchlist.length ? <DesktopRail title="My Library" items={watchlist.slice(0, 18)} savedKeys={savedKeys} onToggle={toggle} onPreview={setSelected} seeAll="/library" /> : null}
-      <DesktopRail title="Trending" items={trending} savedKeys={savedKeys} onToggle={toggle} onPreview={setSelected} seeAll="/discover" />
+      <DesktopRail title="Popular Movies" items={popularMovies} fallbackType="movie" onPreview={setSelected} selectedKey={selectedKey} seeAll="/browse/movie" />
+      <DesktopRail title="Popular Series" items={popularTv} fallbackType="tv" onPreview={setSelected} selectedKey={selectedKey} seeAll="/browse/tv" />
     </div>
   );
 }

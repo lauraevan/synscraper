@@ -6,6 +6,7 @@ import "@/synflix-polish.css";
 import "@/mobile-app.css";
 import "@/desktop-app.css";
 import "@/desktop-v2-polish.css";
+import "@/desktop-reference-exact.css";
 import { useEffect } from "react";
 import { BrowserRouter, Routes, Route, useLocation, Link } from "react-router-dom";
 import { Navbar } from "@/components/Navbar";
