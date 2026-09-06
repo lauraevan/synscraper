@@ -1,76 +1,60 @@
-import { Bookmark, Check, Play, Star } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { Bookmark, Check, Play } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
 import { img } from "@/lib/api";
-import { mediaTypeOf, titleOf, yearOf } from "@/lib/format";
+import { mediaTypeOf, titleOf } from "@/lib/format";
 
-export function DesktopPoster({ item, fallbackType = "movie", onToggle, saved = false, compact = false }) {
+export function DesktopPoster({ item, fallbackType = "movie", onToggle, saved = false, onPreview }) {
   const navigate = useNavigate();
   const mediaType = mediaTypeOf(item, fallbackType);
   const title = titleOf(item);
   const open = () => navigate(`/title/${mediaType}/${item.id}`);
-
   return (
-    <article className={`desktop-poster-card ${compact ? "desktop-poster-card--compact" : ""}`}>
-      <button type="button" className="desktop-poster-art" onClick={open} aria-label={`Open ${title}`}>
-        {item.poster_path ? <img src={img(item.poster_path, "w342")} alt="" loading="lazy" /> : <div className="desktop-poster-fallback">{title.slice(0, 1)}</div>}
-        <div className="desktop-poster-hover">
-          <span className="desktop-poster-play"><Play aria-hidden="true" /></span>
-        </div>
-        {Number(item.vote_average) > 0 && (
-          <span className="desktop-poster-rating"><Star aria-hidden="true" />{Number(item.vote_average).toFixed(1)}</span>
-        )}
-      </button>
-      <div className="desktop-poster-meta">
-        <button type="button" onClick={open} className="desktop-poster-title">{title}</button>
-        <div className="desktop-poster-subline">
-          <span>{yearOf(item) || (mediaType === "tv" ? "Series" : "Movie")}</span>
-          <span>·</span>
-          <span>{mediaType === "tv" ? "Series" : "Movie"}</span>
-        </div>
-      </div>
-      {onToggle && (
-        <button type="button" onClick={() => onToggle(item)} className="desktop-poster-save" aria-label={saved ? `Remove ${title} from watchlist` : `Add ${title} to watchlist`} title={saved ? "Remove from watchlist" : "Add to watchlist"}>
-          {saved ? <Check aria-hidden="true" /> : <Bookmark aria-hidden="true" />}
+    <article className="desktop-poster-card" onMouseEnter={() => onPreview?.({ ...item, media_type: mediaType })}>
+      <div className="desktop-poster-art-wrap">
+        <button type="button" className="desktop-poster-art" onClick={open} onFocus={() => onPreview?.({ ...item, media_type: mediaType })} aria-label={`Open ${title}`}>
+          {item.poster_path ? <img src={img(item.poster_path, "w500")} alt="" loading="lazy" /> : <div className="desktop-poster-fallback">{title.slice(0, 1)}</div>}
+          <span className="desktop-poster-play" aria-hidden="true"><Play /></span>
         </button>
-      )}
+        {onToggle ? (
+          <button type="button" className="desktop-poster-save" onClick={() => onToggle(item)} aria-label={saved ? `Remove ${title} from watchlist` : `Add ${title} to watchlist`} title={saved ? "Remove from watchlist" : "Add to watchlist"}>
+            {saved ? <Check aria-hidden="true" /> : <Bookmark aria-hidden="true" />}
+          </button>
+        ) : null}
+      </div>
     </article>
   );
 }
 
-export function DesktopRail({ title, subtitle, items = [], fallbackType = "movie", savedKeys, onToggle }) {
+export function DesktopRail({ title, items = [], fallbackType = "movie", savedKeys, onToggle, onPreview, seeAll }) {
   if (!items.length) return null;
   return (
     <section className="desktop-media-section">
       <header className="desktop-section-header">
-        <div><h2>{title}</h2>{subtitle ? <p>{subtitle}</p> : null}</div>
+        <h2>{title}</h2>
+        {seeAll ? <Link to={seeAll} className="desktop-see-all">See All <span aria-hidden="true">›</span></Link> : null}
       </header>
       <div className="desktop-poster-rail">
         {items.map((item) => {
           const type = mediaTypeOf(item, fallbackType);
           const key = `${type}:${item.id}`;
-          return <DesktopPoster key={key} item={{ ...item, media_type: type }} fallbackType={fallbackType} saved={savedKeys?.has(key)} onToggle={onToggle} />;
+          return <DesktopPoster key={key} item={{ ...item, media_type: type }} fallbackType={fallbackType} saved={savedKeys?.has(key)} onToggle={onToggle} onPreview={onPreview} />;
         })}
       </div>
     </section>
   );
 }
 
-export function DesktopContinueCard({ item }) {
+export function DesktopContinueCard({ item, onPreview }) {
   const navigate = useNavigate();
-  const title = item.title || item.name || "Untitled";
   const pct = item.duration ? Math.max(0, Math.min(1, item.position / item.duration)) : 0;
   const path = `/watch/${item.media_type}/${item.id}${item.media_type === "tv" ? `?season=${item.season || 1}&episode=${item.episode || 1}` : ""}`;
-
+  const title = item.title || item.name || "Untitled";
   return (
-    <button type="button" className="desktop-continue-card" onClick={() => navigate(path)}>
+    <button type="button" className="desktop-continue-card" onClick={() => navigate(path)} onMouseEnter={() => onPreview?.(item)} onFocus={() => onPreview?.(item)} aria-label={`Continue ${title}`}>
       <div className="desktop-continue-art">
-        {item.backdrop_path ? <img src={img(item.backdrop_path, "w780")} alt="" loading="lazy" /> : item.poster_path ? <img src={img(item.poster_path, "w500")} alt="" loading="lazy" /> : null}
+        {item.poster_path ? <img src={img(item.poster_path, "w500")} alt="" loading="lazy" /> : item.backdrop_path ? <img src={img(item.backdrop_path, "w780")} alt="" loading="lazy" /> : <div className="desktop-poster-fallback">{title.slice(0, 1)}</div>}
         <span className="desktop-continue-play"><Play aria-hidden="true" /></span>
         <div className="desktop-progress-track"><span style={{ width: `${Math.round(pct * 100)}%` }} /></div>
-      </div>
-      <div className="desktop-continue-copy">
-        <strong>{title}</strong>
-        <span>{item.media_type === "tv" ? `S${item.season || 1} E${item.episode || 1}` : `${Math.round(pct * 100)}% watched`}</span>
       </div>
     </button>
   );

@@ -1,30 +1,29 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
-  Bookmark,
-  ChevronDown,
+  Bell,
   Compass,
   Home,
+  LibraryBig,
+  ListFilter,
   Maximize2,
   Minimize2,
+  Puzzle,
   Search,
   Settings,
+  Share2,
   Square,
   UserRound,
   X,
 } from "lucide-react";
-import { getActiveDesktopProfile } from "@/lib/desktopProfile";
 
 const NAV_ITEMS = [
-  { to: "/", label: "Home", icon: Home, exact: true },
-  { to: "/discover", label: "Discover", icon: Compass },
-  { to: "/library", label: "Library", icon: Bookmark },
   { to: "/search", label: "Search", icon: Search },
-];
-
-const BOTTOM_ITEMS = [
-  { to: "/profiles", label: "Profiles", icon: UserRound },
-  { to: "/settings", label: "Settings", icon: Settings },
+  { to: "/", label: "Home", icon: Home, exact: true },
+  { to: "/discover", label: "Discover", icon: Compass, plainDiscover: true },
+  { to: "/library", label: "Library", icon: LibraryBig },
+  { to: "/discover?filters=1", label: "Filters", icon: ListFilter, query: "filters=1" },
+  { to: "/profiles", label: "Profiles", icon: Puzzle },
 ];
 
 const getDesktopWindow = () => {
@@ -44,10 +43,11 @@ export function DesktopShell({ children }) {
   const searchRef = useRef(null);
   const [query, setQuery] = useState("");
   const [maximized, setMaximized] = useState(false);
-  const [profile, setProfile] = useState(() => getActiveDesktopProfile());
 
   const active = (item) => {
     if (item.exact) return location.pathname === item.to;
+    if (item.query) return location.pathname === "/discover" && location.search.includes(item.query);
+    if (item.plainDiscover) return location.pathname === "/discover" && !location.search.includes("filters=1");
     if (item.to === "/library" && location.pathname === "/my-list") return true;
     return location.pathname === item.to || location.pathname.startsWith(`${item.to}/`);
   };
@@ -55,12 +55,7 @@ export function DesktopShell({ children }) {
   const submitSearch = (event) => {
     event.preventDefault();
     const value = query.trim();
-    if (!value) {
-      navigate("/search");
-      searchRef.current?.focus();
-      return;
-    }
-    navigate(`/search?q=${encodeURIComponent(value)}`);
+    navigate(value ? `/search?q=${encodeURIComponent(value)}` : "/search");
   };
 
   useEffect(() => {
@@ -70,20 +65,9 @@ export function DesktopShell({ children }) {
   }, []);
 
   useEffect(() => {
-    const syncProfile = () => setProfile(getActiveDesktopProfile());
-    window.addEventListener("synflix-desktop-profile", syncProfile);
-    window.addEventListener("synflix-desktop-profiles", syncProfile);
-    return () => {
-      window.removeEventListener("synflix-desktop-profile", syncProfile);
-      window.removeEventListener("synflix-desktop-profiles", syncProfile);
-    };
-  }, []);
-
-  useEffect(() => {
     const onKeyDown = async (event) => {
       const target = event.target;
       const typing = target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target?.isContentEditable;
-
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
         event.preventDefault();
         searchRef.current?.focus();
@@ -107,12 +91,9 @@ export function DesktopShell({ children }) {
         try {
           const full = await appWindow.isFullscreen();
           await appWindow.setFullscreen(!full);
-        } catch {
-          // Browser preview or unsupported window API.
-        }
+        } catch {}
       }
     };
-
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [navigate]);
@@ -128,9 +109,7 @@ export function DesktopShell({ children }) {
         if (typeof next === "boolean") setMaximized(next);
       }
       if (action === "close") await appWindow.close?.();
-    } catch {
-      // No-op in browser preview mode.
-    }
+    } catch {}
   };
 
   const toggleFullscreen = async () => {
@@ -139,20 +118,23 @@ export function DesktopShell({ children }) {
     try {
       const full = await appWindow.isFullscreen();
       await appWindow.setFullscreen(!full);
-    } catch {
-      // No-op in browser preview mode.
-    }
+    } catch {}
+  };
+
+  const share = async () => {
+    const payload = { title: "SynFlix", url: window.location.href };
+    try {
+      if (navigator.share) await navigator.share(payload);
+      else await navigator.clipboard?.writeText(window.location.href);
+    } catch {}
   };
 
   return (
-    <div className="synflix-desktop-app min-h-screen bg-[#07090f] text-white">
+    <div className="synflix-desktop-app min-h-screen text-white">
       <a href="#synflix-desktop-main" className="synflix-desktop-skip-link">Skip to content</a>
 
       <div className="synflix-desktop-titlebar" data-tauri-drag-region>
-        <div className="synflix-desktop-titlebrand" data-tauri-drag-region>
-          <img src="/synflix-logo.webp" alt="" aria-hidden="true" />
-          <span data-tauri-drag-region>SynFlix</span>
-        </div>
+        <div className="synflix-desktop-titlebrand" data-tauri-drag-region><span className="sr-only">SynFlix</span></div>
         <div className="synflix-desktop-drag-zone" data-tauri-drag-region aria-hidden="true" />
         <div className="synflix-desktop-window-controls" aria-label="Window controls">
           <button type="button" onClick={() => windowAction("minimize")} aria-label="Minimize window"><Minimize2 aria-hidden="true" /></button>
@@ -163,47 +145,34 @@ export function DesktopShell({ children }) {
 
       <aside className="synflix-desktop-sidebar" aria-label="SynFlix navigation">
         <Link to="/" className="synflix-desktop-logo" aria-label="SynFlix home"><img src="/synflix-logo.webp" alt="" aria-hidden="true" /></Link>
-
         <nav className="synflix-desktop-side-nav" aria-label="Primary">
           {NAV_ITEMS.map((item) => {
             const Icon = item.icon;
             const selected = active(item);
             return (
-              <Link key={item.to} to={item.to} data-label={item.label} data-active={selected ? "true" : "false"} aria-current={selected ? "page" : undefined} aria-label={item.label}>
+              <Link key={item.label} to={item.to} data-label={item.label} data-active={selected ? "true" : "false"} aria-current={selected ? "page" : undefined} aria-label={item.label}>
                 <Icon aria-hidden="true" /><span className="sr-only">{item.label}</span>
               </Link>
             );
           })}
         </nav>
-
         <nav className="synflix-desktop-side-bottom" aria-label="Application">
-          {BOTTOM_ITEMS.map((item) => {
-            const Icon = item.icon;
-            const selected = active(item);
-            return (
-              <Link key={item.to} to={item.to} data-label={item.label} data-active={selected ? "true" : "false"} aria-current={selected ? "page" : undefined} aria-label={item.label}>
-                <Icon aria-hidden="true" /><span className="sr-only">{item.label}</span>
-              </Link>
-            );
-          })}
+          <Link to="/settings" data-label="Settings" data-active={location.pathname === "/settings" ? "true" : "false"} aria-current={location.pathname === "/settings" ? "page" : undefined} aria-label="Settings"><Settings aria-hidden="true" /><span className="sr-only">Settings</span></Link>
         </nav>
       </aside>
 
       <div className="synflix-desktop-toolbar">
         <div className="synflix-desktop-toolbar-spacer" data-tauri-drag-region />
         <form className="synflix-desktop-search" onSubmit={submitSearch} role="search">
-          <Search aria-hidden="true" />
           <label htmlFor="synflix-desktop-search-input" className="sr-only">Search SynFlix</label>
-          <input id="synflix-desktop-search-input" ref={searchRef} value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search movies, series, people…" autoComplete="off" />
-          <kbd aria-hidden="true">Ctrl K</kbd>
+          <input id="synflix-desktop-search-input" ref={searchRef} value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search" autoComplete="off" />
+          <Search aria-hidden="true" />
         </form>
         <div className="synflix-desktop-toolbar-actions">
+          <button type="button" onClick={share} aria-label="Share" title="Share"><Share2 aria-hidden="true" /></button>
           <button type="button" onClick={toggleFullscreen} aria-label="Toggle fullscreen" title="Fullscreen (F11)"><Maximize2 aria-hidden="true" /></button>
-          <Link to="/profiles" className="synflix-desktop-profile" aria-label={`Profile: ${profile?.name || "My Profile"}`} title="Switch profile">
-            <span className="desktop-avatar desktop-avatar--tiny" data-avatar={profile?.avatar || "spark"}><span>{(profile?.name || "S").slice(0, 1).toUpperCase()}</span></span>
-            <span className="synflix-desktop-profile-name">{profile?.name || "My Profile"}</span>
-            <ChevronDown aria-hidden="true" />
-          </Link>
+          <button type="button" aria-label="Notifications" title="No new notifications"><Bell aria-hidden="true" /></button>
+          <Link to="/profiles" className="synflix-desktop-profile" aria-label="Profiles" title="Profiles"><UserRound aria-hidden="true" /></Link>
         </div>
       </div>
 
