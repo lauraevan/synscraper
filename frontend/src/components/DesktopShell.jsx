@@ -3,30 +3,27 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   Bookmark,
   ChevronDown,
-  Dices,
-  Film,
+  Compass,
   Home,
   Maximize2,
   Minimize2,
   Search,
   Settings,
-  Sparkles,
   Square,
-  Tv2,
+  UserRound,
   X,
 } from "lucide-react";
+import { getActiveDesktopProfile } from "@/lib/desktopProfile";
 
 const NAV_ITEMS = [
   { to: "/", label: "Home", icon: Home, exact: true },
-  { to: "/browse/movie", label: "Movies", icon: Film },
-  { to: "/browse/tv", label: "Series", icon: Tv2 },
+  { to: "/discover", label: "Discover", icon: Compass },
+  { to: "/library", label: "Library", icon: Bookmark },
   { to: "/search", label: "Search", icon: Search },
-  { to: "/my-list", label: "My List", icon: Bookmark },
-  { to: "/search?q=anime", label: "Anime", icon: Sparkles, anime: true },
-  { to: "/roulette", label: "Roulette", icon: Dices },
 ];
 
 const BOTTOM_ITEMS = [
+  { to: "/profiles", label: "Profiles", icon: UserRound },
   { to: "/settings", label: "Settings", icon: Settings },
 ];
 
@@ -47,12 +44,11 @@ export function DesktopShell({ children }) {
   const searchRef = useRef(null);
   const [query, setQuery] = useState("");
   const [maximized, setMaximized] = useState(false);
+  const [profile, setProfile] = useState(() => getActiveDesktopProfile());
 
   const active = (item) => {
-    if (item.anime) {
-      return location.pathname === "/search" && new URLSearchParams(location.search).get("q")?.toLowerCase() === "anime";
-    }
     if (item.exact) return location.pathname === item.to;
+    if (item.to === "/library" && location.pathname === "/my-list") return true;
     return location.pathname === item.to || location.pathname.startsWith(`${item.to}/`);
   };
 
@@ -60,6 +56,7 @@ export function DesktopShell({ children }) {
     event.preventDefault();
     const value = query.trim();
     if (!value) {
+      navigate("/search");
       searchRef.current?.focus();
       return;
     }
@@ -70,6 +67,16 @@ export function DesktopShell({ children }) {
     const appWindow = getDesktopWindow();
     if (!appWindow?.isMaximized) return;
     appWindow.isMaximized().then(setMaximized).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    const syncProfile = () => setProfile(getActiveDesktopProfile());
+    window.addEventListener("synflix-desktop-profile", syncProfile);
+    window.addEventListener("synflix-desktop-profiles", syncProfile);
+    return () => {
+      window.removeEventListener("synflix-desktop-profile", syncProfile);
+      window.removeEventListener("synflix-desktop-profiles", syncProfile);
+    };
   }, []);
 
   useEffect(() => {
@@ -148,38 +155,22 @@ export function DesktopShell({ children }) {
         </div>
         <div className="synflix-desktop-drag-zone" data-tauri-drag-region aria-hidden="true" />
         <div className="synflix-desktop-window-controls" aria-label="Window controls">
-          <button type="button" onClick={() => windowAction("minimize")} aria-label="Minimize window">
-            <Minimize2 aria-hidden="true" />
-          </button>
-          <button type="button" onClick={() => windowAction("maximize")} aria-label={maximized ? "Restore window" : "Maximize window"}>
-            {maximized ? <Square aria-hidden="true" /> : <Maximize2 aria-hidden="true" />}
-          </button>
-          <button type="button" className="synflix-desktop-close" onClick={() => windowAction("close")} aria-label="Close SynFlix">
-            <X aria-hidden="true" />
-          </button>
+          <button type="button" onClick={() => windowAction("minimize")} aria-label="Minimize window"><Minimize2 aria-hidden="true" /></button>
+          <button type="button" onClick={() => windowAction("maximize")} aria-label={maximized ? "Restore window" : "Maximize window"}>{maximized ? <Square aria-hidden="true" /> : <Maximize2 aria-hidden="true" />}</button>
+          <button type="button" className="synflix-desktop-close" onClick={() => windowAction("close")} aria-label="Close SynFlix"><X aria-hidden="true" /></button>
         </div>
       </div>
 
       <aside className="synflix-desktop-sidebar" aria-label="SynFlix navigation">
-        <Link to="/" className="synflix-desktop-logo" aria-label="SynFlix home">
-          <img src="/synflix-logo.webp" alt="" aria-hidden="true" />
-        </Link>
+        <Link to="/" className="synflix-desktop-logo" aria-label="SynFlix home"><img src="/synflix-logo.webp" alt="" aria-hidden="true" /></Link>
 
         <nav className="synflix-desktop-side-nav" aria-label="Primary">
           {NAV_ITEMS.map((item) => {
             const Icon = item.icon;
             const selected = active(item);
             return (
-              <Link
-                key={`${item.to}-${item.label}`}
-                to={item.to}
-                data-label={item.label}
-                data-active={selected ? "true" : "false"}
-                aria-current={selected ? "page" : undefined}
-                aria-label={item.label}
-              >
-                <Icon aria-hidden="true" />
-                <span className="sr-only">{item.label}</span>
+              <Link key={item.to} to={item.to} data-label={item.label} data-active={selected ? "true" : "false"} aria-current={selected ? "page" : undefined} aria-label={item.label}>
+                <Icon aria-hidden="true" /><span className="sr-only">{item.label}</span>
               </Link>
             );
           })}
@@ -190,16 +181,8 @@ export function DesktopShell({ children }) {
             const Icon = item.icon;
             const selected = active(item);
             return (
-              <Link
-                key={item.to}
-                to={item.to}
-                data-label={item.label}
-                data-active={selected ? "true" : "false"}
-                aria-current={selected ? "page" : undefined}
-                aria-label={item.label}
-              >
-                <Icon aria-hidden="true" />
-                <span className="sr-only">{item.label}</span>
+              <Link key={item.to} to={item.to} data-label={item.label} data-active={selected ? "true" : "false"} aria-current={selected ? "page" : undefined} aria-label={item.label}>
+                <Icon aria-hidden="true" /><span className="sr-only">{item.label}</span>
               </Link>
             );
           })}
@@ -211,30 +194,20 @@ export function DesktopShell({ children }) {
         <form className="synflix-desktop-search" onSubmit={submitSearch} role="search">
           <Search aria-hidden="true" />
           <label htmlFor="synflix-desktop-search-input" className="sr-only">Search SynFlix</label>
-          <input
-            id="synflix-desktop-search-input"
-            ref={searchRef}
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Search movies, series, people…"
-            autoComplete="off"
-          />
+          <input id="synflix-desktop-search-input" ref={searchRef} value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search movies, series, people…" autoComplete="off" />
           <kbd aria-hidden="true">Ctrl K</kbd>
         </form>
         <div className="synflix-desktop-toolbar-actions">
-          <button type="button" onClick={toggleFullscreen} aria-label="Toggle fullscreen" title="Fullscreen (F11)">
-            <Maximize2 aria-hidden="true" />
-          </button>
-          <Link to="/settings" className="synflix-desktop-profile" aria-label="Open SynFlix settings" title="Settings">
-            <img src="/synflix-logo.webp" alt="" aria-hidden="true" />
+          <button type="button" onClick={toggleFullscreen} aria-label="Toggle fullscreen" title="Fullscreen (F11)"><Maximize2 aria-hidden="true" /></button>
+          <Link to="/profiles" className="synflix-desktop-profile" aria-label={`Profile: ${profile?.name || "My Profile"}`} title="Switch profile">
+            <span className="desktop-avatar desktop-avatar--tiny" data-avatar={profile?.avatar || "spark"}><span>{(profile?.name || "S").slice(0, 1).toUpperCase()}</span></span>
+            <span className="synflix-desktop-profile-name">{profile?.name || "My Profile"}</span>
             <ChevronDown aria-hidden="true" />
           </Link>
         </div>
       </div>
 
-      <main id="synflix-desktop-main" tabIndex="-1" className="synflix-desktop-content">
-        {children}
-      </main>
+      <main id="synflix-desktop-main" tabIndex="-1" className="synflix-desktop-content">{children}</main>
     </div>
   );
 }
