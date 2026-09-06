@@ -88,3 +88,134 @@
 .synflix-site .synflix-yellow-scroll {
   scrollbar-color: rgba(255, 212, 0, 0.28) transparent;
 }
+
+/* Heavy-looking motion that stays on compositor-friendly transform + opacity. */
+.synflix-site [data-testid="hero-banner"] {
+  isolation: isolate;
+  contain: paint;
+}
+
+.synflix-site .synflix-hero-image {
+  animation: synflix-hero-enter 1100ms cubic-bezier(.16, 1, .3, 1) both,
+             synflix-hero-drift 9s ease-out both;
+  transform-origin: 62% 42%;
+  backface-visibility: hidden;
+}
+
+.synflix-site .synflix-hero-copy {
+  animation: synflix-copy-rise 760ms cubic-bezier(.16, 1, .3, 1) both;
+}
+
+.synflix-site .synflix-hero-copy > * {
+  animation: synflix-copy-child 650ms cubic-bezier(.16, 1, .3, 1) both;
+}
+
+.synflix-site .synflix-hero-copy > *:nth-child(2) { animation-delay: 70ms; }
+.synflix-site .synflix-hero-copy > *:nth-child(3) { animation-delay: 120ms; }
+.synflix-site .synflix-hero-copy > *:nth-child(4) { animation-delay: 170ms; }
+.synflix-site .synflix-hero-copy > *:nth-child(5) { animation-delay: 220ms; }
+
+@keyframes synflix-hero-enter {
+  from { opacity: 0; transform: scale(1.055) translate3d(0, 10px, 0); }
+  to { opacity: 1; transform: scale(1.025) translate3d(0, 0, 0); }
+}
+
+@keyframes synflix-hero-drift {
+  from { transform: scale(1.025) translate3d(0, 0, 0); }
+  to { transform: scale(1.075) translate3d(-0.7%, -0.35%, 0); }
+}
+
+@keyframes synflix-copy-rise {
+  from { opacity: 0; transform: translate3d(0, 26px, 0) scale(.985); }
+  to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+}
+
+@keyframes synflix-copy-child {
+  from { opacity: 0; transform: translate3d(0, 13px, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+
+/* Skip layout/paint work for rows that are well below the viewport. */
+.synflix-site [data-testid="home-page"] > div > section {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 430px;
+}
+
+.synflix-site [data-testid="home-page"] [class*="overflow-x-auto"] {
+  overscroll-behavior-inline: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Card motion: lift, zoom and a quick light sweep without animating layout. */
+.synflix-site [data-testid^="movie-card-"] > div:first-child,
+.synflix-site [data-testid="top-ten-row"] article > div:first-child > div:last-child,
+.synflix-site [data-testid="row-popular-movies"] article,
+.synflix-site [data-testid="row-top-rated-movies"] article {
+  transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .synflix-site [data-testid^="movie-card-"] > div:first-child {
+    transition-property: transform, border-color, box-shadow;
+    transition-duration: 320ms;
+    transition-timing-function: cubic-bezier(.16, 1, .3, 1);
+  }
+
+  .synflix-site [data-testid^="movie-card-"]:hover > div:first-child {
+    transform: translate3d(0, -7px, 0) scale(1.018);
+  }
+
+  .synflix-site [data-testid^="movie-card-"] > div:first-child::before,
+  .synflix-site [data-testid="row-popular-movies"] article::before,
+  .synflix-site [data-testid="row-top-rated-movies"] article::before {
+    content: "";
+    pointer-events: none;
+    position: absolute;
+    inset: -30% -70%;
+    z-index: 24;
+    background: linear-gradient(105deg, transparent 36%, rgba(255,255,255,.12) 48%, rgba(255,212,0,.10) 52%, transparent 64%);
+    transform: translate3d(-42%, 0, 0) rotate(8deg);
+    opacity: 0;
+    transition: transform 650ms cubic-bezier(.16, 1, .3, 1), opacity 180ms ease;
+  }
+
+  .synflix-site [data-testid^="movie-card-"]:hover > div:first-child::before,
+  .synflix-site [data-testid="row-popular-movies"] article:hover::before,
+  .synflix-site [data-testid="row-top-rated-movies"] article:hover::before {
+    transform: translate3d(42%, 0, 0) rotate(8deg);
+    opacity: 1;
+  }
+
+  .synflix-site [data-testid="top-ten-row"] article:hover > div:first-child > div:last-child {
+    transform: translate3d(0, -8px, 0) scale(1.018);
+  }
+}
+
+/* Scroll-driven section entrances when supported; zero JS observers/timers. */
+@supports (animation-timeline: view()) {
+  .synflix-site [data-testid="home-page"] > div > section {
+    animation-name: synflix-section-in;
+    animation-duration: 1ms;
+    animation-fill-mode: both;
+    animation-timing-function: linear;
+    animation-timeline: view();
+    animation-range: entry 4% cover 24%;
+  }
+
+  @keyframes synflix-section-in {
+    from { opacity: .18; transform: translate3d(0, 34px, 0) scale(.985); }
+    to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .synflix-site *,
+  .synflix-site *::before,
+  .synflix-site *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.001ms !important;
+  }
+}
