@@ -1,6 +1,8 @@
 import axios from "axios";
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || "";
+const IS_DESKTOP_RUNTIME = typeof window !== "undefined" && Boolean(window.__TAURI__ || window.__TAURI_INTERNALS__);
+const DESKTOP_BACKEND_URL = process.env.REACT_APP_DESKTOP_BACKEND_URL || "https://synscraper-tffk.vercel.app";
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || (IS_DESKTOP_RUNTIME ? DESKTOP_BACKEND_URL : "");
 const DOWNLOAD_BASE_URL = (process.env.REACT_APP_DOWNLOAD_WORKER_URL || BACKEND_URL || "").replace(/\/$/, "");
 export const API = `${BACKEND_URL}/api`;
 // Downloads now default to the same backend. REACT_APP_DOWNLOAD_WORKER_URL remains

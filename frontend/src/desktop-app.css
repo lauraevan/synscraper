@@ -1,0 +1,472 @@
+/* SynFlix Desktop v1 — Tauri-only shell inspired by a dedicated media-center app. */
+
+:root[data-synflix-desktop="true"] {
+  background: #07090f;
+  color-scheme: dark;
+}
+
+:root[data-synflix-desktop="true"] body {
+  margin: 0;
+  overflow-x: hidden;
+  background:
+    radial-gradient(circle at 72% 0%, rgba(67, 72, 255, 0.14), transparent 34rem),
+    radial-gradient(circle at 8% 22%, rgba(255, 212, 0, 0.055), transparent 24rem),
+    #07090f;
+}
+
+.synflix-desktop-app {
+  --desktop-titlebar: 32px;
+  --desktop-toolbar: 58px;
+  --desktop-sidebar: 74px;
+  min-width: 960px;
+  background:
+    radial-gradient(circle at 68% 12%, rgba(63, 55, 210, 0.13), transparent 34rem),
+    linear-gradient(135deg, #080a11 0%, #090b16 50%, #07090f 100%);
+}
+
+.synflix-desktop-skip-link {
+  position: fixed;
+  left: 90px;
+  top: 42px;
+  z-index: 9999;
+  transform: translateY(-150%);
+  border: 1px solid rgba(255, 212, 0, 0.55);
+  border-radius: 10px;
+  background: #11131a;
+  padding: 9px 13px;
+  color: #ffd400;
+  font-size: 13px;
+  font-weight: 700;
+  transition: transform 140ms ease;
+}
+
+.synflix-desktop-skip-link:focus {
+  transform: translateY(0);
+  outline: 2px solid #ffd400;
+  outline-offset: 2px;
+}
+
+.synflix-desktop-titlebar {
+  position: fixed;
+  inset: 0 0 auto 0;
+  z-index: 120;
+  display: grid;
+  height: var(--desktop-titlebar);
+  grid-template-columns: var(--desktop-sidebar) 1fr auto;
+  align-items: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.045);
+  background: rgba(7, 9, 15, 0.92);
+  -webkit-backdrop-filter: blur(18px) saturate(150%);
+  backdrop-filter: blur(18px) saturate(150%);
+  user-select: none;
+}
+
+.synflix-desktop-titlebrand {
+  display: flex;
+  height: 100%;
+  align-items: center;
+  gap: 7px;
+  padding-left: 12px;
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.synflix-desktop-titlebrand img {
+  width: 15px;
+  height: 15px;
+  object-fit: contain;
+}
+
+.synflix-desktop-drag-zone {
+  align-self: stretch;
+}
+
+.synflix-desktop-window-controls {
+  display: flex;
+  height: 100%;
+  align-items: stretch;
+}
+
+.synflix-desktop-window-controls button {
+  display: grid;
+  width: 46px;
+  place-items: center;
+  border: 0;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.63);
+  cursor: default;
+  transition: background-color 120ms ease, color 120ms ease;
+}
+
+.synflix-desktop-window-controls button:hover,
+.synflix-desktop-window-controls button:focus-visible {
+  background: rgba(255, 255, 255, 0.075);
+  color: white;
+  outline: none;
+}
+
+.synflix-desktop-window-controls .synflix-desktop-close:hover,
+.synflix-desktop-window-controls .synflix-desktop-close:focus-visible {
+  background: #c42b1c;
+  color: white;
+}
+
+.synflix-desktop-window-controls svg {
+  width: 12px;
+  height: 12px;
+  stroke-width: 1.8;
+}
+
+.synflix-desktop-sidebar {
+  position: fixed;
+  left: 0;
+  top: var(--desktop-titlebar);
+  bottom: 0;
+  z-index: 110;
+  display: flex;
+  width: var(--desktop-sidebar);
+  flex-direction: column;
+  align-items: center;
+  border-right: 1px solid rgba(255, 255, 255, 0.055);
+  background:
+    linear-gradient(180deg, rgba(18, 20, 37, 0.92), rgba(8, 10, 18, 0.96)),
+    #090b13;
+  -webkit-backdrop-filter: blur(26px) saturate(150%);
+  backdrop-filter: blur(26px) saturate(150%);
+}
+
+.synflix-desktop-logo {
+  display: grid;
+  width: 48px;
+  height: 48px;
+  margin-top: 14px;
+  place-items: center;
+  border-radius: 16px;
+  transition: background-color 150ms ease, transform 150ms ease;
+}
+
+.synflix-desktop-logo:hover,
+.synflix-desktop-logo:focus-visible {
+  background: rgba(255, 255, 255, 0.055);
+  transform: translateY(-1px);
+  outline: none;
+}
+
+.synflix-desktop-logo:focus-visible {
+  box-shadow: 0 0 0 2px #ffd400;
+}
+
+.synflix-desktop-logo img {
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
+}
+
+.synflix-desktop-side-nav,
+.synflix-desktop-side-bottom {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+}
+
+.synflix-desktop-side-nav {
+  margin-top: 16px;
+}
+
+.synflix-desktop-side-bottom {
+  margin-top: auto;
+  margin-bottom: 17px;
+}
+
+.synflix-desktop-side-nav a,
+.synflix-desktop-side-bottom a {
+  position: relative;
+  display: grid;
+  width: 46px;
+  height: 46px;
+  place-items: center;
+  border: 1px solid transparent;
+  border-radius: 15px;
+  color: rgba(255, 255, 255, 0.50);
+  transition: color 150ms ease, background-color 150ms ease, border-color 150ms ease, transform 150ms ease;
+}
+
+.synflix-desktop-side-nav a::before,
+.synflix-desktop-side-bottom a::before {
+  content: "";
+  position: absolute;
+  left: -14px;
+  width: 3px;
+  height: 0;
+  border-radius: 0 3px 3px 0;
+  background: #ffd400;
+  box-shadow: 0 0 14px rgba(255, 212, 0, 0.26);
+  transition: height 160ms ease;
+}
+
+.synflix-desktop-side-nav a::after,
+.synflix-desktop-side-bottom a::after {
+  content: attr(data-label);
+  position: absolute;
+  left: calc(100% + 12px);
+  z-index: 300;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateX(-5px);
+  white-space: nowrap;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  border-radius: 9px;
+  background: rgba(13, 15, 23, 0.96);
+  padding: 7px 9px;
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 11px;
+  font-weight: 600;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.32);
+  transition: opacity 120ms ease, transform 120ms ease;
+}
+
+.synflix-desktop-side-nav a:hover::after,
+.synflix-desktop-side-nav a:focus-visible::after,
+.synflix-desktop-side-bottom a:hover::after,
+.synflix-desktop-side-bottom a:focus-visible::after {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.synflix-desktop-side-nav a:hover,
+.synflix-desktop-side-nav a:focus-visible,
+.synflix-desktop-side-bottom a:hover,
+.synflix-desktop-side-bottom a:focus-visible {
+  border-color: rgba(255, 255, 255, 0.075);
+  background: rgba(255, 255, 255, 0.055);
+  color: rgba(255, 255, 255, 0.92);
+  transform: translateY(-1px);
+  outline: none;
+}
+
+.synflix-desktop-side-nav a:focus-visible,
+.synflix-desktop-side-bottom a:focus-visible {
+  box-shadow: 0 0 0 2px rgba(255, 212, 0, 0.86);
+}
+
+.synflix-desktop-side-nav a[data-active="true"],
+.synflix-desktop-side-bottom a[data-active="true"] {
+  border-color: rgba(255, 212, 0, 0.17);
+  background: rgba(255, 212, 0, 0.075);
+  color: #ffd400;
+}
+
+.synflix-desktop-side-nav a[data-active="true"]::before,
+.synflix-desktop-side-bottom a[data-active="true"]::before {
+  height: 22px;
+}
+
+.synflix-desktop-side-nav svg,
+.synflix-desktop-side-bottom svg {
+  width: 21px;
+  height: 21px;
+  stroke-width: 1.75;
+}
+
+.synflix-desktop-toolbar {
+  position: fixed;
+  top: var(--desktop-titlebar);
+  left: var(--desktop-sidebar);
+  right: 0;
+  z-index: 100;
+  display: grid;
+  height: var(--desktop-toolbar);
+  grid-template-columns: minmax(130px, 1fr) minmax(320px, 560px) minmax(130px, 1fr);
+  align-items: center;
+  gap: 18px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.045);
+  background: rgba(8, 10, 17, 0.70);
+  padding: 0 16px 0 20px;
+  -webkit-backdrop-filter: blur(28px) saturate(155%);
+  backdrop-filter: blur(28px) saturate(155%);
+}
+
+.synflix-desktop-toolbar-spacer {
+  align-self: stretch;
+}
+
+.synflix-desktop-search {
+  display: flex;
+  height: 38px;
+  align-items: center;
+  gap: 9px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.052);
+  padding: 0 11px 0 13px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035), 0 10px 26px rgba(0, 0, 0, 0.12);
+  transition: border-color 150ms ease, background-color 150ms ease, box-shadow 150ms ease;
+}
+
+.synflix-desktop-search:focus-within {
+  border-color: rgba(255, 212, 0, 0.34);
+  background: rgba(255, 255, 255, 0.065);
+  box-shadow: 0 0 0 2px rgba(255, 212, 0, 0.07), inset 0 1px 0 rgba(255, 255, 255, 0.045);
+}
+
+.synflix-desktop-search > svg {
+  width: 17px;
+  height: 17px;
+  flex: 0 0 auto;
+  color: rgba(255, 255, 255, 0.38);
+}
+
+.synflix-desktop-search input {
+  min-width: 0;
+  flex: 1;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 13px;
+  letter-spacing: -0.01em;
+}
+
+.synflix-desktop-search input::placeholder {
+  color: rgba(255, 255, 255, 0.30);
+}
+
+.synflix-desktop-search kbd {
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.045);
+  padding: 2px 6px;
+  color: rgba(255, 255, 255, 0.32);
+  font-family: inherit;
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.synflix-desktop-toolbar-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 5px;
+}
+
+.synflix-desktop-toolbar-actions > button,
+.synflix-desktop-profile {
+  display: grid;
+  height: 38px;
+  place-items: center;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.52);
+  transition: border-color 140ms ease, background-color 140ms ease, color 140ms ease;
+}
+
+.synflix-desktop-toolbar-actions > button {
+  width: 38px;
+}
+
+.synflix-desktop-toolbar-actions > button:hover,
+.synflix-desktop-toolbar-actions > button:focus-visible,
+.synflix-desktop-profile:hover,
+.synflix-desktop-profile:focus-visible {
+  border-color: rgba(255, 255, 255, 0.085);
+  background: rgba(255, 255, 255, 0.05);
+  color: white;
+  outline: none;
+}
+
+.synflix-desktop-toolbar-actions > button:focus-visible,
+.synflix-desktop-profile:focus-visible {
+  box-shadow: 0 0 0 2px rgba(255, 212, 0, 0.80);
+}
+
+.synflix-desktop-toolbar-actions > button svg {
+  width: 18px;
+  height: 18px;
+  stroke-width: 1.7;
+}
+
+.synflix-desktop-profile {
+  grid-auto-flow: column;
+  width: auto;
+  gap: 7px;
+  padding: 0 8px;
+}
+
+.synflix-desktop-profile img {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+}
+
+.synflix-desktop-profile svg {
+  width: 13px;
+  height: 13px;
+}
+
+.synflix-desktop-content {
+  position: relative;
+  min-height: 100vh;
+  margin-left: var(--desktop-sidebar);
+  padding-top: calc(var(--desktop-titlebar) + var(--desktop-toolbar));
+  outline: none;
+}
+
+.synflix-desktop-content > .synflix-site,
+.synflix-desktop-content .synflix-site {
+  min-height: calc(100vh - var(--desktop-titlebar) - var(--desktop-toolbar));
+}
+
+/* Give the existing pages a little more desktop-app breathing room without restyling their content. */
+.synflix-desktop-content [data-testid="home-page"],
+.synflix-desktop-content [data-testid="browse-page"],
+.synflix-desktop-content [data-testid="search-page"],
+.synflix-desktop-content [data-testid="my-list-page"] {
+  scroll-margin-top: calc(var(--desktop-titlebar) + var(--desktop-toolbar) + 12px);
+}
+
+@media (max-width: 1180px) {
+  .synflix-desktop-app {
+    --desktop-sidebar: 66px;
+  }
+
+  .synflix-desktop-toolbar {
+    grid-template-columns: 90px minmax(280px, 500px) minmax(110px, 1fr);
+    gap: 12px;
+  }
+
+  .synflix-desktop-side-nav a,
+  .synflix-desktop-side-bottom a {
+    width: 43px;
+    height: 43px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .synflix-desktop-app *,
+  .synflix-desktop-app *::before,
+  .synflix-desktop-app *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .synflix-desktop-sidebar,
+  .synflix-desktop-toolbar,
+  .synflix-desktop-titlebar {
+    border-color: rgba(255, 255, 255, 0.28);
+  }
+
+  .synflix-desktop-side-nav a,
+  .synflix-desktop-side-bottom a,
+  .synflix-desktop-search {
+    border-color: rgba(255, 255, 255, 0.24);
+  }
+}

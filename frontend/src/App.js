@@ -4,10 +4,12 @@ import "@/theme-system.css";
 import "@/light-mode.css";
 import "@/synflix-polish.css";
 import "@/mobile-app.css";
+import "@/desktop-app.css";
 import { useEffect } from "react";
 import { BrowserRouter, Routes, Route, useLocation, Link } from "react-router-dom";
 import { Navbar } from "@/components/Navbar";
 import { MobileDock } from "@/components/MobileDock";
+import { DesktopShell } from "@/components/DesktopShell";
 import { Toaster } from "@/components/ui/sonner";
 import Home from "@/pages/Home";
 import Browse from "@/pages/Browse";
@@ -23,6 +25,17 @@ import Terms from "@/pages/Terms";
 import Person from "@/pages/Person";
 import Roulette from "@/pages/Roulette";
 import Settings from "@/pages/Settings";
+
+const desktopRuntime = () => {
+  if (typeof window === "undefined") return false;
+  const params = new URLSearchParams(window.location.search);
+  if (params.get("desktopApp") === "1") {
+    try { window.sessionStorage.setItem("synflix-desktop-preview", "1"); } catch { /* noop */ }
+  }
+  let preview = false;
+  try { preview = window.sessionStorage.getItem("synflix-desktop-preview") === "1"; } catch { /* noop */ }
+  return Boolean(window.__TAURI__ || window.__TAURI_INTERNALS__ || preview);
+};
 
 function Footer() {
   return (
@@ -52,20 +65,44 @@ function Footer() {
   );
 }
 
+function AppRoutes() {
+  return (
+    <Routes>
+      <Route path="/" element={<Home />} />
+      <Route path="/demo" element={<Demo />} />
+      <Route path="/docs" element={<Docs />} />
+      <Route path="/synplayer-api" element={<Api />} />
+      <Route path="/privacy" element={<Privacy />} />
+      <Route path="/terms" element={<Terms />} />
+      <Route path="/settings" element={<Settings />} />
+      <Route path="/roulette" element={<Roulette />} />
+      <Route path="/person/:id" element={<Person />} />
+      <Route path="/browse/:mediaType" element={<Browse />} />
+      <Route path="/title/:mediaType/:id" element={<Title />} />
+      <Route path="/watch/:mediaType/:id" element={<Watch />} />
+      <Route path="/embed/:mediaType/:id" element={<Watch embed />} />
+      <Route path="/search" element={<Search />} />
+      <Route path="/my-list" element={<MyList />} />
+    </Routes>
+  );
+}
+
 function Shell() {
   const location = useLocation();
   const isWatch = location.pathname.startsWith("/watch/");
   const isEmbed = location.pathname.startsWith("/embed/");
   const isPlayerSurface = isWatch || isEmbed;
+  const isDesktopApp = desktopRuntime() && !isEmbed;
 
   useEffect(() => {
-    document.title = isPlayerSurface ? "SynPlayer" : "SynFlix";
+    document.title = isPlayerSurface ? "SynPlayer · SynFlix" : "SynFlix";
+    document.documentElement.dataset.synflixDesktop = isDesktopApp ? "true" : "false";
 
     const syncBrowserChrome = () => {
       const meta = document.querySelector('meta[name="theme-color"]');
       if (meta) {
         const light = document.documentElement.dataset.siteMode === "light";
-        meta.setAttribute("content", isPlayerSurface ? "#000000" : light ? "#f5f3ed" : "#070707");
+        meta.setAttribute("content", isPlayerSurface || isDesktopApp ? "#07090f" : light ? "#f5f3ed" : "#070707");
       }
     };
     syncBrowserChrome();
@@ -80,28 +117,24 @@ function Shell() {
     icon.setAttribute("href", "/synflix-logo.webp");
 
     return () => window.removeEventListener("synflix-preferences", syncBrowserChrome);
-  }, [isPlayerSurface, location.pathname]);
+  }, [isPlayerSurface, isDesktopApp, location.pathname]);
+
+  if (isEmbed) return <AppRoutes />;
+
+  if (isDesktopApp) {
+    return (
+      <DesktopShell>
+        <div className={isWatch ? "" : "synflix-site"}>
+          <AppRoutes />
+        </div>
+      </DesktopShell>
+    );
+  }
 
   return (
     <div className={isPlayerSurface ? "" : "synflix-site"}>
       {!isPlayerSurface && <Navbar />}
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/demo" element={<Demo />} />
-        <Route path="/docs" element={<Docs />} />
-        <Route path="/synplayer-api" element={<Api />} />
-        <Route path="/privacy" element={<Privacy />} />
-        <Route path="/terms" element={<Terms />} />
-        <Route path="/settings" element={<Settings />} />
-        <Route path="/roulette" element={<Roulette />} />
-        <Route path="/person/:id" element={<Person />} />
-        <Route path="/browse/:mediaType" element={<Browse />} />
-        <Route path="/title/:mediaType/:id" element={<Title />} />
-        <Route path="/watch/:mediaType/:id" element={<Watch />} />
-        <Route path="/embed/:mediaType/:id" element={<Watch embed />} />
-        <Route path="/search" element={<Search />} />
-        <Route path="/my-list" element={<MyList />} />
-      </Routes>
+      <AppRoutes />
       {!isPlayerSurface && <MobileDock />}
       {!isPlayerSurface && <Footer />}
     </div>
