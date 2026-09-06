@@ -6,7 +6,7 @@ const NAV_ITEMS = [
   { to: "/", label: "Home", icon: Home, exact: true },
   { to: "/browse/movie", label: "Movies", icon: Film },
   { to: "/browse/tv", label: "TV", icon: Tv2 },
-  { to: "/live", label: "Live TV", icon: Radio },
+  { to: "/live", label: "Live TV", icon: Radio, live: true },
   { to: "/search?q=anime", label: "Anime", icon: Sparkles, anime: true },
   { to: "/roulette", label: "Roulette", icon: Dices },
 ];
@@ -101,17 +101,30 @@ export const Navbar = () => {
             </span>
           </Link>
 
-          <nav className="hidden h-full items-center justify-center gap-4 md:flex lg:gap-6 xl:gap-8">
+          <nav className="hidden h-full items-center justify-center gap-3 md:flex lg:gap-5 xl:gap-6">
             {NAV_ITEMS.map((item) => {
               const selected = active(item);
+              const liveTone = item.live
+                ? selected
+                  ? "h-9 rounded-full border border-[#ffd400]/25 bg-[#ffd400]/[0.10] px-3 text-[#ffd400]"
+                  : "h-9 rounded-full border border-white/[0.08] bg-white/[0.025] px-3 text-white/68 hover:border-[#ffd400]/20 hover:bg-[#ffd400]/[0.055] hover:text-white"
+                : selected
+                  ? "text-white"
+                  : "text-white/58 hover:text-white/90";
+
               return (
                 <Link
                   key={item.to}
                   to={item.to}
-                  className={`group relative inline-flex h-full items-center whitespace-nowrap text-[13px] font-semibold tracking-[-0.02em] transition-colors duration-200 lg:text-[14px] ${selected ? "text-white" : "text-white/58 hover:text-white/90"}`}
+                  className={`group relative inline-flex items-center whitespace-nowrap text-[13px] font-semibold tracking-[-0.02em] transition-all duration-200 lg:text-[14px] ${item.live ? "" : "h-full"} ${liveTone}`}
                 >
+                  {item.live && (
+                    <span className={`mr-1.5 h-1.5 w-1.5 rounded-full transition-all duration-200 ${selected ? "bg-[#ffd400]" : "bg-[#ffd400]/70 group-hover:bg-[#ffd400]"}`} />
+                  )}
                   <span>{item.label}</span>
-                  <span className={`absolute bottom-[10px] left-1/2 h-[2px] -translate-x-1/2 rounded-full bg-[#ffd400] transition-all duration-200 ${selected ? "w-4 opacity-100" : "w-0 opacity-0 group-hover:w-2.5 group-hover:opacity-55"}`} />
+                  {!item.live && (
+                    <span className={`absolute bottom-[10px] left-1/2 h-[2px] -translate-x-1/2 rounded-full bg-[#ffd400] transition-all duration-200 ${selected ? "w-4 opacity-100" : "w-0 opacity-0 group-hover:w-2.5 group-hover:opacity-55"}`} />
+                  )}
                 </Link>
               );
             })}
