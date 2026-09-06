@@ -68,37 +68,37 @@ export const Navbar = () => {
   };
 
   const shellTone = scrolled || gearOpen
-    ? "border-white/[0.18] bg-[#101318]/[0.58] shadow-[0_18px_54px_rgba(0,0,0,.34),inset_0_1px_0_rgba(255,255,255,.10)]"
-    : "border-white/[0.13] bg-[#101318]/[0.42] shadow-[0_16px_44px_rgba(0,0,0,.26),inset_0_1px_0_rgba(255,255,255,.08)]";
+    ? "border-white/[0.18] bg-[#101318]/[0.58] shadow-[0_16px_46px_rgba(0,0,0,.32),inset_0_1px_0_rgba(255,255,255,.10)]"
+    : "border-white/[0.13] bg-[#101318]/[0.42] shadow-[0_14px_38px_rgba(0,0,0,.24),inset_0_1px_0_rgba(255,255,255,.08)]";
 
   return (
     <header className="synflix-navbar pointer-events-none fixed inset-x-0 top-0 z-50">
-      <div className="mx-auto w-full max-w-[1160px] px-3.5 pt-3.5 md:px-4 md:pt-4">
+      <div className="mx-auto w-full max-w-[1160px] px-3.5 pt-2.5 md:px-4 md:pt-3">
         <div className="pointer-events-auto flex justify-center md:hidden">
           <button
             type="button"
             onClick={() => setMobileOpen((v) => !v)}
-            className={`synflix-phone-menu-button flex h-12 items-center gap-2 rounded-full border px-3.5 text-white shadow-[0_12px_34px_rgba(0,0,0,.30),inset_0_1px_0_rgba(255,255,255,.12)] backdrop-blur-2xl backdrop-saturate-150 transition-all ${mobileOpen ? "border-white/[0.18] bg-[#11151c]/80" : "border-white/[0.12] bg-[#11151c]/58"}`}
+            className={`synflix-phone-menu-button flex h-11 items-center gap-2 rounded-full border px-3 text-white shadow-[0_10px_28px_rgba(0,0,0,.28),inset_0_1px_0_rgba(255,255,255,.12)] backdrop-blur-2xl backdrop-saturate-150 transition-all ${mobileOpen ? "border-white/[0.18] bg-[#11151c]/80" : "border-white/[0.12] bg-[#11151c]/58"}`}
             aria-label="Open SynFlix menu"
             aria-expanded={mobileOpen}
           >
-            <img src="/synflix-logo.webp" alt="" className="h-7 w-7 object-contain" />
+            <img src="/synflix-logo.webp" alt="" className="h-6 w-6 object-contain" />
             <span className="text-[13px] font-semibold tracking-[-0.025em] text-white/90">SynFlix</span>
-            <ChevronDown className={`h-4 w-4 text-white/55 transition-transform duration-200 ${mobileOpen ? "rotate-180" : ""}`} />
+            <ChevronDown className={`h-3.5 w-3.5 text-white/55 transition-transform duration-200 ${mobileOpen ? "rotate-180" : ""}`} />
           </button>
         </div>
 
-        <div className={`pointer-events-auto hidden h-[68px] grid-cols-[auto_1fr_auto] items-center rounded-[35px] border px-5 backdrop-blur-[30px] backdrop-saturate-[175%] transition-all duration-300 md:grid xl:px-6 ${shellTone}`}>
+        <div className={`pointer-events-auto hidden h-[56px] grid-cols-[auto_1fr_auto] items-center rounded-[28px] border px-4 backdrop-blur-[30px] backdrop-saturate-[175%] transition-all duration-300 md:grid xl:px-5 ${shellTone}`}>
           <Link
             to="/"
             onClick={() => setBrandOpen((v) => !v)}
             className="group flex shrink-0 items-center overflow-hidden"
             aria-label="SynFlix home"
           >
-            <span className="grid h-10 w-10 shrink-0 place-items-center">
-              <img src="/synflix-logo.webp" alt="" className="synflix-brand-logo h-10 w-10 object-contain transition-transform duration-300 group-active:scale-90" />
+            <span className="grid h-9 w-9 shrink-0 place-items-center">
+              <img src="/synflix-logo.webp" alt="" className="synflix-brand-logo h-9 w-9 object-contain transition-transform duration-300 group-active:scale-90" />
             </span>
-            <span className={`whitespace-nowrap text-[15px] font-bold tracking-[-0.035em] text-[#ffd400] transition-all duration-300 ease-out ${brandOpen ? "ml-2 max-w-[78px] translate-x-0 opacity-100" : "ml-0 max-w-0 -translate-x-2 opacity-0"}`} aria-hidden={!brandOpen}>
+            <span className={`whitespace-nowrap text-[14px] font-bold tracking-[-0.035em] text-[#ffd400] transition-all duration-300 ease-out ${brandOpen ? "ml-2 max-w-[74px] translate-x-0 opacity-100" : "ml-0 max-w-0 -translate-x-2 opacity-0"}`} aria-hidden={!brandOpen}>
               SynFlix
             </span>
           </Link>
@@ -113,39 +113,39 @@ export const Navbar = () => {
                   className={`group relative inline-flex h-full items-center whitespace-nowrap text-[12px] font-semibold tracking-[-0.02em] transition-colors duration-200 lg:text-[13px] xl:text-[14px] ${selected ? "text-white" : "text-white/58 hover:text-white/90"}`}
                 >
                   <span>{item.label}</span>
-                  <span className={`absolute bottom-[10px] left-1/2 h-[2px] -translate-x-1/2 rounded-full bg-[#ffd400] transition-all duration-200 ${selected ? "w-4 opacity-100" : "w-0 opacity-0 group-hover:w-2.5 group-hover:opacity-55"}`} />
+                  <span className={`absolute bottom-[7px] left-1/2 h-[2px] -translate-x-1/2 rounded-full bg-[#ffd400] transition-all duration-200 ${selected ? "w-4 opacity-100" : "w-0 opacity-0 group-hover:w-2.5 group-hover:opacity-55"}`} />
                 </Link>
               );
             })}
           </nav>
 
           <div className="flex items-center justify-end gap-1">
-            <div className="mr-1.5 hidden h-6 w-px bg-white/[0.13] lg:block" />
+            <div className="mr-1 hidden h-5 w-px bg-white/[0.13] lg:block" />
 
             <Link
               to="/my-list"
-              className={`hidden h-10 w-10 place-items-center rounded-full transition md:grid ${location.pathname.startsWith("/my-list") ? "bg-[#ffd400]/[0.10] text-[#ffd400]" : "text-white/76 hover:bg-white/[0.07] hover:text-white"}`}
+              className={`hidden h-9 w-9 place-items-center rounded-full transition md:grid ${location.pathname.startsWith("/my-list") ? "bg-[#ffd400]/[0.10] text-[#ffd400]" : "text-white/76 hover:bg-white/[0.07] hover:text-white"}`}
               aria-label="My List"
             >
-              <Bookmark className="h-[19px] w-[19px]" strokeWidth={2.1} />
+              <Bookmark className="h-[18px] w-[18px]" strokeWidth={2.1} />
             </Link>
 
             <Link
               to="/search"
-              className={`grid h-10 w-10 place-items-center rounded-full transition lg:hidden ${location.pathname.startsWith("/search") ? "bg-[#ffd400]/[0.10] text-[#ffd400]" : "text-white/76 hover:bg-white/[0.07] hover:text-white"}`}
+              className={`grid h-9 w-9 place-items-center rounded-full transition lg:hidden ${location.pathname.startsWith("/search") ? "bg-[#ffd400]/[0.10] text-[#ffd400]" : "text-white/76 hover:bg-white/[0.07] hover:text-white"}`}
               aria-label="Search"
             >
-              <Search className="h-[19px] w-[19px]" strokeWidth={2.1} />
+              <Search className="h-[18px] w-[18px]" strokeWidth={2.1} />
             </Link>
 
             <form
               onSubmit={submit}
-              className="hidden h-10 w-[168px] items-center gap-2 rounded-full border border-white/[0.10] bg-white/[0.055] px-3 shadow-[inset_0_1px_0_rgba(255,255,255,.06)] transition focus-within:border-[#ffd400]/30 focus-within:bg-white/[0.075] lg:flex xl:w-[220px]"
+              className="hidden h-9 w-[168px] items-center gap-2 rounded-full border border-white/[0.10] bg-white/[0.055] px-3 shadow-[inset_0_1px_0_rgba(255,255,255,.06)] transition focus-within:border-[#ffd400]/30 focus-within:bg-white/[0.075] lg:flex xl:w-[210px]"
             >
               <Search className="h-4 w-4 shrink-0 text-white/42" />
-              <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search SynFlix" className="h-9 min-w-0 flex-1 bg-transparent text-[13px] text-white outline-none placeholder:text-white/30" />
+              <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search SynFlix" className="h-8 min-w-0 flex-1 bg-transparent text-[13px] text-white outline-none placeholder:text-white/30" />
               {q && (
-                <button type="button" onClick={() => setQ("")} className="grid h-7 w-7 shrink-0 place-items-center rounded-full text-white/36 hover:bg-white/[0.07] hover:text-white/72" aria-label="Clear search">
+                <button type="button" onClick={() => setQ("")} className="grid h-6 w-6 shrink-0 place-items-center rounded-full text-white/36 hover:bg-white/[0.07] hover:text-white/72" aria-label="Clear search">
                   <X className="h-3.5 w-3.5" />
                 </button>
               )}
@@ -155,15 +155,15 @@ export const Navbar = () => {
               <button
                 type="button"
                 onClick={() => setGearOpen((v) => !v)}
-                className={`grid h-10 w-10 place-items-center rounded-full transition ${gearOpen ? "bg-[#ffd400]/[0.10] text-[#ffd400]" : "text-white/80 hover:bg-white/[0.07] hover:text-white"}`}
+                className={`grid h-9 w-9 place-items-center rounded-full transition ${gearOpen ? "bg-[#ffd400]/[0.10] text-[#ffd400]" : "text-white/80 hover:bg-white/[0.07] hover:text-white"}`}
                 aria-label="Open SynFlix menu"
                 aria-expanded={gearOpen}
               >
-                <Settings className={`h-[20px] w-[20px] transition-transform duration-300 ${gearOpen ? "rotate-45" : ""}`} strokeWidth={2.1} />
+                <Settings className={`h-[19px] w-[19px] transition-transform duration-300 ${gearOpen ? "rotate-45" : ""}`} strokeWidth={2.1} />
               </button>
 
               {gearOpen && (
-                <div className="absolute right-0 top-[48px] w-[290px] overflow-hidden rounded-[18px] border border-white/[0.12] bg-[#0b0e13]/[0.78] p-2 shadow-[0_24px_68px_rgba(0,0,0,.58)] backdrop-blur-[28px] backdrop-saturate-150">
+                <div className="absolute right-0 top-[43px] w-[290px] overflow-hidden rounded-[18px] border border-white/[0.12] bg-[#0b0e13]/[0.78] p-2 shadow-[0_24px_68px_rgba(0,0,0,.58)] backdrop-blur-[28px] backdrop-saturate-150">
                   <div className="px-3 pb-2.5 pt-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#ffd400]/55">SynFlix</div>
                   {UTILITY_ITEMS.map((item, index) => {
                     if (item.divider) return <div key={`divider-${index}`} className="my-1.5 h-px bg-white/[0.07]" />;
@@ -186,7 +186,7 @@ export const Navbar = () => {
         </div>
 
         {mobileOpen && (
-          <div className="pointer-events-auto mt-2 max-h-[calc(100dvh-82px)] overflow-y-auto overscroll-contain rounded-[24px] border border-white/[0.13] bg-[#0b0f15]/[0.82] p-3 shadow-[0_24px_70px_rgba(0,0,0,.52),inset_0_1px_0_rgba(255,255,255,.08)] backdrop-blur-[28px] backdrop-saturate-150 md:hidden">
+          <div className="pointer-events-auto mt-2 max-h-[calc(100dvh-74px)] overflow-y-auto overscroll-contain rounded-[24px] border border-white/[0.13] bg-[#0b0f15]/[0.82] p-3 shadow-[0_24px_70px_rgba(0,0,0,.52),inset_0_1px_0_rgba(255,255,255,.08)] backdrop-blur-[28px] backdrop-saturate-150 md:hidden">
             <form onSubmit={submit} className="mb-3 flex h-11 items-center gap-2 rounded-[14px] border border-white/[0.09] bg-white/[0.045] px-3 focus-within:border-[#ffd400]/35">
               <Search className="h-4 w-4 text-white/45" />
               <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search SynFlix" className="min-w-0 flex-1 bg-transparent text-base text-white outline-none placeholder:text-white/28" />
