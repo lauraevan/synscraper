@@ -27,8 +27,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: yarn
-          cache-dependency-path: frontend/yarn.lock
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
@@ -40,7 +38,7 @@ jobs:
 
       - name: Install frontend dependencies
         shell: pwsh
-        run: yarn --cwd frontend install --frozen-lockfile
+        run: yarn --cwd frontend install
 
       - name: Install Tauri CLI
         shell: pwsh
