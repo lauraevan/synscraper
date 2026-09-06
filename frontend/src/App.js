@@ -25,6 +25,13 @@ import Terms from "@/pages/Terms";
 import Person from "@/pages/Person";
 import Roulette from "@/pages/Roulette";
 import Settings from "@/pages/Settings";
+import DesktopHome from "@/pages/desktop/DesktopHome";
+import DesktopDiscover from "@/pages/desktop/DesktopDiscover";
+import DesktopLibrary from "@/pages/desktop/DesktopLibrary";
+import DesktopSearch from "@/pages/desktop/DesktopSearch";
+import DesktopProfiles from "@/pages/desktop/DesktopProfiles";
+import DesktopSettings from "@/pages/desktop/DesktopSettings";
+import DesktopTitle from "@/pages/desktop/DesktopTitle";
 
 const desktopRuntime = () => {
   if (typeof window === "undefined") return false;
@@ -87,6 +94,25 @@ function AppRoutes() {
   );
 }
 
+function DesktopRoutes() {
+  return (
+    <Routes>
+      <Route path="/" element={<DesktopHome />} />
+      <Route path="/discover" element={<DesktopDiscover />} />
+      <Route path="/browse/:mediaType" element={<DesktopDiscover />} />
+      <Route path="/library" element={<DesktopLibrary />} />
+      <Route path="/my-list" element={<DesktopLibrary />} />
+      <Route path="/search" element={<DesktopSearch />} />
+      <Route path="/profiles" element={<DesktopProfiles />} />
+      <Route path="/settings" element={<DesktopSettings />} />
+      <Route path="/title/:mediaType/:id" element={<DesktopTitle />} />
+      <Route path="/watch/:mediaType/:id" element={<Watch />} />
+      <Route path="/person/:id" element={<Person />} />
+      <Route path="*" element={<DesktopHome />} />
+    </Routes>
+  );
+}
+
 function Shell() {
   const location = useLocation();
   const isWatch = location.pathname.startsWith("/watch/");
@@ -124,9 +150,7 @@ function Shell() {
   if (isDesktopApp) {
     return (
       <DesktopShell>
-        <div className={isWatch ? "" : "synflix-site"}>
-          <AppRoutes />
-        </div>
+        <DesktopRoutes />
       </DesktopShell>
     );
   }
