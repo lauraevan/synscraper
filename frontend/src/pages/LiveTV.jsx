@@ -27,7 +27,7 @@ const DEFAULT_CHANNELS = [
     name: "SynFlix Live Demo",
     group: "Featured",
     url: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8",
-    description: "A public HLS demo feed for testing the SynFlix Live TV experience.",
+    description: "Public HLS test feed for the SynFlix Live TV player.",
     now: "Live demo feed",
     next: "Continuous programming",
     demo: true,
@@ -49,27 +49,31 @@ const cleanUrl = (value) => {
 };
 
 const parseM3U = (text) => {
-  const lines = String(text || "").split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+  const lines = String(text || "")
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
   const channels = [];
   let meta = null;
 
   for (const line of lines) {
     if (line.startsWith("#EXTINF")) {
-      const name = line.includes(",") ? line.slice(line.lastIndexOf(",") + 1).trim() : "Live channel";
-      const group = line.match(/group-title="([^"]*)"/i)?.[1]?.trim() || "Imported";
-      const logo = line.match(/tvg-logo="([^"]*)"/i)?.[1]?.trim() || "";
-      const tvgName = line.match(/tvg-name="([^"]*)"/i)?.[1]?.trim() || "";
-      meta = { name: tvgName || name || "Live channel", group, logo };
+      const fallbackName = line.includes(",") ? line.slice(line.lastIndexOf(",") + 1).trim() : "Live channel";
+      meta = {
+        name: line.match(/tvg-name="([^"]*)"/i)?.[1]?.trim() || fallbackName,
+        group: line.match(/group-title="([^"]*)"/i)?.[1]?.trim() || "Imported",
+        logo: line.match(/tvg-logo="([^"]*)"/i)?.[1]?.trim() || "",
+      };
       continue;
     }
 
     if (!line.startsWith("#")) {
       const url = cleanUrl(line);
       if (url) {
-        const channelMeta = meta || { name: `Channel ${channels.length + 1}`, group: "Imported", logo: "" };
+        const info = meta || { name: `Channel ${channels.length + 1}`, group: "Imported", logo: "" };
         channels.push({
           id: `import-${Date.now()}-${channels.length}-${Math.random().toString(36).slice(2, 7)}`,
-          ...channelMeta,
+          ...info,
           url,
           description: "Imported live stream",
           userAdded: true,
@@ -84,18 +88,24 @@ const parseM3U = (text) => {
 
 const ChannelMark = ({ channel, large = false }) => {
   const [broken, setBroken] = useState(false);
-  const size = large ? "h-14 w-14 rounded-2xl text-lg" : "h-10 w-10 rounded-xl text-sm";
+  const size = large ? "h-14 w-14 rounded-2xl text-lg" : "h-11 w-11 rounded-xl text-sm";
 
   if (channel.logo && !broken) {
     return (
       <span className={`${size} grid shrink-0 place-items-center overflow-hidden border border-white/[0.08] bg-white/[0.04]`}>
-        <img src={channel.logo} alt="" className="h-full w-full object-contain p-1.5" onError={() => setBroken(true)} loading="lazy" />
+        <img
+          src={channel.logo}
+          alt=""
+          className="h-full w-full object-contain p-1.5"
+          onError={() => setBroken(true)}
+          loading="lazy"
+        />
       </span>
     );
   }
 
   return (
-    <span className={`${size} grid shrink-0 place-items-center border border-[#ffd400]/18 bg-[#ffd400]/[0.07] font-black text-[#ffd400]`}>
+    <span className={`${size} grid shrink-0 place-items-center border border-[#ffd400]/20 bg-[#ffd400]/[0.08] font-black text-[#ffd400]`}>
       {String(channel.name || "TV").trim().slice(0, 2).toUpperCase()}
     </span>
   );
@@ -149,7 +159,7 @@ const LivePlayer = ({ channel }) => {
           setStatus("Recovering…");
           hls.recoverMediaError();
         } else {
-          setError("This stream could not be played. Check the channel URL or its CORS settings.");
+          setError("This stream could not be played. Check the stream URL and its CORS settings.");
           setStatus("Offline");
         }
       });
@@ -177,14 +187,9 @@ const LivePlayer = ({ channel }) => {
   const togglePlay = () => {
     const video = videoRef.current;
     if (!video) return;
-    if (video.paused) video.play().then(() => setPlaying(true)).catch(() => {});
-    else {
-      video.pause();
-      setPlaying(false);
-    }
+    if (video.paused) video.play().catch(() => {});
+    else video.pause();
   };
-
-  const toggleMute = () => setMuted((value) => !value);
 
   const pip = async () => {
     const video = videoRef.current;
@@ -192,18 +197,26 @@ const LivePlayer = ({ channel }) => {
     try {
       if (document.pictureInPictureElement) await document.exitPictureInPicture();
       else await video.requestPictureInPicture();
-    } catch { /* browser rejected PiP */ }
+    } catch {
+      return;
+    }
   };
 
   const fullscreen = async () => {
     try {
       if (document.fullscreenElement) await document.exitFullscreen();
       else await shellRef.current?.requestFullscreen?.();
-    } catch { /* browser rejected fullscreen */ }
+    } catch {
+      return;
+    }
   };
 
   return (
-    <div ref={shellRef} className="group/player relative aspect-video overflow-hidden rounded-[24px] border border-white/[0.08] bg-black shadow-[0_28px_90px_rgba(0,0,0,.54)]" data-testid="live-tv-player">
+    <div
+      ref={shellRef}
+      className="group/player relative aspect-video overflow-hidden rounded-[26px] border border-white/[0.09] bg-black shadow-[0_28px_90px_rgba(0,0,0,.55)]"
+      data-testid="live-tv-player"
+    >
       <video
         ref={videoRef}
         playsInline
@@ -214,21 +227,21 @@ const LivePlayer = ({ channel }) => {
         className="h-full w-full bg-black object-contain"
       />
 
-      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,.10)_0%,transparent_48%,rgba(0,0,0,.82)_100%)]" />
+      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,.16)_0%,transparent_44%,rgba(0,0,0,.86)_100%)]" />
 
       <div className="absolute left-4 top-4 flex items-center gap-2 md:left-5 md:top-5">
-        <span className="inline-flex h-7 items-center gap-1.5 rounded-full border border-red-500/20 bg-red-500/12 px-2.5 text-[10px] font-black tracking-[0.12em] text-red-400 backdrop-blur-md">
+        <span className="inline-flex h-7 items-center gap-1.5 rounded-full border border-red-500/20 bg-red-500/[0.12] px-2.5 text-[10px] font-black tracking-[0.12em] text-red-400 backdrop-blur-md">
           <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-red-400" /> LIVE
         </span>
-        <span className="rounded-full border border-white/[0.10] bg-black/48 px-2.5 py-1.5 text-[10px] font-semibold text-white/62 backdrop-blur-md">{status}</span>
+        <span className="rounded-full border border-white/[0.10] bg-black/[0.48] px-2.5 py-1.5 text-[10px] font-semibold text-white/[0.62] backdrop-blur-md">{status}</span>
       </div>
 
       {error && (
-        <div className="absolute inset-0 grid place-items-center bg-black/74 p-8 text-center backdrop-blur-sm">
+        <div className="absolute inset-0 grid place-items-center bg-black/[0.76] p-8 text-center backdrop-blur-sm">
           <div className="max-w-sm">
             <Radio className="mx-auto h-8 w-8 text-[#ffd400]" />
-            <p className="mt-4 text-sm font-semibold text-white/88">Stream unavailable</p>
-            <p className="mt-2 text-xs leading-5 text-white/38">{error}</p>
+            <p className="mt-4 text-sm font-semibold text-white/[0.9]">Stream unavailable</p>
+            <p className="mt-2 text-xs leading-5 text-white/[0.4]">{error}</p>
           </div>
         </div>
       )}
@@ -237,7 +250,7 @@ const LivePlayer = ({ channel }) => {
         <button type="button" onClick={togglePlay} className="grid h-10 w-10 place-items-center rounded-full bg-[#ffd400] text-black transition-transform duration-200 hover:scale-105 active:scale-95" aria-label={playing ? "Pause" : "Play"}>
           {playing ? <Pause className="h-4 w-4 fill-current" /> : <Play className="ml-0.5 h-4 w-4 fill-current" />}
         </button>
-        <button type="button" onClick={toggleMute} className="grid h-9 w-9 place-items-center rounded-full text-white/80 transition hover:bg-white/[0.08] hover:text-white" aria-label={muted ? "Unmute" : "Mute"}>
+        <button type="button" onClick={() => setMuted((value) => !value)} className="grid h-9 w-9 place-items-center rounded-full text-white/[0.8] transition hover:bg-white/[0.08] hover:text-white" aria-label={muted ? "Unmute" : "Mute"}>
           {muted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
         </button>
         <input
@@ -256,12 +269,16 @@ const LivePlayer = ({ channel }) => {
         />
 
         <div className="min-w-0 flex-1 px-1">
-          <p className="truncate text-xs font-semibold text-white/92 md:text-sm">{channel.name}</p>
-          <p className="mt-0.5 truncate text-[10px] text-white/38 md:text-[11px]">{channel.now || "Live programming"}</p>
+          <p className="truncate text-xs font-semibold text-white/[0.94] md:text-sm">{channel.name}</p>
+          <p className="mt-0.5 truncate text-[10px] text-white/[0.4] md:text-[11px]">{channel.now || "Live programming"}</p>
         </div>
 
-        <button type="button" onClick={pip} className="hidden h-9 w-9 place-items-center rounded-full text-white/70 transition hover:bg-white/[0.08] hover:text-white sm:grid" aria-label="Picture in picture"><PictureInPicture2 className="h-4 w-4" /></button>
-        <button type="button" onClick={fullscreen} className="grid h-9 w-9 place-items-center rounded-full text-white/70 transition hover:bg-white/[0.08] hover:text-white" aria-label="Fullscreen"><Maximize2 className="h-4 w-4" /></button>
+        <button type="button" onClick={pip} className="hidden h-9 w-9 place-items-center rounded-full text-white/[0.7] transition hover:bg-white/[0.08] hover:text-white sm:grid" aria-label="Picture in picture">
+          <PictureInPicture2 className="h-4 w-4" />
+        </button>
+        <button type="button" onClick={fullscreen} className="grid h-9 w-9 place-items-center rounded-full text-white/[0.7] transition hover:bg-white/[0.08] hover:text-white" aria-label="Fullscreen">
+          <Maximize2 className="h-4 w-4" />
+        </button>
       </div>
     </div>
   );
@@ -270,7 +287,7 @@ const LivePlayer = ({ channel }) => {
 export default function LiveTV() {
   const [userChannels, setUserChannels] = useState(() => readJson(USER_CHANNELS_KEY, []));
   const [favorites, setFavorites] = useState(() => new Set(readJson(FAVORITES_KEY, [])));
-  const [selectedId, setSelectedId] = useState(() => DEFAULT_CHANNELS[0].id);
+  const [selectedId, setSelectedId] = useState(DEFAULT_CHANNELS[0].id);
   const [query, setQuery] = useState("");
   const [group, setGroup] = useState("All");
   const [modal, setModal] = useState("");
@@ -280,7 +297,10 @@ export default function LiveTV() {
 
   const channels = useMemo(() => [...DEFAULT_CHANNELS, ...userChannels], [userChannels]);
   const selected = channels.find((channel) => channel.id === selectedId) || channels[0];
-  const groups = useMemo(() => ["All", "Favorites", ...Array.from(new Set(channels.map((channel) => channel.group || "General")))], [channels]);
+  const groups = useMemo(
+    () => ["All", "Favorites", ...Array.from(new Set(channels.map((channel) => channel.group || "General")))],
+    [channels]
+  );
 
   const visible = useMemo(() => {
     const needle = query.trim().toLowerCase();
@@ -328,6 +348,7 @@ export default function LiveTV() {
       description: "Custom live channel",
       userAdded: true,
     };
+
     setUserChannels((items) => [...items, channel]);
     setSelectedId(channel.id);
     setForm({ name: "", group: "General", url: "", logo: "" });
@@ -362,133 +383,135 @@ export default function LiveTV() {
 
   return (
     <main className="min-h-screen overflow-hidden bg-[#070707] pb-20 pt-24 text-white md:pt-28" data-testid="live-tv-page">
-      <section className="synflix-live-slide-left mx-auto max-w-[1500px] px-5 pt-7 md:px-8 md:pt-10">
-        <div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
-          <div>
-            <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-red-500/18 bg-red-500/[0.07] px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.18em] text-red-400">
-              <Radio className="h-3.5 w-3.5" /> Live now
+      <section className="synflix-live-slide-left mx-auto max-w-[1500px] px-4 md:px-6 lg:px-8">
+        <div className="overflow-hidden rounded-[28px] border border-white/[0.08] bg-[radial-gradient(circle_at_20%_0%,rgba(255,212,0,.08),transparent_34%),linear-gradient(135deg,#111318,#090a0d_60%,#070707)] px-5 py-6 shadow-[0_28px_90px_rgba(0,0,0,.34)] md:px-8 md:py-8">
+          <div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
+            <div>
+              <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-[#ffd400]/20 bg-[#ffd400]/[0.07] px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.16em] text-[#ffd400]">
+                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#ffd400]" /> Live now
+              </div>
+              <h1 className="text-3xl font-black tracking-[-0.05em] text-white md:text-5xl">Live TV</h1>
+              <p className="mt-2 max-w-2xl text-xs leading-5 text-white/[0.38] md:text-sm">A fast, clean live-channel hub with low-latency HLS playback, favorites, categories and playlist importing.</p>
             </div>
-            <h1 className="text-4xl font-semibold tracking-[-0.05em] sm:text-5xl md:text-6xl">Live TV, built into SynFlix.</h1>
-            <p className="mt-4 max-w-2xl text-sm leading-6 text-white/42 md:text-[15px]">A fast channel guide, favorites, HLS playback, picture-in-picture, fullscreen, search, and M3U import. Add streams you own or are authorized to use and they stay saved on this device.</p>
-          </div>
-          <div className="flex shrink-0 flex-wrap gap-2">
-            <button type="button" onClick={() => { setNotice(""); setModal("import"); }} className="inline-flex h-10 items-center gap-2 rounded-full border border-white/[0.10] bg-white/[0.035] px-4 text-xs font-semibold text-white/70 transition hover:border-[#ffd400]/25 hover:text-[#ffd400]"><Upload className="h-4 w-4" /> Import M3U</button>
-            <button type="button" onClick={() => { setNotice(""); setModal("add"); }} className="inline-flex h-10 items-center gap-2 rounded-full bg-[#ffd400] px-4 text-xs font-bold text-black transition-transform hover:scale-[1.03] active:scale-95"><Plus className="h-4 w-4" /> Add channel</button>
+            <div className="flex flex-wrap gap-2">
+              <button type="button" onClick={() => { setNotice(""); setModal("import"); }} className="inline-flex h-10 items-center gap-2 rounded-full border border-white/[0.10] bg-white/[0.04] px-4 text-xs font-semibold text-white/[0.72] transition hover:border-white/[0.18] hover:bg-white/[0.07] hover:text-white">
+                <Upload className="h-4 w-4" /> Import M3U
+              </button>
+              <button type="button" onClick={() => { setNotice(""); setModal("add"); }} className="inline-flex h-10 items-center gap-2 rounded-full bg-[#ffd400] px-4 text-xs font-bold text-black transition hover:brightness-105 active:scale-[0.98]">
+                <Plus className="h-4 w-4" /> Add channel
+              </button>
+            </div>
           </div>
         </div>
       </section>
 
-      <section className="synflix-live-slide-right mx-auto mt-8 grid max-w-[1500px] gap-5 px-5 md:px-8 lg:grid-cols-[minmax(0,1fr)_360px]">
-        <div className="min-w-0">
-          <LivePlayer key={selected?.id} channel={selected} />
-          <div className="mt-4 flex items-center gap-3 rounded-[18px] border border-white/[0.07] bg-white/[0.025] p-3.5 md:p-4">
+      <section className="mx-auto mt-5 grid max-w-[1500px] gap-5 px-4 md:px-6 lg:grid-cols-[minmax(0,1fr)_380px] lg:px-8">
+        <div className="synflix-live-slide-left min-w-0">
+          <LivePlayer channel={selected} />
+
+          <div className="mt-4 grid gap-3 rounded-[22px] border border-white/[0.07] bg-[#0b0d10] p-4 sm:grid-cols-[auto_1fr_auto] sm:items-center md:p-5">
             <ChannelMark channel={selected} large />
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2">
-                <h2 className="truncate text-sm font-semibold text-white/92 md:text-base">{selected.name}</h2>
-                <span className="shrink-0 rounded border border-red-500/18 bg-red-500/[0.08] px-1.5 py-0.5 text-[8px] font-black tracking-[0.12em] text-red-400">LIVE</span>
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 className="truncate text-base font-bold text-white md:text-lg">{selected.name}</h2>
+                <span className="rounded-full border border-red-500/15 bg-red-500/[0.08] px-2 py-1 text-[9px] font-black tracking-[0.12em] text-red-400">LIVE</span>
               </div>
-              <p className="mt-1 truncate text-xs text-white/36">{selected.now || "Live programming"}</p>
-              {selected.next && <p className="mt-0.5 truncate text-[10px] text-white/24">Up next · {selected.next}</p>}
+              <p className="mt-1 truncate text-xs text-white/[0.36]">{selected.now || selected.description || "Live programming"}</p>
+              <p className="mt-1 truncate text-[10px] text-white/[0.22]">Up next · {selected.next || "Live programming continues"}</p>
             </div>
-            <button type="button" onClick={(event) => toggleFavorite(event, selected.id)} className={`grid h-10 w-10 shrink-0 place-items-center rounded-full border transition ${favorites.has(selected.id) ? "border-[#ffd400]/28 bg-[#ffd400]/10 text-[#ffd400]" : "border-white/[0.08] text-white/38 hover:text-white"}`} aria-label="Favorite channel"><Star className={`h-4 w-4 ${favorites.has(selected.id) ? "fill-current" : ""}`} /></button>
+            <button type="button" onClick={(event) => toggleFavorite(event, selected.id)} className={`grid h-10 w-10 place-items-center rounded-full border transition ${favorites.has(selected.id) ? "border-[#ffd400]/25 bg-[#ffd400]/[0.08] text-[#ffd400]" : "border-white/[0.08] bg-white/[0.03] text-white/[0.46] hover:text-white"}`} aria-label="Favorite channel">
+              <Star className={`h-4 w-4 ${favorites.has(selected.id) ? "fill-current" : ""}`} />
+            </button>
           </div>
         </div>
 
-        <aside className="overflow-hidden rounded-[24px] border border-white/[0.08] bg-[#0b0d10] shadow-[0_24px_70px_rgba(0,0,0,.30)]">
+        <aside className="synflix-live-slide-right overflow-hidden rounded-[24px] border border-white/[0.08] bg-[#0b0d10] shadow-[0_24px_70px_rgba(0,0,0,.30)]">
           <div className="border-b border-white/[0.07] p-4">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <p className="text-sm font-semibold text-white/90">Channels</p>
-                <p className="mt-0.5 text-[10px] text-white/28">{visible.length} available</p>
+                <p className="text-sm font-bold text-white/[0.9]">Channels</p>
+                <p className="mt-0.5 text-[10px] text-white/[0.28]">{channels.length} available</p>
               </div>
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-[#ffd400]/15 bg-[#ffd400]/[0.05] px-2.5 py-1 text-[9px] font-bold text-[#ffd400]/70"><span className="h-1.5 w-1.5 rounded-full bg-[#ffd400]" /> ON AIR</span>
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-[#ffd400]/15 bg-[#ffd400]/[0.05] px-2.5 py-1.5 text-[9px] font-bold text-[#ffd400]/80"><Radio className="h-3 w-3" /> LIVE</span>
             </div>
-            <div className="mt-3 flex h-10 items-center gap-2 rounded-xl border border-white/[0.08] bg-black/28 px-3 focus-within:border-[#ffd400]/30">
-              <Search className="h-4 w-4 text-white/34" />
-              <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search channels" className="min-w-0 flex-1 bg-transparent text-xs text-white outline-none placeholder:text-white/24" />
-              {query && <button type="button" onClick={() => setQuery("")} className="text-white/30 hover:text-white"><X className="h-3.5 w-3.5" /></button>}
+
+            <div className="mt-3 flex h-10 items-center gap-2 rounded-[13px] border border-white/[0.08] bg-black/[0.26] px-3 focus-within:border-[#ffd400]/30">
+              <Search className="h-4 w-4 shrink-0 text-white/[0.28]" />
+              <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search channels" className="min-w-0 flex-1 bg-transparent text-xs text-white outline-none placeholder:text-white/[0.22]" />
+              {query && <button type="button" onClick={() => setQuery("")} className="text-white/[0.28] hover:text-white"><X className="h-3.5 w-3.5" /></button>}
+            </div>
+
+            <div className="mt-3 flex gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {groups.map((item) => (
+                <button key={item} type="button" onClick={() => setGroup(item)} className={`h-8 shrink-0 rounded-full border px-3 text-[10px] font-semibold transition ${group === item ? "border-[#ffd400]/25 bg-[#ffd400]/[0.09] text-[#ffd400]" : "border-white/[0.07] bg-white/[0.025] text-white/[0.42] hover:text-white/[0.75]"}`}>
+                  {item}
+                </button>
+              ))}
             </div>
           </div>
 
-          <div className="synflix-yellow-scroll flex gap-1.5 overflow-x-auto border-b border-white/[0.06] px-3 py-3">
-            {groups.map((item) => (
-              <button key={item} type="button" onClick={() => setGroup(item)} className={`shrink-0 rounded-full px-3 py-1.5 text-[10px] font-semibold transition ${group === item ? "bg-[#ffd400] text-black" : "border border-white/[0.07] bg-white/[0.025] text-white/42 hover:text-white"}`}>{item}</button>
-            ))}
-          </div>
-
-          <div className="synflix-yellow-scroll max-h-[540px] overflow-y-auto p-2">
+          <div className="max-h-[560px] overflow-y-auto p-2 [scrollbar-color:rgba(255,212,0,.28)_transparent] [scrollbar-width:thin]">
             {visible.length ? visible.map((channel) => {
-              const active = selected?.id === channel.id;
+              const active = channel.id === selected.id;
               const starred = favorites.has(channel.id);
               return (
-                <button key={channel.id} type="button" onClick={() => setSelectedId(channel.id)} className={`group/channel flex w-full items-center gap-3 rounded-[15px] p-2.5 text-left transition ${active ? "bg-[#ffd400]/[0.08]" : "hover:bg-white/[0.035]"}`}>
-                  <ChannelMark channel={channel} />
-                  <span className="min-w-0 flex-1">
-                    <span className={`block truncate text-xs font-semibold ${active ? "text-[#ffd400]" : "text-white/76"}`}>{channel.name}</span>
-                    <span className="mt-0.5 block truncate text-[10px] text-white/28">{channel.now || channel.group || "Live"}</span>
-                  </span>
-                  <span className="flex shrink-0 items-center gap-0.5 opacity-70 transition group-hover/channel:opacity-100">
-                    <span role="button" tabIndex={0} onClick={(event) => toggleFavorite(event, channel.id)} onKeyDown={() => {}} className={`grid h-7 w-7 place-items-center rounded-full ${starred ? "text-[#ffd400]" : "text-white/26 hover:text-white"}`} aria-label="Favorite"><Star className={`h-3.5 w-3.5 ${starred ? "fill-current" : ""}`} /></span>
-                    {channel.userAdded && <span role="button" tabIndex={0} onClick={(event) => removeChannel(event, channel)} onKeyDown={() => {}} className="grid h-7 w-7 place-items-center rounded-full text-white/20 hover:bg-red-500/10 hover:text-red-400" aria-label="Remove"><Trash2 className="h-3.5 w-3.5" /></span>}
-                    <ChevronRight className={`h-4 w-4 ${active ? "text-[#ffd400]" : "text-white/18"}`} />
-                  </span>
-                </button>
+                <div key={channel.id} className={`group/channel flex items-center gap-3 rounded-[16px] border p-2.5 transition ${active ? "border-[#ffd400]/20 bg-[#ffd400]/[0.065]" : "border-transparent hover:border-white/[0.06] hover:bg-white/[0.025]"}`}>
+                  <button type="button" onClick={() => setSelectedId(channel.id)} className="flex min-w-0 flex-1 items-center gap-3 text-left">
+                    <ChannelMark channel={channel} />
+                    <span className="min-w-0 flex-1">
+                      <span className={`block truncate text-xs font-semibold ${active ? "text-white" : "text-white/[0.72]"}`}>{channel.name}</span>
+                      <span className="mt-0.5 block truncate text-[10px] text-white/[0.28]">{channel.now || channel.group || "Live"}</span>
+                    </span>
+                    <ChevronRight className={`h-4 w-4 shrink-0 ${active ? "text-[#ffd400]" : "text-white/[0.14]"}`} />
+                  </button>
+                  <button type="button" onClick={(event) => toggleFavorite(event, channel.id)} className={`grid h-8 w-8 shrink-0 place-items-center rounded-full transition ${starred ? "text-[#ffd400]" : "text-white/[0.24] hover:bg-white/[0.04] hover:text-white"}`} aria-label="Favorite">
+                    <Star className={`h-3.5 w-3.5 ${starred ? "fill-current" : ""}`} />
+                  </button>
+                  {channel.userAdded && (
+                    <button type="button" onClick={(event) => removeChannel(event, channel)} className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-white/[0.18] transition hover:bg-red-500/[0.08] hover:text-red-400" aria-label="Remove channel">
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </div>
               );
             }) : (
               <div className="grid min-h-[220px] place-items-center p-6 text-center">
-                <div><Radio className="mx-auto h-7 w-7 text-white/20" /><p className="mt-3 text-xs font-semibold text-white/48">No channels here</p><p className="mt-1 text-[10px] text-white/24">Try another category or add a channel.</p></div>
+                <div><Radio className="mx-auto h-6 w-6 text-white/[0.16]" /><p className="mt-3 text-xs font-semibold text-white/[0.48]">No channels found</p><p className="mt-1 text-[10px] text-white/[0.22]">Try another category or search.</p></div>
               </div>
             )}
           </div>
         </aside>
       </section>
 
-      <section className="synflix-live-slide-left mx-auto mt-7 max-w-[1500px] px-5 md:px-8">
-        <div className="rounded-[24px] border border-white/[0.07] bg-[#0b0c0f] p-4 md:p-5">
-          <div className="flex flex-wrap items-end justify-between gap-3">
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#ffd400]/60">Channel guide</p>
-              <h2 className="mt-1 text-xl font-semibold tracking-[-0.03em]">What’s on now</h2>
-            </div>
-            <p className="text-[10px] text-white/24">Guide data appears when a channel provides it.</p>
-          </div>
-          <div className="mt-4 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
-            {channels.slice(0, 9).map((channel) => (
-              <button key={`guide-${channel.id}`} type="button" onClick={() => { setSelectedId(channel.id); window.scrollTo({ top: 0, behavior: "smooth" }); }} className="group/guide flex items-center gap-3 rounded-[16px] border border-white/[0.06] bg-white/[0.018] p-3 text-left transition hover:-translate-y-0.5 hover:border-[#ffd400]/20 hover:bg-[#ffd400]/[0.025]">
-                <ChannelMark channel={channel} />
-                <span className="min-w-0 flex-1"><span className="block truncate text-xs font-semibold text-white/78">{channel.name}</span><span className="mt-1 block truncate text-[10px] text-white/30">{channel.now || "Live programming"}</span></span>
-                <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-red-400 shadow-[0_0_10px_rgba(248,113,113,.5)]" />
-              </button>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {modal && (
-        <div className="fixed inset-0 z-[100] grid place-items-center bg-black/74 p-4 backdrop-blur-md" onMouseDown={(event) => { if (event.target === event.currentTarget) setModal(""); }}>
+        <div className="fixed inset-0 z-[80] grid place-items-center bg-black/[0.74] p-4 backdrop-blur-md" onMouseDown={(event) => { if (event.target === event.currentTarget) setModal(""); }}>
           <div className="synflix-modal-slide w-full max-w-[560px] overflow-hidden rounded-[24px] border border-white/[0.10] bg-[#0b0d10] shadow-[0_32px_100px_rgba(0,0,0,.72)]">
             <div className="flex items-center justify-between border-b border-white/[0.07] px-5 py-4">
-              <div><p className="text-sm font-semibold text-white/92">{modal === "add" ? "Add live channel" : "Import M3U playlist"}</p><p className="mt-0.5 text-[10px] text-white/28">Use streams you own or are authorized to access.</p></div>
-              <button type="button" onClick={() => setModal("")} className="grid h-8 w-8 place-items-center rounded-full text-white/36 transition hover:bg-white/[0.05] hover:text-white"><X className="h-4 w-4" /></button>
+              <div><p className="text-sm font-semibold text-white/[0.92]">{modal === "add" ? "Add live channel" : "Import M3U playlist"}</p><p className="mt-0.5 text-[10px] text-white/[0.28]">Use streams you own or are authorized to access.</p></div>
+              <button type="button" onClick={() => setModal("")} className="grid h-8 w-8 place-items-center rounded-full text-white/[0.36] transition hover:bg-white/[0.05] hover:text-white"><X className="h-4 w-4" /></button>
             </div>
 
             {modal === "add" ? (
               <form onSubmit={addChannel} className="space-y-3 p-5">
                 <div className="grid gap-3 sm:grid-cols-2">
-                  <label className="block"><span className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.12em] text-white/30">Channel name</span><input value={form.name} onChange={(event) => setForm((value) => ({ ...value, name: event.target.value }))} placeholder="My channel" className="h-11 w-full rounded-xl border border-white/[0.08] bg-black/30 px-3 text-sm text-white outline-none placeholder:text-white/20" /></label>
-                  <label className="block"><span className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.12em] text-white/30">Category</span><input value={form.group} onChange={(event) => setForm((value) => ({ ...value, group: event.target.value }))} placeholder="News, Sports…" className="h-11 w-full rounded-xl border border-white/[0.08] bg-black/30 px-3 text-sm text-white outline-none placeholder:text-white/20" /></label>
+                  <label className="block"><span className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.12em] text-white/[0.30]">Channel name</span><input value={form.name} onChange={(event) => setForm((value) => ({ ...value, name: event.target.value }))} placeholder="My channel" className="h-11 w-full rounded-xl border border-white/[0.08] bg-black/[0.30] px-3 text-sm text-white outline-none placeholder:text-white/[0.20]" /></label>
+                  <label className="block"><span className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.12em] text-white/[0.30]">Category</span><input value={form.group} onChange={(event) => setForm((value) => ({ ...value, group: event.target.value }))} placeholder="News, Sports…" className="h-11 w-full rounded-xl border border-white/[0.08] bg-black/[0.30] px-3 text-sm text-white outline-none placeholder:text-white/[0.20]" /></label>
                 </div>
-                <label className="block"><span className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.12em] text-white/30">HLS / video URL</span><input value={form.url} onChange={(event) => setForm((value) => ({ ...value, url: event.target.value }))} placeholder="https://…/master.m3u8" className="h-11 w-full rounded-xl border border-white/[0.08] bg-black/30 px-3 text-sm text-white outline-none placeholder:text-white/20" /></label>
-                <label className="block"><span className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.12em] text-white/30">Logo URL <span className="normal-case tracking-normal text-white/18">optional</span></span><input value={form.logo} onChange={(event) => setForm((value) => ({ ...value, logo: event.target.value }))} placeholder="https://…/logo.png" className="h-11 w-full rounded-xl border border-white/[0.08] bg-black/30 px-3 text-sm text-white outline-none placeholder:text-white/20" /></label>
-                {notice && <p className="rounded-xl border border-red-500/15 bg-red-500/[0.06] px-3 py-2.5 text-xs text-red-300/80">{notice}</p>}
+                <label className="block"><span className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.12em] text-white/[0.30]">HLS / video URL</span><input value={form.url} onChange={(event) => setForm((value) => ({ ...value, url: event.target.value }))} placeholder="https://…/master.m3u8" className="h-11 w-full rounded-xl border border-white/[0.08] bg-black/[0.30] px-3 text-sm text-white outline-none placeholder:text-white/[0.20]" /></label>
+                <label className="block"><span className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.12em] text-white/[0.30]">Logo URL <span className="normal-case tracking-normal text-white/[0.18]">optional</span></span><input value={form.logo} onChange={(event) => setForm((value) => ({ ...value, logo: event.target.value }))} placeholder="https://…/logo.png" className="h-11 w-full rounded-xl border border-white/[0.08] bg-black/[0.30] px-3 text-sm text-white outline-none placeholder:text-white/[0.20]" /></label>
+                {notice && <p className="rounded-xl border border-red-500/15 bg-red-500/[0.06] px-3 py-2.5 text-xs text-red-300/[0.80]">{notice}</p>}
                 <button type="submit" className="inline-flex h-10 items-center gap-2 rounded-full bg-[#ffd400] px-4 text-xs font-bold text-black"><Check className="h-4 w-4" /> Add channel</button>
               </form>
             ) : (
               <div className="p-5">
-                <textarea value={playlistText} onChange={(event) => setPlaylistText(event.target.value)} placeholder="#EXTM3U\n#EXTINF:-1 group-title=\"News\",My Channel\nhttps://example.com/live.m3u8" className="h-60 w-full resize-none rounded-2xl border border-white/[0.08] bg-black/35 p-4 font-mono text-[11px] leading-5 text-white/68 outline-none placeholder:text-white/18" />
-                {notice && <p className="mt-3 rounded-xl border border-red-500/15 bg-red-500/[0.06] px-3 py-2.5 text-xs text-red-300/80">{notice}</p>}
-                <div className="mt-4 flex items-center justify-between gap-3"><p className="text-[10px] leading-4 text-white/24">SynFlix stores imported channels locally in this browser.</p><button type="button" onClick={importPlaylist} className="inline-flex h-10 shrink-0 items-center gap-2 rounded-full bg-[#ffd400] px-4 text-xs font-bold text-black"><Upload className="h-4 w-4" /> Import</button></div>
+                <textarea
+                  value={playlistText}
+                  onChange={(event) => setPlaylistText(event.target.value)}
+                  placeholder={`#EXTM3U\n#EXTINF:-1 group-title="News",My Channel\nhttps://example.com/live.m3u8`}
+                  className="h-60 w-full resize-none rounded-2xl border border-white/[0.08] bg-black/[0.35] p-4 font-mono text-[11px] leading-5 text-white/[0.68] outline-none placeholder:text-white/[0.18]"
+                />
+                {notice && <p className="mt-3 rounded-xl border border-red-500/15 bg-red-500/[0.06] px-3 py-2.5 text-xs text-red-300/[0.80]">{notice}</p>}
+                <div className="mt-4 flex items-center justify-between gap-3"><p className="text-[10px] leading-4 text-white/[0.24]">Imported channels are stored locally in this browser.</p><button type="button" onClick={importPlaylist} className="inline-flex h-10 shrink-0 items-center gap-2 rounded-full bg-[#ffd400] px-4 text-xs font-bold text-black"><Upload className="h-4 w-4" /> Import</button></div>
               </div>
             )}
           </div>
