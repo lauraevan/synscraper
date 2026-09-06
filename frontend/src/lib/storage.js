@@ -1,15 +1,38 @@
-// localStorage helpers for watchlist + continue watching (no login)
+// localStorage helpers for watchlist + continue watching.
+// The Windows desktop app scopes these collections per profile; the website keeps
+// the existing global keys so browser users are not migrated unexpectedly.
 const WATCHLIST = "synflix_watchlist";
 const CONTINUE = "synflix_continue_watching";
+const ACTIVE_DESKTOP_PROFILE = "synflix_desktop_active_profile";
+
+const isDesktopRuntime = () => {
+    if (typeof window === "undefined") return false;
+    if (window.__TAURI__ || window.__TAURI_INTERNALS__) return true;
+    try {
+        return window.sessionStorage.getItem("synflix-desktop-preview") === "1";
+    } catch {
+        return false;
+    }
+};
+
+const scopedKey = (key) => {
+    if (!isDesktopRuntime()) return key;
+    let profile = "main";
+    try { profile = window.localStorage.getItem(ACTIVE_DESKTOP_PROFILE) || "main"; } catch { /* noop */ }
+    return `${key}:profile:${profile}`;
+};
 
 const read = (k) => {
     try {
-        return JSON.parse(localStorage.getItem(k) || "[]");
+        return JSON.parse(localStorage.getItem(scopedKey(k)) || "[]");
     } catch {
         return [];
     }
 };
-const write = (k, v) => localStorage.setItem(k, JSON.stringify(v));
+const write = (k, v) => {
+    localStorage.setItem(scopedKey(k), JSON.stringify(v));
+    if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent("synflix-library-change", { detail: { key: k } }));
+};
 
 const keyOf = (item) => `${item.media_type}:${item.id}`;
 
@@ -23,7 +46,7 @@ export const toggleWatchlist = (item) => {
     if (idx >= 0) list.splice(idx, 1);
     else list.unshift({ ...item, added_at: Date.now() });
     write(WATCHLIST, list);
-    return idx < 0; // true if now added
+    return idx < 0;
 };
 
 // ---- Continue watching ----
@@ -42,14 +65,12 @@ export const getProgress = (media_type, id, season, episode) => {
 };
 
 export const saveProgress = (entry) => {
-    // entry: {media_type,id,title,poster_path,backdrop_path,season,episode,position,duration}
     const list = read(CONTINUE);
     const match = (x) =>
         x.media_type === entry.media_type && String(x.id) === String(entry.id);
     const filtered = list.filter((x) => !match(x));
     const pct = entry.duration ? entry.position / entry.duration : 0;
     if (pct > 0.95) {
-        // finished — drop from continue watching
         write(CONTINUE, filtered);
         return;
     }
