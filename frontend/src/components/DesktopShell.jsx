@@ -174,7 +174,7 @@ export function DesktopShell({ children }) {
         </form>
         <div className="synflix-desktop-toolbar-actions">
           {!isNativeDesktop ? (
-            <a href={DESKTOP_DOWNLOAD_URL} aria-label="Download SynFlix for Windows" title="Download SynFlix for Windows">
+            <a href={DESKTOP_DOWNLOAD_URL} className="synflix-desktop-profile" aria-label="Download SynFlix for Windows" title="Download SynFlix for Windows">
               <Download aria-hidden="true" />
             </a>
           ) : null}
