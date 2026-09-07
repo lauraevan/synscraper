@@ -26,7 +26,8 @@ const NAV_ITEMS = [
   { to: "/discover", label: "Discover", icon: Compass, plainDiscover: true },
   { to: "/library", label: "Library", icon: LibraryBig },
   { to: "/discover?filters=1", label: "Filters", icon: ListFilter, query: "filters=1" },
-  { to: "/profiles", label: "Profiles", icon: Puzzle },
+  { to: "/addons", label: "Add-ons", icon: Puzzle },
+  { to: "/profiles", label: "Profiles", icon: UserRound },
 ];
 
 const getDesktopWindow = () => {

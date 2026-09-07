@@ -1,18 +1,27 @@
 import { useEffect, useState } from "react";
-import { MonitorCog, Sparkles, UserRound } from "lucide-react";
+import { LogOut, MonitorCog, Puzzle, Sparkles, UserRound } from "lucide-react";
 import { Link } from "react-router-dom";
 import { getActiveDesktopProfile, getDesktopPreferences, saveDesktopPreferences } from "@/lib/desktopProfile";
+import { getDesktopAccount, signOutDesktopAccount } from "@/lib/desktopAccount";
+import { getDesktopAddons } from "@/lib/desktopAddons";
 
 const GENRES = ["action", "adventure", "animation", "comedy", "family", "fantasy", "horror", "mystery", "romance", "scifi", "thriller"];
 
 export default function DesktopSettings() {
   const [profile, setProfile] = useState(() => getActiveDesktopProfile());
   const [prefs, setPrefs] = useState(() => getDesktopPreferences());
+  const [account] = useState(() => getDesktopAccount());
+  const [addonCount, setAddonCount] = useState(() => getDesktopAddons().length);
 
   useEffect(() => {
     const sync = () => { setProfile(getActiveDesktopProfile()); setPrefs(getDesktopPreferences()); };
+    const syncAddons = () => setAddonCount(getDesktopAddons().length);
     window.addEventListener("synflix-desktop-profile", sync);
-    return () => window.removeEventListener("synflix-desktop-profile", sync);
+    window.addEventListener("synflix-desktop-addons", syncAddons);
+    return () => {
+      window.removeEventListener("synflix-desktop-profile", sync);
+      window.removeEventListener("synflix-desktop-addons", syncAddons);
+    };
   }, []);
 
   const update = (patch) => setPrefs(saveDesktopPreferences(patch));
@@ -22,6 +31,11 @@ export default function DesktopSettings() {
     update({ favoriteGenres: [...current] });
   };
 
+  const signOut = () => {
+    signOutDesktopAccount();
+    window.location.replace("/");
+  };
+
   return (
     <div className="desktop-page desktop-settings-page" data-testid="desktop-settings-page">
       <div className="desktop-page-heading"><div><span className="desktop-eyebrow"><MonitorCog aria-hidden="true" /> Desktop preferences</span><h1>Settings</h1><p>Personalize SynFlix for {profile?.name || "this profile"}.</p></div></div>
@@ -29,8 +43,23 @@ export default function DesktopSettings() {
       <div className="desktop-settings-layout">
         <section className="desktop-settings-card desktop-settings-profile">
           <div className="desktop-settings-icon"><UserRound aria-hidden="true" /></div>
-          <div className="desktop-settings-copy"><h2>Profile</h2><p>Switch, add or edit profiles. Libraries and progress stay separate.</p></div>
+          <div className="desktop-settings-copy">
+            <h2>SynFlix ID</h2>
+            <div className="desktop-settings-account-line"><strong>{account?.displayName || profile?.name || "SynFlix user"}</strong><small>{account?.email || "Local desktop account"}</small></div>
+          </div>
+          <button type="button" className="desktop-soft-button" onClick={signOut}><LogOut aria-hidden="true" /> Sign out</button>
+        </section>
+
+        <section className="desktop-settings-card desktop-settings-profile">
+          <div className="desktop-settings-icon"><UserRound aria-hidden="true" /></div>
+          <div className="desktop-settings-copy"><h2>Profiles</h2><p>Switch, add or edit profiles. Libraries and progress stay separate.</p></div>
           <Link to="/profiles" className="desktop-soft-button">Manage profiles</Link>
+        </section>
+
+        <section className="desktop-settings-card desktop-settings-profile">
+          <div className="desktop-settings-icon"><Puzzle aria-hidden="true" /></div>
+          <div className="desktop-settings-copy"><h2>Add-ons</h2><p>{addonCount ? `${addonCount} Stremio-compatible add-on${addonCount === 1 ? "" : "s"} installed.` : "Install Stremio-compatible add-ons from a manifest URL."}</p></div>
+          <Link to="/addons" className="desktop-soft-button">Manage add-ons</Link>
         </section>
 
         <section className="desktop-settings-card desktop-settings-wide">

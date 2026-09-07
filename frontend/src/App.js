@@ -8,6 +8,7 @@ import "@/desktop-app.css";
 import "@/desktop-v2-polish.css";
 import "@/desktop-reference-exact.css";
 import "@/desktop-tv-reference.css";
+import "@/desktop-product.css";
 import { useEffect } from "react";
 import { BrowserRouter, Routes, Route, useLocation, Link } from "react-router-dom";
 import { Navbar } from "@/components/Navbar";
@@ -35,6 +36,9 @@ import DesktopSearch from "@/pages/desktop/DesktopSearch";
 import DesktopProfiles from "@/pages/desktop/DesktopProfiles";
 import DesktopSettings from "@/pages/desktop/DesktopSettings";
 import DesktopTitle from "@/pages/desktop/DesktopTitle";
+import DesktopAddons from "@/pages/desktop/DesktopAddons";
+import DesktopOnboarding from "@/pages/desktop/DesktopOnboarding";
+import { isDesktopSignedIn } from "@/lib/desktopAccount";
 
 const desktopRuntime = () => {
   if (typeof window === "undefined") return false;
@@ -106,6 +110,7 @@ function DesktopRoutes() {
       <Route path="/library" element={<DesktopLibrary />} />
       <Route path="/my-list" element={<DesktopLibrary />} />
       <Route path="/search" element={<DesktopSearch />} />
+      <Route path="/addons" element={<DesktopAddons />} />
       <Route path="/profiles" element={<DesktopProfiles />} />
       <Route path="/settings" element={<DesktopSettings />} />
       <Route path="/title/:mediaType/:id" element={<DesktopTitle />} />
@@ -151,6 +156,7 @@ function Shell() {
   if (isEmbed) return <AppRoutes />;
 
   if (isDesktopApp) {
+    if (!isDesktopSignedIn()) return <DesktopOnboarding />;
     return (
       <DesktopShell>
         <DesktopRoutes />
