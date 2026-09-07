@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   Bell,
   Compass,
+  Download,
   Home,
   LibraryBig,
   ListFilter,
@@ -16,6 +17,8 @@ import {
   UserRound,
   X,
 } from "lucide-react";
+
+const DESKTOP_DOWNLOAD_URL = "https://github.com/lauraevan/synscraper/releases/download/desktop-latest/SynFlix-Setup.exe";
 
 const NAV_ITEMS = [
   { to: "/search", label: "Search", icon: Search },
@@ -43,6 +46,7 @@ export function DesktopShell({ children }) {
   const searchRef = useRef(null);
   const [query, setQuery] = useState("");
   const [maximized, setMaximized] = useState(false);
+  const isNativeDesktop = typeof window !== "undefined" && Boolean(window.__TAURI__ || window.__TAURI_INTERNALS__);
 
   const active = (item) => {
     if (item.exact) return location.pathname === item.to;
@@ -169,6 +173,11 @@ export function DesktopShell({ children }) {
           <Search aria-hidden="true" />
         </form>
         <div className="synflix-desktop-toolbar-actions">
+          {!isNativeDesktop ? (
+            <a href={DESKTOP_DOWNLOAD_URL} aria-label="Download SynFlix for Windows" title="Download SynFlix for Windows">
+              <Download aria-hidden="true" />
+            </a>
+          ) : null}
           <button type="button" onClick={share} aria-label="Share" title="Share"><Share2 aria-hidden="true" /></button>
           <button type="button" onClick={toggleFullscreen} aria-label="Toggle fullscreen" title="Fullscreen (F11)"><Maximize2 aria-hidden="true" /></button>
           <button type="button" aria-label="Notifications" title="No new notifications"><Bell aria-hidden="true" /></button>
