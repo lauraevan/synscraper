@@ -6,13 +6,14 @@ on:
     paths:
       - "desktop/**"
       - "frontend/src/App.js"
-      - "frontend/src/components/DesktopShell.jsx"
-      - "frontend/src/desktop-app.css"
+      - "frontend/src/components/Desktop*.jsx"
+      - "frontend/src/pages/desktop/**"
+      - "frontend/src/desktop*.css"
       - "frontend/src/lib/api.js"
       - ".github/workflows/desktop-windows.yml"
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   windows-installer:
@@ -62,10 +63,28 @@ jobs:
           CI: "false"
         run: npm run build
 
+      - name: Stage stable installer name
+        shell: pwsh
+        run: |
+          $installer = Get-ChildItem "desktop/src-tauri/target/release/bundle/nsis/*.exe" | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+          if (-not $installer) { throw "SynFlix NSIS installer was not produced." }
+          Copy-Item $installer.FullName "SynFlix-Setup.exe" -Force
+
       - name: Upload SynFlix installer
         uses: actions/upload-artifact@v4
         with:
           name: SynFlix-Desktop-v1-Windows
-          path: desktop/src-tauri/target/release/bundle/nsis/*.exe
+          path: SynFlix-Setup.exe
           if-no-files-found: error
           retention-days: 14
+
+      - name: Publish stable desktop download
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view desktop-latest *> $null
+          if ($LASTEXITCODE -ne 0) {
+            gh release create desktop-latest --title "SynFlix Desktop" --notes "Rolling Windows installer for SynFlix Desktop." --target "${{ github.sha }}"
+          }
+          gh release upload desktop-latest "SynFlix-Setup.exe" --clobber
