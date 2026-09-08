@@ -3,7 +3,7 @@ import WebKit
 import UIKit
 import Combine
 
-private enum AppSection: String, CaseIterable, Identifiable {
+enum AppSection: String, CaseIterable, Identifiable {
     case home
     case search
     case library
