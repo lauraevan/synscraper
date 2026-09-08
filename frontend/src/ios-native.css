@@ -3,21 +3,22 @@ html[data-synflix-ios="true"] body,
 html[data-synflix-ios="true"] #root,
 html[data-synflix-ios="true"] .App {
   min-height: 100%;
-  background: #080a14 !important;
+  background: #05070d !important;
   overscroll-behavior-y: none;
 }
 
 html[data-synflix-ios="true"] body {
   -webkit-tap-highlight-color: transparent;
   -webkit-touch-callout: none;
+  text-rendering: optimizeLegibility;
 }
 
 html[data-synflix-ios="true"] .synflix-ios-native-surface {
   min-height: 100dvh;
   background:
-    radial-gradient(circle at 82% -8%, rgba(110, 84, 255, .12), transparent 32%),
-    radial-gradient(circle at 6% 92%, rgba(42, 112, 255, .10), transparent 34%),
-    #080a14;
+    radial-gradient(circle at 84% -10%, rgba(104, 80, 255, .10), transparent 31%),
+    radial-gradient(circle at 4% 94%, rgba(38, 104, 255, .08), transparent 34%),
+    #05070d;
 }
 
 html[data-synflix-ios="true"] .synflix-ios-native-surface > main,
@@ -25,14 +26,49 @@ html[data-synflix-ios="true"] .synflix-ios-native-surface [data-testid$="-page"]
   background: transparent !important;
 }
 
+/* Native SwiftUI chrome floats above the page. Leave touch-safe breathing room
+   without putting the web content back inside a fake card. */
+html[data-synflix-ios="true"] .synflix-ios-native-surface [data-testid$="-page"]:not([data-testid="home-page"]) {
+  padding-top: max(72px, calc(env(safe-area-inset-top) + 52px)) !important;
+}
+
 html[data-synflix-ios="true"] .synflix-ios-native-surface [data-testid="home-page"] {
-  padding-bottom: 1.25rem !important;
+  padding-bottom: max(112px, calc(env(safe-area-inset-bottom) + 88px)) !important;
+}
+
+html[data-synflix-ios="true"] .synflix-ios-native-surface [data-testid$="-page"]:not([data-testid="home-page"]) {
+  padding-bottom: max(112px, calc(env(safe-area-inset-bottom) + 88px)) !important;
 }
 
 html[data-synflix-ios="true"] .synflix-ios-native-surface .synflix-navbar,
 html[data-synflix-ios="true"] .synflix-ios-native-surface .synflix-mobile-dock,
 html[data-synflix-ios="true"] .synflix-ios-native-surface footer {
   display: none !important;
+}
+
+/* Long streaming rails are expensive in WebKit. Off-screen sections are skipped
+   until they approach the viewport, which noticeably improves first paint and scroll. */
+html[data-synflix-ios="true"] .synflix-ios-native-surface section:not(:first-child) {
+  content-visibility: auto;
+  contain-intrinsic-size: 1px 420px;
+}
+
+html[data-synflix-ios="true"] .synflix-ios-native-surface img {
+  -webkit-user-drag: none;
+  transform: translateZ(0);
+}
+
+html[data-synflix-ios="true"] .synflix-ios-native-surface a,
+html[data-synflix-ios="true"] .synflix-ios-native-surface button,
+html[data-synflix-ios="true"] .synflix-ios-native-surface [role="button"] {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+html[data-synflix-ios="true"] .synflix-ios-native-surface input,
+html[data-synflix-ios="true"] .synflix-ios-native-surface textarea,
+html[data-synflix-ios="true"] .synflix-ios-native-surface select {
+  font-size: max(16px, 1em);
 }
 
 html[data-synflix-ios="true"] ::-webkit-scrollbar {
@@ -44,18 +80,25 @@ html[data-synflix-ios="true"] * {
   scrollbar-width: none;
 }
 
-html[data-synflix-ios="true"] a,
-html[data-synflix-ios="true"] button,
-html[data-synflix-ios="true"] [role="button"] {
-  -webkit-tap-highlight-color: transparent;
-}
-
-html[data-synflix-ios="true"] img {
-  -webkit-user-drag: none;
-}
-
 @media (max-width: 767px) {
   html[data-synflix-ios="true"] .synflix-ios-native-surface [data-testid="home-page"] > section:first-child {
-    min-height: 52dvh;
+    min-height: 56dvh;
+  }
+}
+
+@media (min-width: 768px) {
+  html[data-synflix-ios="true"] .synflix-ios-native-surface [data-testid="home-page"] > section:first-child {
+    min-height: 62dvh;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-synflix-ios="true"] .synflix-ios-native-surface *,
+  html[data-synflix-ios="true"] .synflix-ios-native-surface *::before,
+  html[data-synflix-ios="true"] .synflix-ios-native-surface *::after {
+    scroll-behavior: auto !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
   }
 }

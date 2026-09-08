@@ -8,11 +8,21 @@ import App from "@/App";
 
 applyPreferences();
 
+const isIOSRuntime = (() => {
+  if (typeof window === "undefined") return false;
+  const params = new URLSearchParams(window.location.search);
+  return Boolean(window.__SYNFLIX_IOS__ || params.get("iosApp") === "1");
+})();
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 60_000,
+      staleTime: isIOSRuntime ? 5 * 60_000 : 60_000,
+      gcTime: isIOSRuntime ? 45 * 60_000 : 5 * 60_000,
       refetchOnWindowFocus: false,
+      refetchOnReconnect: true,
+      retry: isIOSRuntime ? 1 : 2,
+      networkMode: isIOSRuntime ? "offlineFirst" : "online",
     },
   },
 });
@@ -28,8 +38,26 @@ root.render(
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("/service-worker.js").catch(() => {
-      // SynFlix still works as a normal website if service workers are unavailable.
+    navigator.serviceWorker.register("/service-worker.js").then((registration) => {
+      if (!isIOSRuntime) return;
+
+      const warm = () => {
+        const worker = registration.active || registration.waiting || registration.installing;
+        worker?.postMessage({
+          type: "WARM_CACHE",
+          urls: [
+            "/?iosApp=1",
+            "/search?iosApp=1",
+            "/my-list?iosApp=1",
+            "/settings?iosApp=1",
+          ],
+        });
+      };
+
+      warm();
+      navigator.serviceWorker.ready.then(warm).catch(() => {});
+    }).catch(() => {
+      // SynFlix still works normally if service workers are unavailable.
     });
   });
 }
