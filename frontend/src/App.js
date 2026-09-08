@@ -4,6 +4,7 @@ import "@/theme-system.css";
 import "@/light-mode.css";
 import "@/synflix-polish.css";
 import "@/mobile-app.css";
+import "@/ios-native.css";
 import "@/desktop-app.css";
 import "@/desktop-v2-polish.css";
 import "@/desktop-reference-exact.css";
@@ -49,6 +50,12 @@ const desktopRuntime = () => {
   let preview = false;
   try { preview = window.sessionStorage.getItem("synflix-desktop-preview") === "1"; } catch { /* noop */ }
   return Boolean(window.__TAURI__ || window.__TAURI_INTERNALS__ || preview);
+};
+
+const iosRuntime = () => {
+  if (typeof window === "undefined") return false;
+  const params = new URLSearchParams(window.location.search);
+  return Boolean(window.__SYNFLIX_IOS__ || params.get("iosApp") === "1");
 };
 
 function Footer() {
@@ -127,16 +134,18 @@ function Shell() {
   const isEmbed = location.pathname.startsWith("/embed/");
   const isPlayerSurface = isWatch || isEmbed;
   const isDesktopApp = desktopRuntime() && !isEmbed;
+  const isIOSApp = iosRuntime() && !isEmbed;
 
   useEffect(() => {
     document.title = isPlayerSurface ? "SynPlayer · SynFlix" : "SynFlix";
     document.documentElement.dataset.synflixDesktop = isDesktopApp ? "true" : "false";
+    document.documentElement.dataset.synflixIos = isIOSApp ? "true" : "false";
 
     const syncBrowserChrome = () => {
       const meta = document.querySelector('meta[name="theme-color"]');
       if (meta) {
         const light = document.documentElement.dataset.siteMode === "light";
-        meta.setAttribute("content", isPlayerSurface || isDesktopApp ? "#07090f" : light ? "#f5f3ed" : "#070707");
+        meta.setAttribute("content", isPlayerSurface || isDesktopApp || isIOSApp ? "#080a14" : light ? "#f5f3ed" : "#070707");
       }
     };
     syncBrowserChrome();
@@ -151,7 +160,7 @@ function Shell() {
     icon.setAttribute("href", "/synflix-logo.webp");
 
     return () => window.removeEventListener("synflix-preferences", syncBrowserChrome);
-  }, [isPlayerSurface, isDesktopApp, location.pathname]);
+  }, [isPlayerSurface, isDesktopApp, isIOSApp, location.pathname]);
 
   if (isEmbed) return <AppRoutes />;
 
@@ -161,6 +170,14 @@ function Shell() {
       <DesktopShell>
         <DesktopRoutes />
       </DesktopShell>
+    );
+  }
+
+  if (isIOSApp) {
+    return (
+      <div className={isPlayerSurface ? "synflix-ios-player-surface" : "synflix-site synflix-ios-native-surface"}>
+        <AppRoutes />
+      </div>
     );
   }
 

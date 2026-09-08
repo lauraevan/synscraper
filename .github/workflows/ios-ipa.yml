@@ -5,6 +5,8 @@ on:
   push:
     paths:
       - "ios/**"
+      - "frontend/src/App.js"
+      - "frontend/src/ios-native.css"
       - ".github/workflows/ios-ipa.yml"
 
 permissions:
@@ -27,23 +29,63 @@ jobs:
       - name: Install XcodeGen
         run: brew install xcodegen
 
-      - name: Build SynFlix app icon
+      - name: Build premium SynFlix app icon
         run: |
           python -m pip install --disable-pip-version-check pillow
           python <<'PY'
           import json
           from pathlib import Path
-          from PIL import Image
+          from PIL import Image, ImageDraw, ImageFilter
 
+          W = 1024
           out = Path('ios/SynFlix/Assets.xcassets/AppIcon.appiconset')
           out.mkdir(parents=True, exist_ok=True)
-          src = Image.open('frontend/public/synflix-logo.webp').convert('RGBA')
 
-          base = Image.new('RGB', (1024, 1024), (8, 8, 13))
-          src.thumbnail((820, 820), Image.Resampling.LANCZOS)
-          x = (1024 - src.width) // 2
-          y = (1024 - src.height) // 2
-          base.paste(src, (x, y), src)
+          # Full-bleed indigo/blue background. iOS applies its own icon mask.
+          base = Image.new('RGBA', (W, W), (7, 9, 22, 255))
+          d = ImageDraw.Draw(base)
+          top = (18, 16, 46)
+          bottom = (7, 11, 27)
+          for y in range(W):
+              t = y / (W - 1)
+              color = tuple(round(top[i] * (1 - t) + bottom[i] * t) for i in range(3)) + (255,)
+              d.line((0, y, W, y), fill=color)
+
+          # Cinematic color bloom behind the mark.
+          glow = Image.new('RGBA', (W, W), (0, 0, 0, 0))
+          gd = ImageDraw.Draw(glow)
+          gd.ellipse((-120, -180, 700, 650), fill=(112, 72, 255, 128))
+          gd.ellipse((410, 360, 1160, 1110), fill=(38, 112, 255, 108))
+          glow = glow.filter(ImageFilter.GaussianBlur(118))
+          base = Image.alpha_composite(base, glow)
+
+          # Large glass diamond — deliberately fills the icon instead of floating tiny in the middle.
+          diamond = Image.new('RGBA', (570, 570), (0, 0, 0, 0))
+          dd = ImageDraw.Draw(diamond)
+          dd.rounded_rectangle((18, 18, 552, 552), radius=118, fill=(255, 255, 255, 28), outline=(255, 255, 255, 118), width=12)
+          dd.rounded_rectangle((46, 46, 524, 524), radius=96, outline=(156, 139, 255, 118), width=5)
+          diamond = diamond.rotate(45, expand=True, resample=Image.Resampling.BICUBIC)
+          base.alpha_composite(diamond, ((W - diamond.width) // 2, (W - diamond.height) // 2))
+
+          # Specular Liquid Glass highlight.
+          shine = Image.new('RGBA', (W, W), (0, 0, 0, 0))
+          sd = ImageDraw.Draw(shine)
+          sd.ellipse((170, 105, 760, 500), fill=(255, 255, 255, 52))
+          shine = shine.filter(ImageFilter.GaussianBlur(72))
+          base = Image.alpha_composite(base, shine)
+
+          # Bold play glyph, sized to read clearly even on the Home Screen.
+          d = ImageDraw.Draw(base)
+          shadow = Image.new('RGBA', (W, W), (0, 0, 0, 0))
+          sh = ImageDraw.Draw(shadow)
+          sh.polygon([(420, 336), (420, 688), (720, 512)], fill=(0, 0, 0, 92))
+          shadow = shadow.filter(ImageFilter.GaussianBlur(24))
+          base = Image.alpha_composite(base, shadow)
+          d = ImageDraw.Draw(base)
+          d.polygon([(414, 326), (414, 698), (728, 512)], fill=(255, 255, 255, 250))
+
+          # Fine inner highlight gives the glyph a polished glass edge.
+          d.line([(438, 365), (438, 646)], fill=(255, 255, 255, 220), width=7)
 
           specs = [
               ('iphone','20x20','2x',40), ('iphone','20x20','3x',60),
@@ -57,13 +99,14 @@ jobs:
               ('ipad','83.5x83.5','2x',167),
               ('ios-marketing','1024x1024','1x',1024),
           ]
+
           images = []
           for idiom, size, scale, px in specs:
               filename = f'icon-{idiom}-{size.replace(".", "_")}-{scale}.png'
-              base.resize((px, px), Image.Resampling.LANCZOS).save(out / filename, 'PNG')
+              base.resize((px, px), Image.Resampling.LANCZOS).convert('RGB').save(out / filename, 'PNG')
               images.append({'idiom': idiom, 'size': size, 'scale': scale, 'filename': filename})
-          (out / 'Contents.json').write_text(json.dumps({'images': images, 'info': {'author':'xcode','version':1}}, indent=2))
 
+          (out / 'Contents.json').write_text(json.dumps({'images': images, 'info': {'author':'xcode','version':1}}, indent=2))
           root = Path('ios/SynFlix/Assets.xcassets')
           (root / 'Contents.json').write_text(json.dumps({'info': {'author':'xcode','version':1}}, indent=2))
           PY

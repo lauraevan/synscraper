@@ -1,0 +1,61 @@
+html[data-synflix-ios="true"],
+html[data-synflix-ios="true"] body,
+html[data-synflix-ios="true"] #root,
+html[data-synflix-ios="true"] .App {
+  min-height: 100%;
+  background: #080a14 !important;
+  overscroll-behavior-y: none;
+}
+
+html[data-synflix-ios="true"] body {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+}
+
+html[data-synflix-ios="true"] .synflix-ios-native-surface {
+  min-height: 100dvh;
+  background:
+    radial-gradient(circle at 82% -8%, rgba(110, 84, 255, .12), transparent 32%),
+    radial-gradient(circle at 6% 92%, rgba(42, 112, 255, .10), transparent 34%),
+    #080a14;
+}
+
+html[data-synflix-ios="true"] .synflix-ios-native-surface > main,
+html[data-synflix-ios="true"] .synflix-ios-native-surface [data-testid$="-page"] {
+  background: transparent !important;
+}
+
+html[data-synflix-ios="true"] .synflix-ios-native-surface [data-testid="home-page"] {
+  padding-bottom: 1.25rem !important;
+}
+
+html[data-synflix-ios="true"] .synflix-ios-native-surface .synflix-navbar,
+html[data-synflix-ios="true"] .synflix-ios-native-surface .synflix-mobile-dock,
+html[data-synflix-ios="true"] .synflix-ios-native-surface footer {
+  display: none !important;
+}
+
+html[data-synflix-ios="true"] ::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
+html[data-synflix-ios="true"] * {
+  scrollbar-width: none;
+}
+
+html[data-synflix-ios="true"] a,
+html[data-synflix-ios="true"] button,
+html[data-synflix-ios="true"] [role="button"] {
+  -webkit-tap-highlight-color: transparent;
+}
+
+html[data-synflix-ios="true"] img {
+  -webkit-user-drag: none;
+}
+
+@media (max-width: 767px) {
+  html[data-synflix-ios="true"] .synflix-ios-native-surface [data-testid="home-page"] > section:first-child {
+    min-height: 52dvh;
+  }
+}
