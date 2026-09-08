@@ -1,0 +1,112 @@
+name: Build SynFlix iOS IPA
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "ios/**"
+      - ".github/workflows/ios-ipa.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  ios-ipa:
+    runs-on: macos-15
+    timeout-minutes: 35
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Build SynFlix app icon
+        run: |
+          python3 -m pip install --disable-pip-version-check pillow
+          python3 <<'PY'
+          import json
+          from pathlib import Path
+          from PIL import Image
+
+          out = Path('ios/SynFlix/Assets.xcassets/AppIcon.appiconset')
+          out.mkdir(parents=True, exist_ok=True)
+          src = Image.open('frontend/public/synflix-logo.webp').convert('RGBA')
+
+          base = Image.new('RGB', (1024, 1024), (8, 8, 13))
+          src.thumbnail((820, 820), Image.Resampling.LANCZOS)
+          x = (1024 - src.width) // 2
+          y = (1024 - src.height) // 2
+          base.paste(src, (x, y), src)
+
+          specs = [
+              ('iphone','20x20','2x',40), ('iphone','20x20','3x',60),
+              ('iphone','29x29','2x',58), ('iphone','29x29','3x',87),
+              ('iphone','40x40','2x',80), ('iphone','40x40','3x',120),
+              ('iphone','60x60','2x',120), ('iphone','60x60','3x',180),
+              ('ipad','20x20','1x',20), ('ipad','20x20','2x',40),
+              ('ipad','29x29','1x',29), ('ipad','29x29','2x',58),
+              ('ipad','40x40','1x',40), ('ipad','40x40','2x',80),
+              ('ipad','76x76','1x',76), ('ipad','76x76','2x',152),
+              ('ipad','83.5x83.5','2x',167),
+              ('ios-marketing','1024x1024','1x',1024),
+          ]
+          images = []
+          for idiom, size, scale, px in specs:
+              filename = f'icon-{idiom}-{size.replace(".", "_")}-{scale}.png'
+              base.resize((px, px), Image.Resampling.LANCZOS).save(out / filename, 'PNG')
+              images.append({'idiom': idiom, 'size': size, 'scale': scale, 'filename': filename})
+          (out / 'Contents.json').write_text(json.dumps({'images': images, 'info': {'author':'xcode','version':1}}, indent=2))
+
+          root = Path('ios/SynFlix/Assets.xcassets')
+          (root / 'Contents.json').write_text(json.dumps({'info': {'author':'xcode','version':1}}, indent=2))
+          PY
+
+      - name: Generate Xcode project
+        working-directory: ios
+        run: xcodegen generate
+
+      - name: Build unsigned device app
+        working-directory: ios
+        run: |
+          xcodebuild \
+            -project SynFlix.xcodeproj \
+            -scheme SynFlix \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY='' \
+            clean build
+
+      - name: Package sideloadable IPA
+        working-directory: ios
+        run: |
+          APP='build/Build/Products/Release-iphoneos/SynFlix.app'
+          test -d "$APP" || { echo 'SynFlix.app was not produced'; exit 1; }
+          rm -rf Payload SynFlix.ipa
+          mkdir Payload
+          cp -R "$APP" Payload/SynFlix.app
+          /usr/bin/zip -qry SynFlix.ipa Payload
+          unzip -t SynFlix.ipa
+          ls -lh SynFlix.ipa
+
+      - name: Upload SynFlix IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: SynFlix-iOS-IPA
+          path: ios/SynFlix.ipa
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Publish stable IPA download
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if ! gh release view ios-latest >/dev/null 2>&1; then
+            gh release create ios-latest --title "SynFlix iOS" --notes "Rolling unsigned SynFlix IPA for sideloading with Sideloadly, AltStore, SideStore, or another signer." --target "${{ github.sha }}"
+          fi
+          gh release upload ios-latest ios/SynFlix.ipa --clobber
