@@ -43,6 +43,21 @@ enum AppSection: String, CaseIterable, Identifiable {
     }
 }
 
+private extension View {
+    @ViewBuilder
+    func synflixLiquidGlass<S: Shape>(in shape: S, interactive: Bool = false) -> some View {
+        if #available(iOS 26.0, *) {
+            if interactive {
+                self.glassEffect(.regular.interactive(), in: shape)
+            } else {
+                self.glassEffect(.regular, in: shape)
+            }
+        } else {
+            self.background(.ultraThinMaterial, in: shape)
+        }
+    }
+}
+
 final class SynFlixBrowserModel: ObservableObject {
     @Published var isLoading = true
     @Published var isInitialLoad = true
@@ -112,16 +127,16 @@ struct ContentView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
                         .overlay {
                             RoundedRectangle(cornerRadius: 26, style: .continuous)
-                                .strokeBorder(.white.opacity(0.09), lineWidth: 0.8)
+                                .strokeBorder(.white.opacity(0.08), lineWidth: 0.8)
                         }
-                        .shadow(color: .black.opacity(0.28), radius: 22, y: 10)
+                        .shadow(color: .black.opacity(0.26), radius: 22, y: 10)
 
                     if browser.isLoading && !browser.isInitialLoad {
                         GeometryReader { proxy in
                             Rectangle()
                                 .fill(
                                     LinearGradient(
-                                        colors: [Color.white.opacity(0.85), Color(red: 0.54, green: 0.45, blue: 1.0)],
+                                        colors: [Color.white.opacity(0.9), Color(red: 0.55, green: 0.46, blue: 1.0)],
                                         startPoint: .leading,
                                         endPoint: .trailing
                                     )
@@ -163,18 +178,18 @@ struct ContentView: View {
 
     private var appBackground: some View {
         ZStack {
-            Color(red: 0.025, green: 0.03, blue: 0.055)
+            Color(red: 0.022, green: 0.027, blue: 0.05)
             RadialGradient(
-                colors: [Color(red: 0.34, green: 0.18, blue: 0.72).opacity(0.28), .clear],
+                colors: [Color(red: 0.36, green: 0.19, blue: 0.76).opacity(0.30), .clear],
                 center: .topTrailing,
-                startRadius: 10,
-                endRadius: 520
+                startRadius: 12,
+                endRadius: 540
             )
             RadialGradient(
-                colors: [Color(red: 0.10, green: 0.34, blue: 0.72).opacity(0.22), .clear],
+                colors: [Color(red: 0.08, green: 0.34, blue: 0.78).opacity(0.22), .clear],
                 center: .bottomLeading,
                 startRadius: 18,
-                endRadius: 560
+                endRadius: 580
             )
         }
         .ignoresSafeArea()
@@ -190,7 +205,7 @@ struct ContentView: View {
                         .foregroundStyle(.white)
                     Text(browser.pageTitle == "SynFlix" ? "Streaming" : browser.pageTitle)
                         .font(.system(size: 10.5, weight: .medium))
-                        .foregroundStyle(.white.opacity(0.42))
+                        .foregroundStyle(.white.opacity(0.44))
                         .lineLimit(1)
                 }
             }
@@ -207,13 +222,13 @@ struct ContentView: View {
                     Text("Search")
                         .font(.system(size: 13, weight: .semibold, design: .rounded))
                 }
-                .foregroundStyle(.white.opacity(0.78))
+                .foregroundStyle(.white.opacity(0.82))
                 .padding(.horizontal, 13)
                 .frame(height: 38)
             }
             .buttonStyle(.plain)
-            .background(.ultraThinMaterial, in: Capsule())
-            .overlay(Capsule().stroke(.white.opacity(0.13), lineWidth: 0.7))
+            .synflixLiquidGlass(in: Capsule(), interactive: true)
+            .overlay(Capsule().stroke(.white.opacity(0.11), lineWidth: 0.6))
 
             if browser.canGoBack {
                 glassIconButton("chevron.left") { browser.goBack() }
@@ -223,31 +238,31 @@ struct ContentView: View {
         }
         .padding(.horizontal, 11)
         .frame(height: 58)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .synflixLiquidGlass(in: RoundedRectangle(cornerRadius: 24, style: .continuous))
         .overlay {
             RoundedRectangle(cornerRadius: 24, style: .continuous)
                 .stroke(
                     LinearGradient(
-                        colors: [.white.opacity(0.24), .white.opacity(0.06)],
+                        colors: [.white.opacity(0.22), .white.opacity(0.04)],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     ),
-                    lineWidth: 0.8
+                    lineWidth: 0.75
                 )
         }
-        .shadow(color: .black.opacity(0.22), radius: 18, y: 8)
+        .shadow(color: .black.opacity(0.20), radius: 18, y: 8)
     }
 
     private func glassIconButton(_ symbol: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Image(systemName: symbol)
                 .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(.white.opacity(0.82))
+                .foregroundStyle(.white.opacity(0.84))
                 .frame(width: 38, height: 38)
         }
         .buttonStyle(.plain)
-        .background(.thinMaterial, in: Circle())
-        .overlay(Circle().stroke(.white.opacity(0.12), lineWidth: 0.7))
+        .synflixLiquidGlass(in: Circle(), interactive: true)
+        .overlay(Circle().stroke(.white.opacity(0.09), lineWidth: 0.6))
     }
 
     private var bottomDock: some View {
@@ -271,10 +286,8 @@ struct ContentView: View {
                     .background {
                         if selectedSection == section {
                             Capsule()
-                                .fill(.white.opacity(0.10))
-                                .overlay {
-                                    Capsule().stroke(.white.opacity(0.14), lineWidth: 0.7)
-                                }
+                                .fill(Color.white.opacity(0.07))
+                                .overlay(Capsule().stroke(.white.opacity(0.12), lineWidth: 0.6))
                                 .padding(.horizontal, 2)
                         }
                     }
@@ -283,47 +296,47 @@ struct ContentView: View {
             }
         }
         .padding(6)
-        .background(.ultraThinMaterial, in: Capsule())
+        .synflixLiquidGlass(in: Capsule())
         .overlay {
             Capsule()
                 .stroke(
                     LinearGradient(
-                        colors: [.white.opacity(0.25), .white.opacity(0.07)],
+                        colors: [.white.opacity(0.22), .white.opacity(0.04)],
                         startPoint: .top,
                         endPoint: .bottom
                     ),
-                    lineWidth: 0.8
+                    lineWidth: 0.75
                 )
         }
-        .shadow(color: .black.opacity(0.30), radius: 24, y: 12)
+        .shadow(color: .black.opacity(0.28), radius: 24, y: 12)
     }
 
     private var launchOverlay: some View {
         ZStack {
             appBackground
             VStack(spacing: 18) {
-                SynFlixMark(size: 92)
-                    .shadow(color: Color(red: 0.47, green: 0.36, blue: 1).opacity(0.45), radius: 34)
+                SynFlixMark(size: 98)
+                    .shadow(color: Color(red: 0.47, green: 0.36, blue: 1).opacity(0.50), radius: 36)
                 VStack(spacing: 6) {
                     Text("SynFlix")
                         .font(.system(size: 32, weight: .bold, design: .rounded))
                         .tracking(-0.8)
                     Text("Your cinema, beautifully connected.")
                         .font(.system(size: 13.5, weight: .medium))
-                        .foregroundStyle(.white.opacity(0.48))
+                        .foregroundStyle(.white.opacity(0.50))
                 }
                 ProgressView()
-                    .tint(.white.opacity(0.85))
+                    .tint(.white.opacity(0.9))
                     .controlSize(.regular)
                     .padding(.top, 4)
             }
             .padding(34)
-            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 34, style: .continuous))
+            .synflixLiquidGlass(in: RoundedRectangle(cornerRadius: 34, style: .continuous))
             .overlay {
                 RoundedRectangle(cornerRadius: 34, style: .continuous)
-                    .stroke(.white.opacity(0.12), lineWidth: 0.8)
+                    .stroke(.white.opacity(0.10), lineWidth: 0.7)
             }
-            .shadow(color: .black.opacity(0.38), radius: 34, y: 18)
+            .shadow(color: .black.opacity(0.36), radius: 34, y: 18)
             .padding(28)
         }
         .ignoresSafeArea()
@@ -333,13 +346,13 @@ struct ContentView: View {
         VStack(spacing: 14) {
             Image(systemName: "wifi.exclamationmark")
                 .font(.system(size: 28, weight: .semibold))
-                .foregroundStyle(.white.opacity(0.82))
+                .foregroundStyle(.white.opacity(0.84))
             VStack(spacing: 5) {
                 Text("Couldn’t connect")
                     .font(.system(size: 18, weight: .semibold, design: .rounded))
                 Text(message)
                     .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(.white.opacity(0.48))
+                    .foregroundStyle(.white.opacity(0.50))
                     .multilineTextAlignment(.center)
                     .lineLimit(3)
             }
@@ -348,18 +361,11 @@ struct ContentView: View {
                 .foregroundStyle(.white)
                 .padding(.horizontal, 18)
                 .frame(height: 40)
-                .background(
-                    LinearGradient(
-                        colors: [Color(red: 0.54, green: 0.42, blue: 1), Color(red: 0.32, green: 0.54, blue: 1)],
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    ),
-                    in: Capsule()
-                )
+                .synflixLiquidGlass(in: Capsule(), interactive: true)
         }
         .padding(24)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 26, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 26, style: .continuous).stroke(.white.opacity(0.13), lineWidth: 0.8))
+        .synflixLiquidGlass(in: RoundedRectangle(cornerRadius: 26, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 26, style: .continuous).stroke(.white.opacity(0.10), lineWidth: 0.7))
     }
 }
 
@@ -372,8 +378,8 @@ private struct SynFlixMark: View {
                 .fill(
                     LinearGradient(
                         colors: [
-                            Color(red: 0.48, green: 0.31, blue: 1.0),
-                            Color(red: 0.22, green: 0.48, blue: 1.0)
+                            Color(red: 0.50, green: 0.31, blue: 1.0),
+                            Color(red: 0.22, green: 0.50, blue: 1.0)
                         ],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
@@ -381,21 +387,21 @@ private struct SynFlixMark: View {
                 )
                 .overlay {
                     RoundedRectangle(cornerRadius: size * 0.26, style: .continuous)
-                        .stroke(.white.opacity(0.28), lineWidth: max(0.7, size * 0.012))
+                        .stroke(.white.opacity(0.26), lineWidth: max(0.7, size * 0.012))
                 }
 
             RoundedRectangle(cornerRadius: size * 0.17, style: .continuous)
                 .fill(.white.opacity(0.12))
-                .frame(width: size * 0.61, height: size * 0.61)
+                .frame(width: size * 0.62, height: size * 0.62)
                 .rotationEffect(.degrees(45))
 
             Image(systemName: "play.fill")
-                .font(.system(size: size * 0.32, weight: .black))
+                .font(.system(size: size * 0.34, weight: .black))
                 .foregroundStyle(.white)
-                .offset(x: size * 0.025)
+                .offset(x: size * 0.026)
         }
         .frame(width: size, height: size)
-        .shadow(color: Color(red: 0.42, green: 0.34, blue: 1).opacity(0.24), radius: size * 0.18, y: size * 0.08)
+        .shadow(color: Color(red: 0.42, green: 0.34, blue: 1).opacity(0.25), radius: size * 0.18, y: size * 0.08)
     }
 }
 
@@ -431,7 +437,7 @@ struct SynFlixWebView: UIViewRepresentable {
         webView.scrollView.backgroundColor = UIColor(red: 0.025, green: 0.03, blue: 0.055, alpha: 1)
         webView.scrollView.keyboardDismissMode = .interactive
         webView.scrollView.contentInsetAdjustmentBehavior = .automatic
-        webView.customUserAgent = "SynFlix-iOS/1.1 Mobile Safari WebKit"
+        webView.customUserAgent = "SynFlix-iOS/1.2 Mobile Safari WebKit"
 
         let refresh = UIRefreshControl()
         refresh.tintColor = UIColor.white.withAlphaComponent(0.72)

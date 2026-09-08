@@ -21,6 +21,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Select Xcode 26.3
+        run: |
+          sudo xcode-select -s /Applications/Xcode_26.3.app/Contents/Developer
+          xcodebuild -version
+
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
@@ -41,7 +46,6 @@ jobs:
           out = Path('ios/SynFlix/Assets.xcassets/AppIcon.appiconset')
           out.mkdir(parents=True, exist_ok=True)
 
-          # Full-bleed indigo/blue background. iOS applies its own icon mask.
           base = Image.new('RGBA', (W, W), (7, 9, 22, 255))
           d = ImageDraw.Draw(base)
           top = (18, 16, 46)
@@ -51,7 +55,6 @@ jobs:
               color = tuple(round(top[i] * (1 - t) + bottom[i] * t) for i in range(3)) + (255,)
               d.line((0, y, W, y), fill=color)
 
-          # Cinematic color bloom behind the mark.
           glow = Image.new('RGBA', (W, W), (0, 0, 0, 0))
           gd = ImageDraw.Draw(glow)
           gd.ellipse((-120, -180, 700, 650), fill=(112, 72, 255, 128))
@@ -59,7 +62,6 @@ jobs:
           glow = glow.filter(ImageFilter.GaussianBlur(118))
           base = Image.alpha_composite(base, glow)
 
-          # Large glass diamond — deliberately fills the icon instead of floating tiny in the middle.
           diamond = Image.new('RGBA', (570, 570), (0, 0, 0, 0))
           dd = ImageDraw.Draw(diamond)
           dd.rounded_rectangle((18, 18, 552, 552), radius=118, fill=(255, 255, 255, 28), outline=(255, 255, 255, 118), width=12)
@@ -67,24 +69,20 @@ jobs:
           diamond = diamond.rotate(45, expand=True, resample=Image.Resampling.BICUBIC)
           base.alpha_composite(diamond, ((W - diamond.width) // 2, (W - diamond.height) // 2))
 
-          # Specular Liquid Glass highlight.
           shine = Image.new('RGBA', (W, W), (0, 0, 0, 0))
           sd = ImageDraw.Draw(shine)
           sd.ellipse((170, 105, 760, 500), fill=(255, 255, 255, 52))
           shine = shine.filter(ImageFilter.GaussianBlur(72))
           base = Image.alpha_composite(base, shine)
 
-          # Bold play glyph, sized to read clearly even on the Home Screen.
-          d = ImageDraw.Draw(base)
           shadow = Image.new('RGBA', (W, W), (0, 0, 0, 0))
           sh = ImageDraw.Draw(shadow)
           sh.polygon([(420, 336), (420, 688), (720, 512)], fill=(0, 0, 0, 92))
           shadow = shadow.filter(ImageFilter.GaussianBlur(24))
           base = Image.alpha_composite(base, shadow)
+
           d = ImageDraw.Draw(base)
           d.polygon([(414, 326), (414, 698), (728, 512)], fill=(255, 255, 255, 250))
-
-          # Fine inner highlight gives the glyph a polished glass edge.
           d.line([(438, 365), (438, 646)], fill=(255, 255, 255, 220), width=7)
 
           specs = [
