@@ -3,9 +3,9 @@ import SwiftUI
 private struct MediaPressStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .scaleEffect(configuration.isPressed ? 0.985 : 1)
-            .opacity(configuration.isPressed ? 0.92 : 1)
-            .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
+            .scaleEffect(configuration.isPressed ? 0.978 : 1)
+            .opacity(configuration.isPressed ? 0.94 : 1)
+            .animation(.easeOut(duration: 0.11), value: configuration.isPressed)
     }
 }
 
@@ -13,13 +13,13 @@ struct ArtworkView: View {
     let url: URL?
     let cornerRadius: CGFloat
 
-    init(url: URL?, cornerRadius: CGFloat = 9) {
+    init(url: URL?, cornerRadius: CGFloat = 7) {
         self.url = url
         self.cornerRadius = cornerRadius
     }
 
     var body: some View {
-        AsyncImage(url: url, transaction: Transaction(animation: .easeOut(duration: 0.16))) { phase in
+        AsyncImage(url: url, transaction: Transaction(animation: .easeOut(duration: 0.18))) { phase in
             switch phase {
             case .success(let image):
                 image.resizable().scaledToFill()
@@ -30,7 +30,7 @@ struct ArtworkView: View {
                     .overlay {
                         ProgressView()
                             .controlSize(.small)
-                            .tint(.white.opacity(0.34))
+                            .tint(.white.opacity(0.28))
                     }
             @unknown default:
                 placeholder
@@ -42,7 +42,7 @@ struct ArtworkView: View {
 
     private var placeholder: some View {
         LinearGradient(
-            colors: [Color.white.opacity(0.050), Color.white.opacity(0.016)],
+            colors: [Color.white.opacity(0.042), Color.white.opacity(0.014)],
             startPoint: .topLeading,
             endPoint: .bottomTrailing
         )
@@ -60,19 +60,18 @@ struct PosterCard: View {
             router.open(item)
         } label: {
             VStack(alignment: .leading, spacing: 7) {
-                ArtworkView(url: item.posterURL, cornerRadius: 8)
+                ArtworkView(url: item.posterURL, cornerRadius: 7)
                     .frame(width: width, height: width * 1.50)
                     .overlay {
-                        RoundedRectangle(cornerRadius: 8, style: .continuous)
-                            .stroke(.white.opacity(0.050), lineWidth: 0.55)
+                        RoundedRectangle(cornerRadius: 7, style: .continuous)
+                            .stroke(.white.opacity(0.045), lineWidth: 0.55)
                     }
-                    .shadow(color: .black.opacity(0.20), radius: 8, y: 4)
 
                 if showMeta {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(item.displayTitle)
-                            .font(.system(size: 12.5, weight: .semibold))
-                            .foregroundStyle(.white.opacity(0.91))
+                            .font(.system(size: 12.25, weight: .semibold))
+                            .foregroundStyle(.white.opacity(0.92))
                             .lineLimit(1)
 
                         HStack(spacing: 4) {
@@ -80,7 +79,7 @@ struct PosterCard: View {
                             if !item.year.isEmpty { Text("·") }
                             Text(item.kind == "tv" ? "Series" : "Movie")
                         }
-                        .font(.system(size: 10.25, weight: .medium))
+                        .font(.system(size: 10, weight: .medium))
                         .foregroundStyle(.white.opacity(0.36))
                     }
                     .frame(width: width, alignment: .leading)
@@ -102,35 +101,34 @@ struct LandscapeCard: View {
             router.open(item)
         } label: {
             ZStack(alignment: .bottomLeading) {
-                ArtworkView(url: item.backdropURL ?? item.posterURL, cornerRadius: 9)
+                ArtworkView(url: item.backdropURL ?? item.posterURL, cornerRadius: 10)
                     .frame(width: width, height: width * 0.5625)
-                    .overlay {
-                        LinearGradient(
-                            colors: [.clear, .black.opacity(0.78)],
-                            startPoint: .center,
-                            endPoint: .bottom
-                        )
-                        .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
-                    }
-                    .overlay {
-                        RoundedRectangle(cornerRadius: 9, style: .continuous)
-                            .stroke(.white.opacity(0.050), lineWidth: 0.55)
-                    }
-                    .shadow(color: .black.opacity(0.22), radius: 10, y: 5)
+
+                LinearGradient(
+                    colors: [.clear, .black.opacity(0.18), .black.opacity(0.80)],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(item.displayTitle)
-                        .font(.system(size: 14.5, weight: .semibold))
+                        .font(.system(size: 14.25, weight: .semibold))
+                        .tracking(-0.2)
                         .lineLimit(1)
                     if !item.year.isEmpty {
                         Text(item.year)
-                            .font(.system(size: 10.75, weight: .medium))
+                            .font(.system(size: 10.5, weight: .medium))
                             .foregroundStyle(.white.opacity(0.56))
                     }
                 }
                 .foregroundStyle(.white)
                 .padding(11)
                 .frame(width: width, alignment: .leading)
+            }
+            .overlay {
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .stroke(.white.opacity(0.045), lineWidth: 0.55)
             }
         }
         .buttonStyle(MediaPressStyle())
@@ -150,16 +148,22 @@ struct MediaShelf: View {
         if !items.isEmpty {
             let edge = edgePadding ?? (horizontalSizeClass == .regular ? 34 : 18)
             let width = cardWidth ?? (landscape
-                ? (horizontalSizeClass == .regular ? 304 : 250)
-                : (horizontalSizeClass == .regular ? 174 : 138))
-            let spacing: CGFloat = horizontalSizeClass == .regular ? 14 : 11
+                ? (horizontalSizeClass == .regular ? 296 : 248)
+                : (horizontalSizeClass == .regular ? 166 : 136))
+            let spacing: CGFloat = horizontalSizeClass == .regular ? 13 : 10
 
-            VStack(alignment: .leading, spacing: horizontalSizeClass == .regular ? 12 : 10) {
-                Text(title)
-                    .font(.system(size: horizontalSizeClass == .regular ? 21 : 18, weight: .bold))
-                    .tracking(horizontalSizeClass == .regular ? -0.46 : -0.38)
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, edge)
+            VStack(alignment: .leading, spacing: horizontalSizeClass == .regular ? 11 : 9) {
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text(title)
+                        .font(.system(size: horizontalSizeClass == .regular ? 20 : 18, weight: .bold))
+                        .tracking(horizontalSizeClass == .regular ? -0.48 : -0.38)
+                        .foregroundStyle(.white)
+
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: horizontalSizeClass == .regular ? 10 : 9, weight: .bold))
+                        .foregroundStyle(.white.opacity(0.25))
+                }
+                .padding(.horizontal, edge)
 
                 ScrollView(.horizontal, showsIndicators: false) {
                     LazyHStack(alignment: .top, spacing: spacing) {
@@ -172,7 +176,7 @@ struct MediaShelf: View {
                         }
                     }
                     .padding(.horizontal, edge)
-                    .padding(.bottom, 5)
+                    .padding(.bottom, 3)
                 }
             }
         }
@@ -209,9 +213,9 @@ struct AccentActionButton: View {
         Button(action: action) {
             HStack(spacing: 8) {
                 Image(systemName: symbol)
-                    .font(.system(size: 13.5, weight: .bold))
+                    .font(.system(size: 13.25, weight: .bold))
                 Text(title)
-                    .font(.system(size: 13.5, weight: .bold))
+                    .font(.system(size: 13.25, weight: .bold))
             }
             .foregroundStyle(.black)
             .padding(.horizontal, 18)
@@ -233,9 +237,9 @@ struct GlassActionButton: View {
         Button(action: action) {
             HStack(spacing: 8) {
                 Image(systemName: symbol)
-                    .font(.system(size: 13.5, weight: .semibold))
+                    .font(.system(size: 13.25, weight: .semibold))
                 Text(title)
-                    .font(.system(size: 13.5, weight: .semibold))
+                    .font(.system(size: 13.25, weight: .semibold))
             }
             .foregroundStyle(.white.opacity(0.94))
             .padding(.horizontal, 17)
@@ -279,10 +283,10 @@ struct ErrorPanel: View {
                 .font(.system(size: 12.5))
                 .foregroundStyle(.white.opacity(0.50))
                 .multilineTextAlignment(.center)
-            GlassActionButton(title: "Try Again", symbol: "arrow.clockwise", tint: theme.accent.opacity(0.08), action: retry)
+            GlassActionButton(title: "Try Again", symbol: "arrow.clockwise", tint: theme.accent.opacity(0.05), action: retry)
         }
         .padding(22)
         .frame(maxWidth: 360)
-        .synflixGlass(tint: theme.accent.opacity(0.03), cornerRadius: 18)
+        .synflixGlass(tint: theme.accent.opacity(0.025), cornerRadius: 18)
     }
 }
