@@ -12,9 +12,13 @@ struct ContentView: View {
     var body: some View {
         GeometryReader { geometry in
             let isPad = UIDevice.current.userInterfaceIdiom == .pad
-            let useTabletChrome = isPad && geometry.size.width >= 720
             let safeTop = geometry.safeAreaInsets.top
             let safeBottom = geometry.safeAreaInsets.bottom
+            let dockWidth = min(
+                geometry.size.width - (isPad ? 44 : 24),
+                isPad ? 640 : 440
+            )
+            let bottomClearance = safeBottom + (isPad ? 94 : 82)
 
             ZStack {
                 Color.black.ignoresSafeArea()
@@ -23,29 +27,22 @@ struct ContentView: View {
                     .environmentObject(theme)
                     .environmentObject(library)
                     .environmentObject(router)
-                    .padding(.top, selectedSection == .home ? 0 : safeTop + (useTabletChrome ? 58 : 66))
-                    .padding(.bottom, useTabletChrome ? 0 : safeBottom + 72)
+                    .padding(.top, selectedSection == .home ? 0 : safeTop + (isPad ? 62 : 66))
+                    .padding(.bottom, bottomClearance)
                     .animation(theme.reducedMotion ? nil : .easeOut(duration: 0.16), value: selectedSection)
 
                 VStack(spacing: 0) {
-                    if useTabletChrome {
-                        tabletHeader(width: geometry.size.width)
-                            .padding(.top, safeTop)
-                    } else {
-                        compactHeader
-                            .padding(.top, safeTop + 8)
-                            .padding(.horizontal, 12)
-                    }
+                    floatingHeader(isPad: isPad)
+                        .padding(.top, safeTop + (isPad ? 10 : 8))
+                        .padding(.horizontal, isPad ? 22 : 12)
                     Spacer(minLength: 0)
                 }
 
-                if !useTabletChrome {
-                    VStack(spacing: 0) {
-                        Spacer(minLength: 0)
-                        bottomDock
-                            .padding(.horizontal, 12)
-                            .padding(.bottom, max(8, safeBottom))
-                    }
+                VStack(spacing: 0) {
+                    Spacer(minLength: 0)
+                    liquidDock(isPad: isPad)
+                        .frame(width: dockWidth)
+                        .padding(.bottom, max(isPad ? 12 : 8, safeBottom))
                 }
 
                 if showLaunch {
@@ -93,25 +90,27 @@ struct ContentView: View {
         }
     }
 
-    private func tabletHeader(width: CGFloat) -> some View {
-        let edge = max(30, min(48, width * 0.034))
+    private func floatingHeader(isPad: Bool) -> some View {
+        HStack(spacing: isPad ? 12 : 10) {
+            SynFlixBrandMark(size: isPad ? 33 : 31)
 
-        return HStack(spacing: 28) {
-            HStack(spacing: 9) {
-                SynFlixBrandMark(size: 29)
+            HStack(spacing: 8) {
                 Text("SynFlix")
-                    .font(.system(size: 17, weight: .bold))
+                    .font(.system(size: isPad ? 17 : 16, weight: .bold))
                     .tracking(-0.45)
-            }
-            .accessibilityElement(children: .combine)
 
-            HStack(spacing: 26) {
-                tabletNavButton(.home)
-                tabletNavButton(.search)
-                tabletNavButton(.library)
+                if isPad {
+                    Rectangle()
+                        .fill(.white.opacity(0.11))
+                        .frame(width: 1, height: 16)
+
+                    Text(selectedSection.title)
+                        .font(.system(size: 12.5, weight: .medium))
+                        .foregroundStyle(.white.opacity(0.48))
+                }
             }
 
-            Spacer(minLength: 20)
+            Spacer(minLength: 8)
 
             if selectedSection != .search {
                 Button {
@@ -119,9 +118,9 @@ struct ContentView: View {
                     selectedSection = .search
                 } label: {
                     Image(systemName: "magnifyingglass")
-                        .font(.system(size: 14.5, weight: .semibold))
-                        .foregroundStyle(.white.opacity(0.84))
-                        .frame(width: 38, height: 38)
+                        .font(.system(size: isPad ? 15 : 14, weight: .semibold))
+                        .foregroundStyle(.white.opacity(0.90))
+                        .frame(width: isPad ? 40 : 38, height: isPad ? 40 : 38)
                 }
                 .buttonStyle(.plain)
                 .synflixCircleGlass(tint: theme.accent.opacity(0.018))
@@ -134,127 +133,123 @@ struct ContentView: View {
             } label: {
                 ZStack {
                     Circle()
-                        .fill(selectedSection == .settings ? theme.accent.opacity(0.15) : Color.white.opacity(0.035))
+                        .fill(selectedSection == .settings ? theme.accent.opacity(0.12) : .clear)
                     Image(systemName: "person.fill")
-                        .font(.system(size: 12.5, weight: .semibold))
-                        .foregroundStyle(selectedSection == .settings ? theme.accent : .white.opacity(0.82))
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(selectedSection == .settings ? theme.accent : .white.opacity(0.86))
                 }
-                .frame(width: 38, height: 38)
+                .frame(width: isPad ? 40 : 38, height: isPad ? 40 : 38)
             }
             .buttonStyle(.plain)
-            .synflixCircleGlass(tint: theme.accent.opacity(selectedSection == .settings ? 0.055 : 0.018))
+            .synflixCircleGlass(tint: theme.accent.opacity(selectedSection == .settings ? 0.045 : 0.018))
             .accessibilityLabel("Settings")
         }
-        .padding(.horizontal, edge)
-        .frame(height: 58)
-        .background(.ultraThinMaterial)
-        .overlay(alignment: .bottom) {
-            Rectangle()
-                .fill(.white.opacity(0.055))
-                .frame(height: 0.5)
+        .padding(.leading, isPad ? 14 : 11)
+        .padding(.trailing, isPad ? 8 : 7)
+        .frame(height: isPad ? 56 : 52)
+        .frame(maxWidth: isPad ? 720 : 560)
+        .synflixGlass(tint: theme.accent.opacity(0.022), cornerRadius: isPad ? 28 : 25, interactive: true)
+        .overlay {
+            RoundedRectangle(cornerRadius: isPad ? 28 : 25, style: .continuous)
+                .stroke(
+                    LinearGradient(
+                        colors: [.white.opacity(0.16), .white.opacity(0.035), .clear],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 0.65
+                )
+                .allowsHitTesting(false)
         }
-    }
-
-    private func tabletNavButton(_ section: RootSection) -> some View {
-        Button {
-            if selectedSection != section {
-                theme.impact()
-                selectedSection = section
-            }
-        } label: {
-            Text(section.title)
-                .font(.system(size: 13.5, weight: selectedSection == section ? .semibold : .medium))
-                .foregroundStyle(selectedSection == section ? .white : .white.opacity(0.50))
-                .padding(.vertical, 19)
-                .contentShape(Rectangle())
-                .overlay(alignment: .bottom) {
-                    if selectedSection == section {
-                        Capsule()
-                            .fill(theme.accent)
-                            .frame(width: 22, height: 2)
-                    }
-                }
-        }
-        .buttonStyle(.plain)
-        .accessibilityAddTraits(selectedSection == section ? [.isSelected] : [])
-    }
-
-    private var compactHeader: some View {
-        HStack(spacing: 10) {
-            SynFlixBrandMark(size: 31)
-            Text("SynFlix")
-                .font(.system(size: 16, weight: .bold))
-                .tracking(-0.4)
-
-            Spacer(minLength: 8)
-
-            if selectedSection != .search {
-                Button {
-                    theme.impact()
-                    selectedSection = .search
-                } label: {
-                    Image(systemName: "magnifyingglass")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(.white.opacity(0.90))
-                        .frame(width: 38, height: 38)
-                }
-                .buttonStyle(.plain)
-                .synflixCircleGlass(tint: theme.accent.opacity(0.022))
-                .accessibilityLabel("Search")
-            }
-
-            Button {
-                theme.impact()
-                selectedSection = .settings
-            } label: {
-                Image(systemName: "person.fill")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(selectedSection == .settings ? theme.accent : .white.opacity(0.86))
-                    .frame(width: 38, height: 38)
-            }
-            .buttonStyle(.plain)
-            .synflixCircleGlass(tint: theme.accent.opacity(0.030))
-            .accessibilityLabel("Settings")
-        }
-        .padding(.leading, 11)
-        .padding(.trailing, 7)
-        .frame(height: 52)
-        .frame(maxWidth: 560)
-        .synflixGlass(tint: theme.accent.opacity(0.024), cornerRadius: 25)
+        .shadow(color: .black.opacity(0.22), radius: 18, y: 7)
         .frame(maxWidth: .infinity)
     }
 
-    private var bottomDock: some View {
-        HStack(spacing: 0) {
+    private func liquidDock(isPad: Bool) -> some View {
+        HStack(spacing: isPad ? 5 : 2) {
             ForEach(RootSection.allCases) { section in
                 Button {
                     if selectedSection != section {
                         theme.impact()
-                        selectedSection = section
+                        withAnimation(theme.reducedMotion ? nil : .spring(response: 0.28, dampingFraction: 0.84)) {
+                            selectedSection = section
+                        }
                     } else {
                         theme.impact(.light)
                     }
                 } label: {
-                    VStack(spacing: 4) {
-                        Image(systemName: section.symbol)
-                            .font(.system(size: 16, weight: .semibold))
-                        Text(section.title)
-                            .font(.system(size: 9.5, weight: .semibold))
+                    ZStack {
+                        if selectedSection == section {
+                            RoundedRectangle(cornerRadius: isPad ? 22 : 20, style: .continuous)
+                                .fill(theme.accent.opacity(0.095))
+                                .overlay {
+                                    RoundedRectangle(cornerRadius: isPad ? 22 : 20, style: .continuous)
+                                        .stroke(
+                                            LinearGradient(
+                                                colors: [theme.accent.opacity(0.42), .white.opacity(0.11), .clear],
+                                                startPoint: .topLeading,
+                                                endPoint: .bottomTrailing
+                                            ),
+                                            lineWidth: 0.7
+                                        )
+                                }
+                                .shadow(color: theme.accent.opacity(0.10), radius: 12, y: 4)
+                        }
+
+                        VStack(spacing: isPad ? 5 : 4) {
+                            Image(systemName: section.symbol)
+                                .font(.system(size: isPad ? 18 : 16.5, weight: .semibold))
+                                .symbolRenderingMode(.hierarchical)
+
+                            Text(section.title)
+                                .font(.system(size: isPad ? 10.5 : 9.5, weight: .semibold))
+                                .lineLimit(1)
+                        }
+                        .foregroundStyle(selectedSection == section ? theme.accent : .white.opacity(0.45))
                     }
-                    .foregroundStyle(selectedSection == section ? theme.accent : .white.opacity(0.42))
                     .frame(maxWidth: .infinity)
-                    .frame(height: 50)
+                    .frame(height: isPad ? 58 : 52)
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel(section.title)
                 .accessibilityAddTraits(selectedSection == section ? [.isSelected] : [])
             }
         }
-        .padding(5)
-        .frame(maxWidth: 430)
-        .synflixGlass(tint: theme.accent.opacity(0.026), cornerRadius: 30, interactive: true)
-        .shadow(color: .black.opacity(0.26), radius: 20, y: 9)
-        .frame(maxWidth: .infinity)
+        .padding(isPad ? 7 : 6)
+        .synflixGlass(tint: theme.accent.opacity(0.040), cornerRadius: isPad ? 35 : 32, interactive: true)
+        .overlay {
+            RoundedRectangle(cornerRadius: isPad ? 35 : 32, style: .continuous)
+                .stroke(
+                    LinearGradient(
+                        colors: [
+                            .white.opacity(0.23),
+                            .white.opacity(0.07),
+                            theme.accent.opacity(0.10),
+                            .clear
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 0.75
+                )
+                .allowsHitTesting(false)
+        }
+        .overlay(alignment: .top) {
+            Capsule()
+                .fill(
+                    LinearGradient(
+                        colors: [.white.opacity(0.20), .white.opacity(0.02), .clear],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                )
+                .frame(width: isPad ? 360 : 230, height: 0.7)
+                .padding(.top, 2)
+                .allowsHitTesting(false)
+        }
+        .shadow(color: .black.opacity(0.36), radius: isPad ? 28 : 22, y: 11)
+        .shadow(color: theme.accent.opacity(0.055), radius: 18, y: 6)
     }
 
     private var launchOverlay: some View {
@@ -262,7 +257,7 @@ struct ContentView: View {
             Color.black.ignoresSafeArea()
 
             RadialGradient(
-                colors: [theme.accent.opacity(0.065), .clear],
+                colors: [theme.accent.opacity(0.070), .clear],
                 center: .center,
                 startRadius: 4,
                 endRadius: 320
