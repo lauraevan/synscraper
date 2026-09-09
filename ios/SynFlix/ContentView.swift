@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 struct ContentView: View {
     @StateObject private var theme = ThemeStore()
@@ -10,6 +11,9 @@ struct ContentView: View {
 
     var body: some View {
         GeometryReader { geometry in
+            let isPad = UIDevice.current.userInterfaceIdiom == .pad
+            let useTabletNav = isPad && geometry.size.width >= 700
+
             ZStack {
                 Color.black.ignoresSafeArea()
 
@@ -17,22 +21,23 @@ struct ContentView: View {
                     .environmentObject(theme)
                     .environmentObject(library)
                     .environmentObject(router)
-                    .padding(.top, selectedSection == .home ? 0 : geometry.safeAreaInsets.top + 72)
-                    .padding(.bottom, geometry.safeAreaInsets.bottom + 78)
-                    .animation(theme.reducedMotion ? nil : .easeOut(duration: 0.20), value: selectedSection)
+                    .padding(.top, selectedSection == .home ? 0 : geometry.safeAreaInsets.top + (useTabletNav ? 62 : 66))
+                    .padding(.bottom, useTabletNav ? 0 : geometry.safeAreaInsets.bottom + 72)
+                    .animation(theme.reducedMotion ? nil : .easeOut(duration: 0.18), value: selectedSection)
 
                 VStack(spacing: 0) {
-                    topChrome
-                        .padding(.top, geometry.safeAreaInsets.top + 8)
-                        .padding(.horizontal, 12)
-                    Spacer()
+                    topChrome(isTablet: useTabletNav)
+                        .padding(.top, geometry.safeAreaInsets.top)
+                    Spacer(minLength: 0)
                 }
 
-                VStack(spacing: 0) {
-                    Spacer()
-                    bottomDock
-                        .padding(.horizontal, 12)
-                        .padding(.bottom, max(8, geometry.safeAreaInsets.bottom))
+                if !useTabletNav {
+                    VStack(spacing: 0) {
+                        Spacer(minLength: 0)
+                        bottomDock
+                            .padding(.horizontal, 12)
+                            .padding(.bottom, max(8, geometry.safeAreaInsets.bottom))
+                    }
                 }
 
                 if showLaunch {
@@ -59,8 +64,8 @@ struct ContentView: View {
                 .environmentObject(theme)
         }
         .task {
-            try? await Task.sleep(nanoseconds: 760_000_000)
-            withAnimation(theme.reducedMotion ? nil : .easeOut(duration: 0.34)) {
+            try? await Task.sleep(nanoseconds: 540_000_000)
+            withAnimation(theme.reducedMotion ? nil : .easeOut(duration: 0.26)) {
                 showLaunch = false
             }
         }
@@ -70,32 +75,93 @@ struct ContentView: View {
     private var rootContent: some View {
         switch selectedSection {
         case .home:
-            HomeView()
-                .transition(.opacity)
+            HomeView().transition(.opacity)
         case .search:
-            SearchView()
-                .transition(.opacity)
+            SearchView().transition(.opacity)
         case .library:
-            LibraryView()
-                .transition(.opacity)
+            LibraryView().transition(.opacity)
         case .settings:
-            SettingsView()
-                .transition(.opacity)
+            SettingsView().transition(.opacity)
         }
     }
 
-    private var topChrome: some View {
+    @ViewBuilder
+    private func topChrome(isTablet: Bool) -> some View {
+        if isTablet {
+            tabletHeader
+        } else {
+            compactHeader
+                .padding(.horizontal, 12)
+                .padding(.top, 8)
+        }
+    }
+
+    private var tabletHeader: some View {
+        HStack(spacing: 28) {
+            HStack(spacing: 9) {
+                SynFlixBrandMark(size: 29)
+                Text("SynFlix")
+                    .font(.system(size: 17, weight: .bold))
+                    .tracking(-0.45)
+            }
+
+            HStack(spacing: 24) {
+                ForEach([RootSection.home, .search, .library]) { section in
+                    Button {
+                        theme.impact()
+                        selectedSection = section
+                    } label: {
+                        Text(section.title)
+                            .font(.system(size: 13.5, weight: selectedSection == section ? .semibold : .medium))
+                            .foregroundStyle(selectedSection == section ? .white : .white.opacity(0.52))
+                            .padding(.vertical, 20)
+                            .overlay(alignment: .bottom) {
+                                if selectedSection == section {
+                                    Capsule()
+                                        .fill(theme.accent)
+                                        .frame(height: 2)
+                                }
+                            }
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+
+            Spacer(minLength: 16)
+
+            Button {
+                theme.impact()
+                selectedSection = .settings
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: "person.fill")
+                        .font(.system(size: 12.5, weight: .semibold))
+                    Text("My SynFlix")
+                        .font(.system(size: 12.5, weight: .semibold))
+                }
+                .foregroundStyle(selectedSection == .settings ? theme.accent : .white.opacity(0.82))
+                .padding(.horizontal, 14)
+                .frame(height: 38)
+            }
+            .buttonStyle(.plain)
+            .synflixGlass(tint: theme.accent.opacity(selectedSection == .settings ? 0.09 : 0.025), cornerRadius: 13, interactive: true)
+        }
+        .padding(.horizontal, 30)
+        .frame(height: 60)
+        .background(.ultraThinMaterial)
+        .overlay(alignment: .bottom) {
+            Rectangle()
+                .fill(.white.opacity(0.055))
+                .frame(height: 0.5)
+        }
+    }
+
+    private var compactHeader: some View {
         HStack(spacing: 10) {
             SynFlixBrandMark(size: 31)
-
-            VStack(alignment: .leading, spacing: 0) {
-                Text("SynFlix")
-                    .font(.system(size: 15.5, weight: .bold))
-                    .tracking(-0.35)
-                Text(selectedSection == .home ? "Premium streaming" : selectedSection.title)
-                    .font(.system(size: 9.5, weight: .semibold))
-                    .foregroundStyle(.white.opacity(0.38))
-            }
+            Text("SynFlix")
+                .font(.system(size: 16, weight: .bold))
+                .tracking(-0.4)
 
             Spacer(minLength: 8)
 
@@ -106,91 +172,58 @@ struct ContentView: View {
                 } label: {
                     Image(systemName: "magnifyingglass")
                         .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(.white.opacity(0.88))
+                        .foregroundStyle(.white.opacity(0.9))
                         .frame(width: 38, height: 38)
                 }
                 .buttonStyle(.plain)
                 .synflixCircleGlass(tint: theme.accent.opacity(0.025))
-                .accessibilityLabel("Search")
             }
 
             Button {
                 theme.impact()
                 selectedSection = .settings
             } label: {
-                ZStack {
-                    Circle()
-                        .fill(theme.accent.opacity(0.14))
-                    Circle()
-                        .stroke(theme.accent.opacity(0.38), lineWidth: 0.8)
-                    Image(systemName: "person.fill")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(theme.accent)
-                }
-                .frame(width: 38, height: 38)
+                Image(systemName: "person.fill")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(selectedSection == .settings ? theme.accent : .white.opacity(0.86))
+                    .frame(width: 38, height: 38)
             }
             .buttonStyle(.plain)
             .synflixCircleGlass(tint: theme.accent.opacity(0.035))
-            .accessibilityLabel("Settings")
         }
         .padding(.leading, 11)
         .padding(.trailing, 7)
         .frame(height: 52)
-        .frame(maxWidth: 680)
-        .synflixGlass(tint: theme.accent.opacity(0.035), cornerRadius: 25)
+        .frame(maxWidth: 560)
+        .synflixGlass(tint: theme.accent.opacity(0.028), cornerRadius: 25)
         .frame(maxWidth: .infinity)
     }
 
     private var bottomDock: some View {
-        HStack(spacing: 2) {
+        HStack(spacing: 0) {
             ForEach(RootSection.allCases) { section in
                 Button {
-                    if selectedSection == section {
-                        theme.impact(.light)
-                    } else {
-                        theme.impact()
-                        selectedSection = section
-                    }
+                    theme.impact()
+                    selectedSection = section
                 } label: {
                     VStack(spacing: 4) {
                         Image(systemName: section.symbol)
                             .font(.system(size: 16, weight: .semibold))
-                            .symbolRenderingMode(.hierarchical)
-
                         Text(section.title)
                             .font(.system(size: 9.5, weight: .semibold))
-                            .lineLimit(1)
                     }
                     .foregroundStyle(selectedSection == section ? theme.accent : .white.opacity(0.42))
                     .frame(maxWidth: .infinity)
-                    .frame(height: 51)
+                    .frame(height: 50)
                     .contentShape(Rectangle())
-                    .background {
-                        if selectedSection == section {
-                            Capsule()
-                                .fill(theme.accent.opacity(0.09))
-                                .padding(.horizontal, 3)
-                                .padding(.vertical, 2)
-                        }
-                    }
-                    .overlay(alignment: .top) {
-                        if selectedSection == section {
-                            Capsule()
-                                .fill(theme.accent)
-                                .frame(width: 18, height: 2)
-                                .offset(y: -1)
-                        }
-                    }
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel(section.title)
-                .accessibilityAddTraits(selectedSection == section ? [.isSelected] : [])
             }
         }
         .padding(5)
-        .frame(maxWidth: 530)
-        .synflixGlass(tint: theme.accent.opacity(0.032), cornerRadius: 31, interactive: true)
-        .shadow(color: .black.opacity(0.34), radius: 24, y: 10)
+        .frame(maxWidth: 430)
+        .synflixGlass(tint: theme.accent.opacity(0.028), cornerRadius: 30, interactive: true)
+        .shadow(color: .black.opacity(0.28), radius: 20, y: 9)
         .frame(maxWidth: .infinity)
     }
 
@@ -199,26 +232,19 @@ struct ContentView: View {
             Color.black.ignoresSafeArea()
 
             RadialGradient(
-                colors: [theme.accent.opacity(0.10), .clear],
+                colors: [theme.accent.opacity(0.075), .clear],
                 center: .center,
                 startRadius: 4,
-                endRadius: 260
+                endRadius: 300
             )
             .ignoresSafeArea()
 
-            VStack(spacing: 16) {
-                SynFlixBrandMark(size: 92)
-                VStack(spacing: 4) {
-                    Text("SynFlix")
-                        .font(.system(size: 29, weight: .heavy))
-                        .tracking(-0.9)
-                    Text("NATIVE")
-                        .font(.system(size: 9, weight: .black))
-                        .tracking(2.2)
-                        .foregroundStyle(theme.accent)
-                }
+            VStack(spacing: 13) {
+                SynFlixBrandMark(size: 94)
+                Text("SynFlix")
+                    .font(.system(size: 28, weight: .bold))
+                    .tracking(-0.85)
             }
-            .scaleEffect(showLaunch ? 1 : 0.985)
         }
     }
 }
