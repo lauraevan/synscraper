@@ -4,18 +4,16 @@ struct ArtworkView: View {
     let url: URL?
     let cornerRadius: CGFloat
 
-    init(url: URL?, cornerRadius: CGFloat = 12) {
+    init(url: URL?, cornerRadius: CGFloat = 9) {
         self.url = url
         self.cornerRadius = cornerRadius
     }
 
     var body: some View {
-        AsyncImage(url: url, transaction: Transaction(animation: .easeOut(duration: 0.22))) { phase in
+        AsyncImage(url: url, transaction: Transaction(animation: .easeOut(duration: 0.16))) { phase in
             switch phase {
             case .success(let image):
-                image
-                    .resizable()
-                    .scaledToFill()
+                image.resizable().scaledToFill()
             case .failure:
                 placeholder
             case .empty:
@@ -23,7 +21,7 @@ struct ArtworkView: View {
                     .overlay {
                         ProgressView()
                             .controlSize(.small)
-                            .tint(.white.opacity(0.55))
+                            .tint(.white.opacity(0.38))
                     }
             @unknown default:
                 placeholder
@@ -35,7 +33,7 @@ struct ArtworkView: View {
 
     private var placeholder: some View {
         LinearGradient(
-            colors: [Color.white.opacity(0.075), Color.white.opacity(0.025)],
+            colors: [Color.white.opacity(0.055), Color.white.opacity(0.018)],
             startPoint: .topLeading,
             endPoint: .bottomTrailing
         )
@@ -52,28 +50,28 @@ struct PosterCard: View {
         Button {
             router.open(item)
         } label: {
-            VStack(alignment: .leading, spacing: 8) {
-                ArtworkView(url: item.posterURL, cornerRadius: 11)
+            VStack(alignment: .leading, spacing: 7) {
+                ArtworkView(url: item.posterURL, cornerRadius: 8)
                     .frame(width: width, height: width * 1.50)
                     .overlay {
-                        RoundedRectangle(cornerRadius: 11, style: .continuous)
-                            .stroke(.white.opacity(0.065), lineWidth: 0.7)
+                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                            .stroke(.white.opacity(0.055), lineWidth: 0.6)
                     }
 
                 if showMeta {
-                    VStack(alignment: .leading, spacing: 3) {
+                    VStack(alignment: .leading, spacing: 2) {
                         Text(item.displayTitle)
-                            .font(.system(size: 13, weight: .semibold))
+                            .font(.system(size: 12.5, weight: .semibold))
                             .foregroundStyle(.white.opacity(0.91))
                             .lineLimit(1)
 
-                        HStack(spacing: 5) {
+                        HStack(spacing: 4) {
                             if !item.year.isEmpty { Text(item.year) }
                             if !item.year.isEmpty { Text("·") }
                             Text(item.kind == "tv" ? "Series" : "Movie")
                         }
-                        .font(.system(size: 10.5, weight: .medium))
-                        .foregroundStyle(.white.opacity(0.38))
+                        .font(.system(size: 10.25, weight: .medium))
+                        .foregroundStyle(.white.opacity(0.36))
                     }
                     .frame(width: width, alignment: .leading)
                 }
@@ -94,33 +92,33 @@ struct LandscapeCard: View {
             router.open(item)
         } label: {
             ZStack(alignment: .bottomLeading) {
-                ArtworkView(url: item.backdropURL ?? item.posterURL, cornerRadius: 14)
-                    .frame(width: width, height: width * 0.56)
+                ArtworkView(url: item.backdropURL ?? item.posterURL, cornerRadius: 9)
+                    .frame(width: width, height: width * 0.5625)
                     .overlay {
                         LinearGradient(
-                            colors: [.clear, .black.opacity(0.78)],
+                            colors: [.clear, .black.opacity(0.76)],
                             startPoint: .center,
                             endPoint: .bottom
                         )
-                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
                     }
                     .overlay {
-                        RoundedRectangle(cornerRadius: 14, style: .continuous)
-                            .stroke(.white.opacity(0.075), lineWidth: 0.7)
+                        RoundedRectangle(cornerRadius: 9, style: .continuous)
+                            .stroke(.white.opacity(0.055), lineWidth: 0.6)
                     }
 
-                VStack(alignment: .leading, spacing: 3) {
+                VStack(alignment: .leading, spacing: 2) {
                     Text(item.displayTitle)
-                        .font(.system(size: 15, weight: .semibold))
+                        .font(.system(size: 14.5, weight: .semibold))
                         .lineLimit(1)
                     if !item.year.isEmpty {
                         Text(item.year)
-                            .font(.system(size: 11, weight: .medium))
-                            .foregroundStyle(.white.opacity(0.58))
+                            .font(.system(size: 10.75, weight: .medium))
+                            .foregroundStyle(.white.opacity(0.56))
                     }
                 }
                 .foregroundStyle(.white)
-                .padding(12)
+                .padding(11)
                 .frame(width: width, alignment: .leading)
             }
         }
@@ -132,32 +130,37 @@ struct MediaShelf: View {
     let title: String
     let items: [MediaItem]
     var landscape = false
+    var cardWidth: CGFloat? = nil
+    var edgePadding: CGFloat? = nil
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
     var body: some View {
         if !items.isEmpty {
-            VStack(alignment: .leading, spacing: 12) {
-                HStack {
-                    Text(title)
-                        .font(.system(size: horizontalSizeClass == .regular ? 22 : 19, weight: .bold))
-                        .tracking(-0.45)
-                        .foregroundStyle(.white)
-                    Spacer()
-                }
-                .padding(.horizontal, horizontalSizeClass == .regular ? 28 : 18)
+            let edge = edgePadding ?? (horizontalSizeClass == .regular ? 28 : 18)
+            let width = cardWidth ?? (landscape
+                ? (horizontalSizeClass == .regular ? 300 : 250)
+                : (horizontalSizeClass == .regular ? 166 : 138))
+            let spacing: CGFloat = horizontalSizeClass == .regular ? 14 : 11
+
+            VStack(alignment: .leading, spacing: 10) {
+                Text(title)
+                    .font(.system(size: horizontalSizeClass == .regular ? 20 : 18, weight: .bold))
+                    .tracking(-0.38)
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, edge)
 
                 ScrollView(.horizontal, showsIndicators: false) {
-                    LazyHStack(alignment: .top, spacing: horizontalSizeClass == .regular ? 16 : 12) {
+                    LazyHStack(alignment: .top, spacing: spacing) {
                         ForEach(items) { item in
                             if landscape {
-                                LandscapeCard(item: item, width: horizontalSizeClass == .regular ? 320 : 252)
+                                LandscapeCard(item: item, width: width)
                             } else {
-                                PosterCard(item: item, width: horizontalSizeClass == .regular ? 174 : 138)
+                                PosterCard(item: item, width: width)
                             }
                         }
                     }
-                    .padding(.horizontal, horizontalSizeClass == .regular ? 28 : 18)
-                    .padding(.bottom, 4)
+                    .padding(.horizontal, edge)
+                    .padding(.bottom, 3)
                 }
             }
         }
@@ -173,9 +176,9 @@ struct GlassIconButton: View {
     var body: some View {
         Button(action: action) {
             Image(systemName: symbol)
-                .font(.system(size: 15, weight: .semibold))
+                .font(.system(size: 14.5, weight: .semibold))
                 .foregroundStyle(.white.opacity(0.92))
-                .frame(width: 42, height: 42)
+                .frame(width: 40, height: 40)
                 .contentShape(Circle())
         }
         .buttonStyle(.plain)
@@ -194,15 +197,15 @@ struct AccentActionButton: View {
         Button(action: action) {
             HStack(spacing: 8) {
                 Image(systemName: symbol)
-                    .font(.system(size: 14, weight: .bold))
+                    .font(.system(size: 13.5, weight: .bold))
                 Text(title)
-                    .font(.system(size: 14, weight: .bold))
+                    .font(.system(size: 13.5, weight: .bold))
             }
             .foregroundStyle(.black)
             .padding(.horizontal, 18)
-            .frame(height: 44)
-            .background(accent, in: Capsule())
-            .contentShape(Capsule())
+            .frame(height: 42)
+            .background(accent, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .contentShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
         }
         .buttonStyle(.plain)
     }
@@ -218,17 +221,17 @@ struct GlassActionButton: View {
         Button(action: action) {
             HStack(spacing: 8) {
                 Image(systemName: symbol)
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: 13.5, weight: .semibold))
                 Text(title)
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: 13.5, weight: .semibold))
             }
             .foregroundStyle(.white.opacity(0.94))
             .padding(.horizontal, 17)
-            .frame(height: 44)
-            .contentShape(Capsule())
+            .frame(height: 42)
+            .contentShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
         }
         .buttonStyle(.plain)
-        .synflixGlass(tint: tint, cornerRadius: 22, interactive: true)
+        .synflixGlass(tint: tint, cornerRadius: 10, interactive: true)
     }
 }
 
@@ -237,13 +240,12 @@ struct NativeLoadingView: View {
     @EnvironmentObject private var theme: ThemeStore
 
     var body: some View {
-        VStack(spacing: 14) {
-            SynFlixBrandMark(size: 50)
-            ProgressView()
-                .tint(theme.accent)
+        VStack(spacing: 12) {
+            SynFlixBrandMark(size: 46)
+            ProgressView().tint(theme.accent)
             Text(text)
-                .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(.white.opacity(0.42))
+                .font(.system(size: 11.5, weight: .medium))
+                .foregroundStyle(.white.opacity(0.40))
         }
     }
 }
@@ -255,20 +257,20 @@ struct ErrorPanel: View {
     @EnvironmentObject private var theme: ThemeStore
 
     var body: some View {
-        VStack(spacing: 14) {
+        VStack(spacing: 13) {
             Image(systemName: "exclamationmark.triangle.fill")
-                .font(.system(size: 24, weight: .semibold))
+                .font(.system(size: 23, weight: .semibold))
                 .foregroundStyle(theme.accent)
             Text(title)
-                .font(.system(size: 19, weight: .bold))
+                .font(.system(size: 18, weight: .bold))
             Text(message)
-                .font(.system(size: 13))
+                .font(.system(size: 12.5))
                 .foregroundStyle(.white.opacity(0.50))
                 .multilineTextAlignment(.center)
-            GlassActionButton(title: "Try Again", symbol: "arrow.clockwise", tint: theme.accent.opacity(0.12), action: retry)
+            GlassActionButton(title: "Try Again", symbol: "arrow.clockwise", tint: theme.accent.opacity(0.08), action: retry)
         }
-        .padding(24)
+        .padding(22)
         .frame(maxWidth: 360)
-        .synflixGlass(tint: theme.accent.opacity(0.045), cornerRadius: 26)
+        .synflixGlass(tint: theme.accent.opacity(0.03), cornerRadius: 18)
     }
 }
