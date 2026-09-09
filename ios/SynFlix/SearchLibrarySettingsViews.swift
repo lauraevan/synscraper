@@ -1,9 +1,9 @@
 import SwiftUI
+import UIKit
 
 struct SearchView: View {
     @EnvironmentObject private var theme: ThemeStore
     @EnvironmentObject private var router: AppRouter
-    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
     @State private var query = ""
     @State private var results: [MediaItem] = []
@@ -19,99 +19,103 @@ struct SearchView: View {
     }
 
     var body: some View {
-        ScrollView(showsIndicators: false) {
-            VStack(alignment: .leading, spacing: 20) {
-                VStack(alignment: .leading, spacing: 14) {
-                    Text("Search")
-                        .font(.system(size: horizontalSizeClass == .regular ? 42 : 34, weight: .heavy))
-                        .tracking(-1.2)
+        GeometryReader { geometry in
+            let isPad = UIDevice.current.userInterfaceIdiom == .pad
+            let edge = isPad ? max(28, min(44, geometry.size.width * 0.032)) : 18
+            let gridMinimum: CGFloat = isPad ? 146 : 116
 
-                    HStack(spacing: 10) {
-                        Image(systemName: "magnifyingglass")
-                            .font(.system(size: 15, weight: .semibold))
-                            .foregroundStyle(.white.opacity(0.46))
+            ScrollView(showsIndicators: false) {
+                VStack(alignment: .leading, spacing: 22) {
+                    VStack(alignment: .leading, spacing: 14) {
+                        Text("Search")
+                            .font(.system(size: isPad ? 34 : 31, weight: .heavy))
+                            .tracking(-1.0)
 
-                        TextField("Movies, series, people", text: $query)
-                            .focused($searchFocused)
-                            .textInputAutocapitalization(.never)
-                            .autocorrectionDisabled()
-                            .font(.system(size: 16, weight: .medium))
-                            .foregroundStyle(.white)
-                            .submitLabel(.search)
+                        HStack(spacing: 10) {
+                            Image(systemName: "magnifyingglass")
+                                .font(.system(size: 15, weight: .semibold))
+                                .foregroundStyle(.white.opacity(0.45))
 
-                        if !query.isEmpty {
-                            Button {
-                                query = ""
-                                results = []
-                            } label: {
-                                Image(systemName: "xmark.circle.fill")
-                                    .foregroundStyle(.white.opacity(0.34))
+                            TextField("Search movies and series", text: $query)
+                                .focused($searchFocused)
+                                .textInputAutocapitalization(.never)
+                                .autocorrectionDisabled()
+                                .font(.system(size: 16, weight: .medium))
+                                .foregroundStyle(.white)
+                                .submitLabel(.search)
+
+                            if !query.isEmpty {
+                                Button {
+                                    query = ""
+                                    results = []
+                                } label: {
+                                    Image(systemName: "xmark.circle.fill")
+                                        .foregroundStyle(.white.opacity(0.34))
+                                }
+                                .buttonStyle(.plain)
                             }
-                            .buttonStyle(.plain)
+                        }
+                        .padding(.horizontal, 16)
+                        .frame(height: 50)
+                        .frame(maxWidth: isPad ? 720 : .infinity)
+                        .synflixGlass(tint: theme.accent.opacity(searchFocused ? 0.07 : 0.025), cornerRadius: 14, interactive: true)
+
+                        if !results.isEmpty {
+                            HStack(spacing: 8) {
+                                filterButton("All", value: "all")
+                                filterButton("Movies", value: "movie")
+                                filterButton("Series", value: "tv")
+                            }
                         }
                     }
-                    .padding(.horizontal, 16)
-                    .frame(height: 52)
-                    .synflixGlass(tint: theme.accent.opacity(searchFocused ? 0.085 : 0.035), cornerRadius: 18, interactive: true)
+                    .padding(.horizontal, edge)
 
-                    if !results.isEmpty {
-                        HStack(spacing: 8) {
-                            filterButton("All", value: "all")
-                            filterButton("Movies", value: "movie")
-                            filterButton("Series", value: "tv")
+                    if isSearching {
+                        ProgressView()
+                            .tint(theme.accent)
+                            .frame(maxWidth: .infinity)
+                            .padding(.top, 24)
+                    } else if let errorMessage, !query.isEmpty {
+                        ErrorPanel(title: "Search failed", message: errorMessage) {
+                            Task { await performSearch(query) }
                         }
+                        .frame(maxWidth: .infinity)
+                        .padding(.horizontal, edge)
+                    } else if query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("Trending")
+                                .font(.system(size: 19, weight: .bold))
+                                .tracking(-0.4)
+                                .padding(.horizontal, edge)
+                            mediaGrid(trending, minimum: gridMinimum, edge: edge)
+                        }
+                    } else if filtered.isEmpty {
+                        VStack(spacing: 10) {
+                            Image(systemName: "magnifyingglass")
+                                .font(.system(size: 28, weight: .medium))
+                                .foregroundStyle(theme.accent.opacity(0.70))
+                            Text("No matches")
+                                .font(.system(size: 18, weight: .bold))
+                            Text("Try a different title or filter.")
+                                .font(.system(size: 13))
+                                .foregroundStyle(.white.opacity(0.42))
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.top, 54)
+                    } else {
+                        mediaGrid(filtered, minimum: gridMinimum, edge: edge)
                     }
+
+                    Spacer(minLength: 72)
                 }
-                .padding(.horizontal, horizontalSizeClass == .regular ? 28 : 18)
-
-                if isSearching {
-                    HStack {
-                        Spacer()
-                        ProgressView().tint(theme.accent)
-                        Spacer()
-                    }
-                    .padding(.top, 20)
-                } else if let errorMessage, !query.isEmpty {
-                    ErrorPanel(title: "Search failed", message: errorMessage) {
-                        Task { await performSearch(query) }
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(.horizontal, 20)
-                } else if query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Trending searches")
-                            .font(.system(size: 19, weight: .bold))
-                            .tracking(-0.4)
-                            .padding(.horizontal, horizontalSizeClass == .regular ? 28 : 18)
-
-                        mediaGrid(trending)
-                    }
-                } else if filtered.isEmpty {
-                    VStack(spacing: 10) {
-                        Image(systemName: "magnifyingglass")
-                            .font(.system(size: 28, weight: .medium))
-                            .foregroundStyle(theme.accent.opacity(0.72))
-                        Text("No matches")
-                            .font(.system(size: 18, weight: .bold))
-                        Text("Try another title or switch the filter.")
-                            .font(.system(size: 13))
-                            .foregroundStyle(.white.opacity(0.42))
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(.top, 48)
-                } else {
-                    mediaGrid(filtered)
-                }
-
-                Spacer(minLength: 100)
+                .padding(.top, 8)
             }
-            .padding(.top, 8)
+            .background(Color.black)
         }
-        .background(Color.black)
         .task {
             if trending.isEmpty,
                let home = try? await SynFlixAPI.shared.home() {
-                await MainActor.run { trending = Array((home.trending ?? []).prefix(18)) }
+                await MainActor.run { trending = Array((home.trending ?? []).prefix(24)) }
             }
         }
         .task(id: query) {
@@ -124,7 +128,7 @@ struct SearchView: View {
                 }
                 return
             }
-            try? await Task.sleep(nanoseconds: 320_000_000)
+            try? await Task.sleep(nanoseconds: 260_000_000)
             guard !Task.isCancelled else { return }
             await performSearch(clean)
         }
@@ -137,29 +141,26 @@ struct SearchView: View {
         } label: {
             Text(title)
                 .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(filter == value ? .black : .white.opacity(0.72))
-                .padding(.horizontal, 14)
-                .frame(height: 34)
-                .background(filter == value ? theme.accent : Color.clear, in: Capsule())
-                .contentShape(Capsule())
+                .foregroundStyle(filter == value ? .black : .white.opacity(0.68))
+                .padding(.horizontal, 13)
+                .frame(height: 32)
+                .background(filter == value ? theme.accent : Color.white.opacity(0.045), in: RoundedRectangle(cornerRadius: 9, style: .continuous))
         }
         .buttonStyle(.plain)
-        .synflixGlass(tint: filter == value ? nil : theme.accent.opacity(0.025), cornerRadius: 17, interactive: true)
     }
 
-    private func mediaGrid(_ items: [MediaItem]) -> some View {
-        let minimum: CGFloat = horizontalSizeClass == .regular ? 164 : 118
-        return LazyVGrid(columns: [GridItem(.adaptive(minimum: minimum), spacing: 13)], spacing: 18) {
+    private func mediaGrid(_ items: [MediaItem], minimum: CGFloat, edge: CGFloat) -> some View {
+        LazyVGrid(columns: [GridItem(.adaptive(minimum: minimum), spacing: 14)], spacing: 18) {
             ForEach(items) { item in
                 Button {
                     router.open(item)
                 } label: {
                     VStack(alignment: .leading, spacing: 7) {
-                        ArtworkView(url: item.posterURL, cornerRadius: 10)
+                        ArtworkView(url: item.posterURL, cornerRadius: 8)
                             .aspectRatio(2.0 / 3.0, contentMode: .fit)
                             .overlay {
-                                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                    .stroke(.white.opacity(0.06), lineWidth: 0.6)
+                                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                    .stroke(.white.opacity(0.05), lineWidth: 0.6)
                             }
                         Text(item.displayTitle)
                             .font(.system(size: 12.5, weight: .semibold))
@@ -170,7 +171,7 @@ struct SearchView: View {
                 .buttonStyle(.plain)
             }
         }
-        .padding(.horizontal, horizontalSizeClass == .regular ? 28 : 18)
+        .padding(.horizontal, edge)
     }
 
     private func performSearch(_ text: String) async {
@@ -199,105 +200,133 @@ struct LibraryView: View {
     @EnvironmentObject private var theme: ThemeStore
     @EnvironmentObject private var library: LibraryStore
     @EnvironmentObject private var router: AppRouter
-    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
     var body: some View {
-        ScrollView(showsIndicators: false) {
-            VStack(alignment: .leading, spacing: 20) {
-                VStack(alignment: .leading, spacing: 5) {
-                    Text("My List")
-                        .font(.system(size: horizontalSizeClass == .regular ? 42 : 34, weight: .heavy))
-                        .tracking(-1.2)
-                    Text(library.items.isEmpty ? "Save something worth coming back to." : "\(library.items.count) saved \(library.items.count == 1 ? "title" : "titles")")
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(.white.opacity(0.40))
-                }
-                .padding(.horizontal, horizontalSizeClass == .regular ? 28 : 18)
+        GeometryReader { geometry in
+            let isPad = UIDevice.current.userInterfaceIdiom == .pad
+            let edge = isPad ? max(28, min(44, geometry.size.width * 0.032)) : 18
+            let minimum: CGFloat = isPad ? 146 : 116
 
-                if library.items.isEmpty {
-                    VStack(spacing: 14) {
-                        SynFlixBrandMark(size: 52)
-                        Text("Your list is empty")
-                            .font(.system(size: 19, weight: .bold))
-                        Text("Tap + on a movie or series and it'll live here.")
-                            .font(.system(size: 13))
-                            .foregroundStyle(.white.opacity(0.43))
-                            .multilineTextAlignment(.center)
+            ScrollView(showsIndicators: false) {
+                VStack(alignment: .leading, spacing: 22) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("My List")
+                            .font(.system(size: isPad ? 34 : 31, weight: .heavy))
+                            .tracking(-1.0)
+                        Text(library.items.isEmpty ? "Save titles to watch later." : "\(library.items.count) saved \(library.items.count == 1 ? "title" : "titles")")
+                            .font(.system(size: 12.5, weight: .medium))
+                            .foregroundStyle(.white.opacity(0.40))
                     }
-                    .padding(26)
-                    .frame(maxWidth: 390)
-                    .synflixGlass(tint: theme.accent.opacity(0.045), cornerRadius: 26)
-                    .frame(maxWidth: .infinity)
-                    .padding(.top, 44)
-                    .padding(.horizontal, 20)
-                } else {
-                    let minimum: CGFloat = horizontalSizeClass == .regular ? 164 : 118
-                    LazyVGrid(columns: [GridItem(.adaptive(minimum: minimum), spacing: 13)], spacing: 18) {
-                        ForEach(library.items) { item in
-                            Button {
-                                router.open(item)
-                            } label: {
-                                VStack(alignment: .leading, spacing: 7) {
-                                    ArtworkView(url: item.posterURL, cornerRadius: 10)
-                                        .aspectRatio(2.0 / 3.0, contentMode: .fit)
-                                        .overlay(alignment: .topTrailing) {
-                                            Button {
-                                                library.toggle(item, haptics: theme.hapticsEnabled)
-                                            } label: {
-                                                Image(systemName: "minus")
-                                                    .font(.system(size: 11, weight: .bold))
-                                                    .foregroundStyle(.white)
-                                                    .frame(width: 30, height: 30)
-                                            }
-                                            .buttonStyle(.plain)
-                                            .synflixCircleGlass(tint: .black.opacity(0.16))
-                                            .padding(7)
-                                        }
-                                    Text(item.displayTitle)
-                                        .font(.system(size: 12.5, weight: .semibold))
-                                        .foregroundStyle(.white.opacity(0.88))
-                                        .lineLimit(1)
-                                }
-                            }
-                            .buttonStyle(.plain)
+                    .padding(.horizontal, edge)
+
+                    if library.items.isEmpty {
+                        VStack(spacing: 13) {
+                            Image(systemName: "bookmark")
+                                .font(.system(size: 29, weight: .medium))
+                                .foregroundStyle(theme.accent)
+                            Text("Nothing saved yet")
+                                .font(.system(size: 18, weight: .bold))
+                            Text("Add a movie or series and it will show up here.")
+                                .font(.system(size: 13))
+                                .foregroundStyle(.white.opacity(0.42))
+                                .multilineTextAlignment(.center)
                         }
+                        .padding(28)
+                        .frame(maxWidth: 420)
+                        .background(Color.white.opacity(0.025), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        .overlay {
+                            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                .stroke(.white.opacity(0.055), lineWidth: 0.6)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.top, 50)
+                        .padding(.horizontal, edge)
+                    } else {
+                        LazyVGrid(columns: [GridItem(.adaptive(minimum: minimum), spacing: 14)], spacing: 18) {
+                            ForEach(library.items) { item in
+                                Button {
+                                    router.open(item)
+                                } label: {
+                                    VStack(alignment: .leading, spacing: 7) {
+                                        ArtworkView(url: item.posterURL, cornerRadius: 8)
+                                            .aspectRatio(2.0 / 3.0, contentMode: .fit)
+                                            .overlay(alignment: .topTrailing) {
+                                                Button {
+                                                    library.toggle(item, haptics: theme.hapticsEnabled)
+                                                } label: {
+                                                    Image(systemName: "xmark")
+                                                        .font(.system(size: 10.5, weight: .bold))
+                                                        .foregroundStyle(.white)
+                                                        .frame(width: 29, height: 29)
+                                                }
+                                                .buttonStyle(.plain)
+                                                .synflixCircleGlass(tint: .black.opacity(0.18))
+                                                .padding(7)
+                                            }
+                                        Text(item.displayTitle)
+                                            .font(.system(size: 12.5, weight: .semibold))
+                                            .foregroundStyle(.white.opacity(0.88))
+                                            .lineLimit(1)
+                                    }
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                        .padding(.horizontal, edge)
                     }
-                    .padding(.horizontal, horizontalSizeClass == .regular ? 28 : 18)
-                }
 
-                Spacer(minLength: 100)
+                    Spacer(minLength: 72)
+                }
+                .padding(.top, 8)
             }
-            .padding(.top, 8)
+            .background(Color.black)
         }
-        .background(Color.black)
     }
 }
 
 struct SettingsView: View {
     @EnvironmentObject private var theme: ThemeStore
-    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
     var body: some View {
-        ScrollView(showsIndicators: false) {
-            VStack(alignment: .leading, spacing: 22) {
-                VStack(alignment: .leading, spacing: 5) {
-                    Text("Settings")
-                        .font(.system(size: horizontalSizeClass == .regular ? 42 : 34, weight: .heavy))
-                        .tracking(-1.2)
-                    Text("Make SynFlix feel like yours.")
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(.white.opacity(0.40))
-                }
+        GeometryReader { geometry in
+            let isPad = UIDevice.current.userInterfaceIdiom == .pad && geometry.size.width >= 760
+            let edge = isPad ? max(30, min(46, geometry.size.width * 0.034)) : 18
 
-                appearancePanel
-                playbackPanel
-                aboutPanel
-                Spacer(minLength: 100)
+            ScrollView(showsIndicators: false) {
+                VStack(alignment: .leading, spacing: 20) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Settings")
+                            .font(.system(size: isPad ? 34 : 31, weight: .heavy))
+                            .tracking(-1.0)
+                        Text("Appearance and playback")
+                            .font(.system(size: 12.5, weight: .medium))
+                            .foregroundStyle(.white.opacity(0.40))
+                    }
+
+                    if isPad {
+                        HStack(alignment: .top, spacing: 18) {
+                            appearancePanel
+                                .frame(maxWidth: .infinity)
+
+                            VStack(spacing: 18) {
+                                playbackPanel
+                                aboutPanel
+                            }
+                            .frame(width: min(360, geometry.size.width * 0.34))
+                        }
+                    } else {
+                        appearancePanel
+                        playbackPanel
+                        aboutPanel
+                    }
+
+                    Spacer(minLength: 72)
+                }
+                .padding(.horizontal, edge)
+                .padding(.top, 8)
             }
-            .padding(.horizontal, horizontalSizeClass == .regular ? 28 : 18)
-            .padding(.top, 8)
+            .background(Color.black)
         }
-        .background(Color.black)
     }
 
     private var appearancePanel: some View {
@@ -305,34 +334,34 @@ struct SettingsView: View {
             HStack {
                 VStack(alignment: .leading, spacing: 3) {
                     Text("Appearance")
-                        .font(.system(size: 18, weight: .bold))
-                    Text("Theme the glass, controls, and playback accents.")
-                        .font(.system(size: 12))
+                        .font(.system(size: 17, weight: .bold))
+                    Text("Choose the accent used by native Liquid Glass controls.")
+                        .font(.system(size: 11.5))
                         .foregroundStyle(.white.opacity(0.42))
                 }
                 Spacer()
-                SynFlixBrandMark(size: 38)
+                SynFlixBrandMark(size: 36)
             }
 
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 74), spacing: 12)], spacing: 14) {
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 72), spacing: 12)], spacing: 14) {
                 ForEach(SynFlixTheme.allCases) { choice in
                     Button {
                         theme.theme = choice
                     } label: {
-                        VStack(spacing: 8) {
+                        VStack(spacing: 7) {
                             ZStack {
                                 Circle()
                                     .fill(choice.accent)
-                                    .frame(width: 38, height: 38)
+                                    .frame(width: 36, height: 36)
                                 if theme.theme == choice {
                                     Image(systemName: "checkmark")
-                                        .font(.system(size: 13, weight: .black))
+                                        .font(.system(size: 12.5, weight: .black))
                                         .foregroundStyle(choice == .monochrome || choice == .noir || choice == .synflix ? .black : .white)
                                 }
                             }
                             Text(choice.name)
-                                .font(.system(size: 10.5, weight: .semibold))
-                                .foregroundStyle(theme.theme == choice ? .white : .white.opacity(0.48))
+                                .font(.system(size: 10.25, weight: .semibold))
+                                .foregroundStyle(theme.theme == choice ? .white : .white.opacity(0.46))
                                 .lineLimit(1)
                         }
                     }
@@ -341,70 +370,73 @@ struct SettingsView: View {
             }
 
             Divider().overlay(.white.opacity(0.06))
-
-            settingToggle(title: "Haptics", subtitle: "Physical feedback on important controls", isOn: $theme.hapticsEnabled)
-            settingToggle(title: "Reduce motion", subtitle: "Use quieter transitions throughout the client", isOn: $theme.reducedMotion)
+            settingToggle(title: "Haptics", subtitle: "Feedback on important controls", isOn: $theme.hapticsEnabled)
+            settingToggle(title: "Reduce motion", subtitle: "Use quieter transitions", isOn: $theme.reducedMotion)
         }
         .padding(20)
-        .synflixGlass(tint: theme.accent.opacity(0.045), cornerRadius: 26)
+        .background(Color.white.opacity(0.022), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(.white.opacity(0.055), lineWidth: 0.6)
+        }
     }
 
     private var playbackPanel: some View {
-        VStack(alignment: .leading, spacing: 17) {
+        VStack(alignment: .leading, spacing: 16) {
             Text("Playback")
-                .font(.system(size: 18, weight: .bold))
-            settingToggle(title: "Autoplay", subtitle: "Start playback as soon as a source is ready", isOn: $theme.autoplayEnabled)
+                .font(.system(size: 17, weight: .bold))
+            settingToggle(title: "Autoplay", subtitle: "Start when a source is ready", isOn: $theme.autoplayEnabled)
 
-            HStack(spacing: 12) {
+            HStack(spacing: 11) {
                 Image(systemName: "play.rectangle.on.rectangle.fill")
-                    .font(.system(size: 17, weight: .semibold))
+                    .font(.system(size: 16, weight: .semibold))
                     .foregroundStyle(theme.accent)
-                    .frame(width: 30)
+                    .frame(width: 28)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Native player")
-                        .font(.system(size: 14, weight: .semibold))
-                    Text("AVPlayer, AirPlay, Picture in Picture, and source switching")
-                        .font(.system(size: 11.5))
+                    Text("Native playback")
+                        .font(.system(size: 13.5, weight: .semibold))
+                    Text("AVPlayer · AirPlay · Picture in Picture")
+                        .font(.system(size: 11))
                         .foregroundStyle(.white.opacity(0.42))
                 }
                 Spacer()
-                Text("ON")
-                    .font(.system(size: 10, weight: .bold))
-                    .tracking(0.8)
-                    .foregroundStyle(theme.accent)
             }
         }
         .padding(20)
-        .synflixGlass(tint: theme.accent.opacity(0.028), cornerRadius: 26)
+        .background(Color.white.opacity(0.022), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(.white.opacity(0.055), lineWidth: 0.6)
+        }
     }
 
     private var aboutPanel: some View {
-        HStack(spacing: 14) {
-            SynFlixBrandMark(size: 44)
+        HStack(spacing: 13) {
+            SynFlixBrandMark(size: 40)
             VStack(alignment: .leading, spacing: 3) {
-                Text("SynFlix Native")
-                    .font(.system(size: 15, weight: .bold))
-                Text("Version 1.5 · built for iPhone and iPad")
-                    .font(.system(size: 11.5))
+                Text("SynFlix")
+                    .font(.system(size: 14.5, weight: .bold))
+                Text("Version 1.6 · iPhone and iPad")
+                    .font(.system(size: 11))
                     .foregroundStyle(.white.opacity(0.42))
             }
             Spacer()
-            Text("PREMIUM")
-                .font(.system(size: 9.5, weight: .black))
-                .tracking(1.1)
-                .foregroundStyle(theme.accent)
         }
         .padding(18)
-        .synflixGlass(tint: theme.accent.opacity(0.035), cornerRadius: 22)
+        .background(Color.white.opacity(0.022), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(.white.opacity(0.055), lineWidth: 0.6)
+        }
     }
 
     private func settingToggle(title: String, subtitle: String, isOn: Binding<Bool>) -> some View {
         HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: 13.5, weight: .semibold))
                 Text(subtitle)
-                    .font(.system(size: 11.5))
+                    .font(.system(size: 11))
                     .foregroundStyle(.white.opacity(0.42))
             }
             Spacer()
