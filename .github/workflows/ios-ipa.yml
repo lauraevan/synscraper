@@ -5,8 +5,11 @@ on:
   push:
     paths:
       - "ios/**"
+      - "frontend/public/synflix-logo.webp"
       - "frontend/src/App.js"
       - "frontend/src/ios-native.css"
+      - "frontend/src/theme-system.css"
+      - "frontend/src/lib/preferences.js"
       - ".github/workflows/ios-ipa.yml"
 
 permissions:
@@ -34,79 +37,105 @@ jobs:
       - name: Install XcodeGen
         run: brew install xcodegen
 
-      - name: Build premium SynFlix app icon
+      - name: Build SynFlix brand assets
         run: |
           python -m pip install --disable-pip-version-check pillow
           python <<'PY'
           import json
           from pathlib import Path
-          from PIL import Image, ImageDraw, ImageFilter
+          from PIL import Image, ImageOps
 
-          W = 1024
-          out = Path('ios/SynFlix/Assets.xcassets/AppIcon.appiconset')
-          out.mkdir(parents=True, exist_ok=True)
+          src_path = Path("frontend/public/synflix-logo.webp")
+          if not src_path.exists():
+              raise SystemExit("frontend/public/synflix-logo.webp is missing")
 
-          base = Image.new('RGBA', (W, W), (7, 9, 22, 255))
-          d = ImageDraw.Draw(base)
-          top = (18, 16, 46)
-          bottom = (7, 11, 27)
-          for y in range(W):
-              t = y / (W - 1)
-              color = tuple(round(top[i] * (1 - t) + bottom[i] * t) for i in range(3)) + (255,)
-              d.line((0, y, W, y), fill=color)
+          src = Image.open(src_path).convert("RGBA")
+          bbox = src.getbbox()
+          logo = src.crop(bbox) if bbox else src
 
-          glow = Image.new('RGBA', (W, W), (0, 0, 0, 0))
-          gd = ImageDraw.Draw(glow)
-          gd.ellipse((-120, -180, 700, 650), fill=(112, 72, 255, 128))
-          gd.ellipse((410, 360, 1160, 1110), fill=(38, 112, 255, 108))
-          glow = glow.filter(ImageFilter.GaussianBlur(118))
-          base = Image.alpha_composite(base, glow)
+          asset_root = Path("ios/SynFlix/Assets.xcassets")
+          appicon_out = asset_root / "AppIcon.appiconset"
+          logo_out = asset_root / "SynFlixLogo.imageset"
+          appicon_out.mkdir(parents=True, exist_ok=True)
+          logo_out.mkdir(parents=True, exist_ok=True)
 
-          diamond = Image.new('RGBA', (570, 570), (0, 0, 0, 0))
-          dd = ImageDraw.Draw(diamond)
-          dd.rounded_rectangle((18, 18, 552, 552), radius=118, fill=(255, 255, 255, 28), outline=(255, 255, 255, 118), width=12)
-          dd.rounded_rectangle((46, 46, 524, 524), radius=96, outline=(156, 139, 255, 118), width=5)
-          diamond = diamond.rotate(45, expand=True, resample=Image.Resampling.BICUBIC)
-          base.alpha_composite(diamond, ((W - diamond.width) // 2, (W - diamond.height) // 2))
+          (asset_root / "Contents.json").write_text(
+              json.dumps({"info": {"author": "xcode", "version": 1}}, indent=2)
+          )
 
-          shine = Image.new('RGBA', (W, W), (0, 0, 0, 0))
-          sd = ImageDraw.Draw(shine)
-          sd.ellipse((170, 105, 760, 500), fill=(255, 255, 255, 52))
-          shine = shine.filter(ImageFilter.GaussianBlur(72))
-          base = Image.alpha_composite(base, shine)
+          # Native SwiftUI branding uses the same real SynFlix logo as the web client.
+          native_images = []
+          for scale, px in (("1x", 128), ("2x", 256), ("3x", 384)):
+              fitted = ImageOps.contain(logo, (px, px), Image.Resampling.LANCZOS)
+              canvas = Image.new("RGBA", (px, px), (0, 0, 0, 0))
+              canvas.alpha_composite(
+                  fitted,
+                  ((px - fitted.width) // 2, (px - fitted.height) // 2),
+              )
+              filename = f"synflix-logo-{scale}.png"
+              canvas.save(logo_out / filename, "PNG")
+              native_images.append({
+                  "idiom": "universal",
+                  "scale": scale,
+                  "filename": filename,
+              })
 
-          shadow = Image.new('RGBA', (W, W), (0, 0, 0, 0))
-          sh = ImageDraw.Draw(shadow)
-          sh.polygon([(420, 336), (420, 688), (720, 512)], fill=(0, 0, 0, 92))
-          shadow = shadow.filter(ImageFilter.GaussianBlur(24))
-          base = Image.alpha_composite(base, shadow)
+          (logo_out / "Contents.json").write_text(
+              json.dumps({
+                  "images": native_images,
+                  "info": {"author": "xcode", "version": 1},
+                  "properties": {"preserves-vector-representation": False},
+              }, indent=2)
+          )
 
-          d = ImageDraw.Draw(base)
-          d.polygon([(414, 326), (414, 698), (728, 512)], fill=(255, 255, 255, 250))
-          d.line([(438, 365), (438, 646)], fill=(255, 255, 255, 220), width=7)
+          def branded_icon(canvas_size):
+              canvas = Image.new("RGBA", (canvas_size, canvas_size), (7, 7, 6, 255))
+              max_dim = max(1, int(canvas_size * 0.68))
+              fitted = ImageOps.contain(
+                  logo,
+                  (max_dim, max_dim),
+                  Image.Resampling.LANCZOS,
+              )
+              canvas.alpha_composite(
+                  fitted,
+                  ((canvas_size - fitted.width) // 2, (canvas_size - fitted.height) // 2),
+              )
+              return canvas
 
           specs = [
-              ('iphone','20x20','2x',40), ('iphone','20x20','3x',60),
-              ('iphone','29x29','2x',58), ('iphone','29x29','3x',87),
-              ('iphone','40x40','2x',80), ('iphone','40x40','3x',120),
-              ('iphone','60x60','2x',120), ('iphone','60x60','3x',180),
-              ('ipad','20x20','1x',20), ('ipad','20x20','2x',40),
-              ('ipad','29x29','1x',29), ('ipad','29x29','2x',58),
-              ('ipad','40x40','1x',40), ('ipad','40x40','2x',80),
-              ('ipad','76x76','1x',76), ('ipad','76x76','2x',152),
-              ('ipad','83.5x83.5','2x',167),
-              ('ios-marketing','1024x1024','1x',1024),
+              ("iphone", "20x20", "2x", 40), ("iphone", "20x20", "3x", 60),
+              ("iphone", "29x29", "2x", 58), ("iphone", "29x29", "3x", 87),
+              ("iphone", "40x40", "2x", 80), ("iphone", "40x40", "3x", 120),
+              ("iphone", "60x60", "2x", 120), ("iphone", "60x60", "3x", 180),
+              ("ipad", "20x20", "1x", 20), ("ipad", "20x20", "2x", 40),
+              ("ipad", "29x29", "1x", 29), ("ipad", "29x29", "2x", 58),
+              ("ipad", "40x40", "1x", 40), ("ipad", "40x40", "2x", 80),
+              ("ipad", "76x76", "1x", 76), ("ipad", "76x76", "2x", 152),
+              ("ipad", "83.5x83.5", "2x", 167),
+              ("ios-marketing", "1024x1024", "1x", 1024),
           ]
 
+          master = branded_icon(1024)
           images = []
           for idiom, size, scale, px in specs:
               filename = f'icon-{idiom}-{size.replace(".", "_")}-{scale}.png'
-              base.resize((px, px), Image.Resampling.LANCZOS).convert('RGB').save(out / filename, 'PNG')
-              images.append({'idiom': idiom, 'size': size, 'scale': scale, 'filename': filename})
+              master.resize((px, px), Image.Resampling.LANCZOS).convert("RGB").save(
+                  appicon_out / filename,
+                  "PNG",
+              )
+              images.append({
+                  "idiom": idiom,
+                  "size": size,
+                  "scale": scale,
+                  "filename": filename,
+              })
 
-          (out / 'Contents.json').write_text(json.dumps({'images': images, 'info': {'author':'xcode','version':1}}, indent=2))
-          root = Path('ios/SynFlix/Assets.xcassets')
-          (root / 'Contents.json').write_text(json.dumps({'info': {'author':'xcode','version':1}}, indent=2))
+          (appicon_out / "Contents.json").write_text(
+              json.dumps({
+                  "images": images,
+                  "info": {"author": "xcode", "version": 1},
+              }, indent=2)
+          )
           PY
 
       - name: Generate Xcode project

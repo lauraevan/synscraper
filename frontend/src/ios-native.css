@@ -3,7 +3,7 @@ html[data-synflix-ios="true"] body,
 html[data-synflix-ios="true"] #root,
 html[data-synflix-ios="true"] .App {
   min-height: 100%;
-  background: #05070d !important;
+  background: var(--site-bg, #070706) !important;
   overscroll-behavior-y: none;
 }
 
@@ -11,14 +11,12 @@ html[data-synflix-ios="true"] body {
   -webkit-tap-highlight-color: transparent;
   -webkit-touch-callout: none;
   text-rendering: optimizeLegibility;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
 }
 
 html[data-synflix-ios="true"] .synflix-ios-native-surface {
   min-height: 100dvh;
-  background:
-    radial-gradient(circle at 84% -10%, rgba(104, 80, 255, .10), transparent 31%),
-    radial-gradient(circle at 4% 94%, rgba(38, 104, 255, .08), transparent 34%),
-    #05070d;
+  background: var(--site-bg, #070706) !important;
 }
 
 html[data-synflix-ios="true"] .synflix-ios-native-surface > main,
@@ -26,18 +24,15 @@ html[data-synflix-ios="true"] .synflix-ios-native-surface [data-testid$="-page"]
   background: transparent !important;
 }
 
-/* Native SwiftUI chrome floats above the page. Leave touch-safe breathing room
-   without putting the web content back inside a fake card. */
+/* Native chrome owns the app navigation. Keep the web surface edge-to-edge,
+   with only enough clearance for the fixed top and bottom bars. */
 html[data-synflix-ios="true"] .synflix-ios-native-surface [data-testid$="-page"]:not([data-testid="home-page"]) {
-  padding-top: max(72px, calc(env(safe-area-inset-top) + 52px)) !important;
+  padding-top: max(70px, calc(env(safe-area-inset-top) + 54px)) !important;
+  padding-bottom: max(88px, calc(env(safe-area-inset-bottom) + 62px)) !important;
 }
 
 html[data-synflix-ios="true"] .synflix-ios-native-surface [data-testid="home-page"] {
-  padding-bottom: max(112px, calc(env(safe-area-inset-bottom) + 88px)) !important;
-}
-
-html[data-synflix-ios="true"] .synflix-ios-native-surface [data-testid$="-page"]:not([data-testid="home-page"]) {
-  padding-bottom: max(112px, calc(env(safe-area-inset-bottom) + 88px)) !important;
+  padding-bottom: max(88px, calc(env(safe-area-inset-bottom) + 62px)) !important;
 }
 
 html[data-synflix-ios="true"] .synflix-ios-native-surface .synflix-navbar,
@@ -46,11 +41,134 @@ html[data-synflix-ios="true"] .synflix-ios-native-surface footer {
   display: none !important;
 }
 
-/* Long streaming rails are expensive in WebKit. Off-screen sections are skipped
-   until they approach the viewport, which noticeably improves first paint and scroll. */
+/* Streaming-client geometry: posters and controls are crisp and restrained,
+   not a field of oversized rounded glass cards. */
+html[data-synflix-ios="true"] .synflix-ios-native-surface article[data-testid^="movie-card-"] > div:first-child {
+  border-radius: 8px !important;
+  border-color: rgb(255 255 255 / .055) !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+html[data-synflix-ios="true"] .synflix-ios-native-surface article[data-testid^="movie-card-"] img {
+  transform: none !important;
+  transition: opacity 160ms ease !important;
+}
+
+html[data-synflix-ios="true"] .synflix-ios-native-surface article[data-testid^="movie-card-"] > div:first-child > div[class*="opacity-0"],
+html[data-synflix-ios="true"] .synflix-ios-native-surface article[data-testid^="movie-card-"] > div:first-child > div[class*="group-hover"] {
+  display: none !important;
+}
+
+html[data-synflix-ios="true"] .synflix-ios-native-surface article[data-testid^="movie-card-"] h3 {
+  font-weight: 560 !important;
+  letter-spacing: -.012em !important;
+}
+
+html[data-synflix-ios="true"] .synflix-ios-native-surface section[data-testid^="row-"] {
+  padding-top: 14px !important;
+  padding-bottom: 10px !important;
+}
+
+html[data-synflix-ios="true"] .synflix-ios-native-surface section[data-testid^="row-"] > div:first-child {
+  margin-bottom: 10px !important;
+}
+
+html[data-synflix-ios="true"] .synflix-ios-native-surface section[data-testid^="row-"] h2 {
+  font-size: 18px !important;
+  line-height: 1.2 !important;
+  font-weight: 650 !important;
+  letter-spacing: -.025em !important;
+}
+
+html[data-synflix-ios="true"] .synflix-ios-native-surface section[data-testid^="row-"] h2 + p {
+  display: none !important;
+}
+
+html[data-synflix-ios="true"] .synflix-ios-native-surface section[data-testid^="row-"] > div:first-child > div:last-child {
+  display: none !important;
+}
+
+/* Hero is a cinematic header, not a giant landing-page billboard. */
+html[data-synflix-ios="true"] [data-testid="hero-banner"] {
+  height: 64dvh !important;
+  min-height: 500px !important;
+  max-height: 680px !important;
+  background: var(--site-bg, #070706) !important;
+}
+
+html[data-synflix-ios="true"] [data-testid="hero-banner"] .synflix-hero-copy {
+  max-width: 640px !important;
+}
+
+html[data-synflix-ios="true"] [data-testid="hero-banner"] button {
+  border-radius: 8px !important;
+  transform: none !important;
+  transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease !important;
+}
+
+html[data-synflix-ios="true"] [data-testid="hero-play-button"] {
+  background: var(--site-accent, #ffd400) !important;
+  color: #050505 !important;
+}
+
+html[data-synflix-ios="true"] [data-testid="hero-info-button"],
+html[data-synflix-ios="true"] [data-testid="hero-watchlist-button"] {
+  border-color: rgb(255 255 255 / .16) !important;
+  background: rgb(7 7 6 / .64) !important;
+  color: rgb(255 255 255 / .84) !important;
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+}
+
+html[data-synflix-ios="true"] [data-testid="hero-watchlist-button"] {
+  width: 44px !important;
+  min-width: 44px !important;
+}
+
+/* Settings should read like a native media app preference screen. */
+html[data-synflix-ios="true"] [data-testid="settings-page"] section {
+  border-radius: 12px !important;
+  background: rgb(255 255 255 / .018) !important;
+  border-color: rgb(255 255 255 / .065) !important;
+}
+
+html[data-synflix-ios="true"] [data-testid="settings-page"] button {
+  border-radius: 10px !important;
+}
+
+html[data-synflix-ios="true"] [data-testid="settings-page"] aside {
+  border-radius: 12px !important;
+}
+
+html[data-synflix-ios="true"] [data-testid="settings-page"] aside button {
+  border-radius: 8px !important;
+}
+
+html[data-synflix-ios="true"] [data-testid="settings-page"] h1 {
+  font-size: clamp(36px, 8vw, 56px) !important;
+  letter-spacing: -.045em !important;
+}
+
+/* Theme swatches remain fully available. Active color comes from the shared
+   SynFlix appearance engine, with yellow as the default brand treatment. */
+html[data-synflix-ios="true"] .synflix-ios-native-surface [class~="text-[#ffd400]"],
+html[data-synflix-ios="true"] .synflix-ios-native-surface [class*="text-[#ffd400]/"] {
+  color: var(--site-accent, #ffd400) !important;
+}
+
+html[data-synflix-ios="true"] .synflix-ios-native-surface [class~="bg-[#ffd400]"] {
+  background-color: var(--site-accent, #ffd400) !important;
+}
+
+html[data-synflix-ios="true"] .synflix-ios-native-surface [class*="border-[#ffd400]"] {
+  border-color: rgb(var(--site-accent-rgb, 255 212 0) / .30) !important;
+}
+
+/* Long rails are expensive in WKWebView. Skip layout/paint until close to view. */
 html[data-synflix-ios="true"] .synflix-ios-native-surface section:not(:first-child) {
   content-visibility: auto;
-  contain-intrinsic-size: 1px 420px;
+  contain-intrinsic-size: 1px 360px;
 }
 
 html[data-synflix-ios="true"] .synflix-ios-native-surface img {
@@ -81,14 +199,46 @@ html[data-synflix-ios="true"] * {
 }
 
 @media (max-width: 767px) {
-  html[data-synflix-ios="true"] .synflix-ios-native-surface [data-testid="home-page"] > section:first-child {
-    min-height: 56dvh;
+  html[data-synflix-ios="true"] [data-testid="hero-banner"] {
+    height: 60dvh !important;
+    min-height: 470px !important;
+  }
+
+  html[data-synflix-ios="true"] [data-testid="hero-banner"] > div:last-child {
+    padding-left: 18px !important;
+    padding-right: 18px !important;
+    padding-bottom: 52px !important;
+  }
+
+  html[data-synflix-ios="true"] [data-testid="hero-banner"] .synflix-hero-copy p {
+    -webkit-line-clamp: 2 !important;
+  }
+
+  html[data-synflix-ios="true"] .synflix-ios-native-surface article[data-testid^="movie-card-"] {
+    width: 136px !important;
+  }
+
+  html[data-synflix-ios="true"] .synflix-ios-native-surface section[data-testid^="row-"] > div {
+    padding-left: 18px !important;
+    padding-right: 18px !important;
   }
 }
 
 @media (min-width: 768px) {
-  html[data-synflix-ios="true"] .synflix-ios-native-surface [data-testid="home-page"] > section:first-child {
-    min-height: 62dvh;
+  html[data-synflix-ios="true"] [data-testid="hero-banner"] {
+    min-height: 560px !important;
+  }
+
+  html[data-synflix-ios="true"] .synflix-ios-native-surface article[data-testid^="movie-card-"] {
+    width: 176px !important;
+  }
+}
+
+@media (hover: none), (pointer: coarse) {
+  html[data-synflix-ios="true"] .synflix-ios-native-surface article[data-testid^="movie-card-"]:hover > div:first-child,
+  html[data-synflix-ios="true"] .synflix-ios-native-surface article[data-testid^="movie-card-"]:hover img {
+    transform: none !important;
+    box-shadow: none !important;
   }
 }
 

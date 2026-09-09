@@ -26,7 +26,7 @@ enum AppSection: String, CaseIterable, Identifiable {
         case .home: return "house.fill"
         case .search: return "magnifyingglass"
         case .library: return "bookmark.fill"
-        case .settings: return "slider.horizontal.3"
+        case .settings: return "gearshape.fill"
         }
     }
 
@@ -42,20 +42,40 @@ enum AppSection: String, CaseIterable, Identifiable {
             return URL(string: "https://synscraper-tffk.vercel.app/settings?iosApp=1")!
         }
     }
+
+    static func section(for url: URL?) -> AppSection? {
+        guard let path = url?.path else { return nil }
+        if path == "/" || path.isEmpty { return .home }
+        if path.hasPrefix("/search") { return .search }
+        if path.hasPrefix("/my-list") { return .library }
+        if path.hasPrefix("/settings") { return .settings }
+        return nil
+    }
 }
 
-private extension View {
-    @ViewBuilder
-    func synflixLiquidGlass<S: Shape>(in shape: S, interactive: Bool = false) -> some View {
-        if #available(iOS 26.0, *) {
-            if interactive {
-                self.glassEffect(.regular.interactive(), in: shape)
-            } else {
-                self.glassEffect(.regular, in: shape)
-            }
-        } else {
-            self.background(.ultraThinMaterial, in: shape)
+private extension Color {
+    init(hex: String) {
+        let clean = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
+        var value: UInt64 = 0
+        Scanner(string: clean).scanHexInt64(&value)
+        let r, g, b: UInt64
+        switch clean.count {
+        case 6:
+            r = (value >> 16) & 0xff
+            g = (value >> 8) & 0xff
+            b = value & 0xff
+        default:
+            r = 255
+            g = 212
+            b = 0
         }
+        self.init(
+            .sRGB,
+            red: Double(r) / 255.0,
+            green: Double(g) / 255.0,
+            blue: Double(b) / 255.0,
+            opacity: 1
+        )
     }
 }
 
@@ -69,6 +89,10 @@ final class SynFlixBrowserModel: ObservableObject {
     @Published var errorMessage: String?
     @Published var isOnline = true
     @Published var lastUpdated: Date?
+    @Published var currentSection: AppSection = .home
+    @Published var isPlayerSurface = false
+    @Published var themeID = "synflix"
+    @Published var accentHex = "#ffd400"
 
     weak var webView: WKWebView?
     private(set) var initialURL: URL
@@ -78,12 +102,29 @@ final class SynFlixBrowserModel: ObservableObject {
     private let monitorQueue = DispatchQueue(label: "app.synflix.network-monitor", qos: .utility)
     private var currentURL = AppSection.home.url
 
+    private let themeAccents: [String: String] = [
+        "synflix": "#ffd400",
+        "aqua": "#54e7f1",
+        "autumn": "#ff9d42",
+        "cherri": "#ff5d8f",
+        "evergreen": "#64d98b",
+        "rose": "#ff91ad",
+        "violet": "#a78bfa",
+        "purple": "#8b5cf6",
+        "red": "#ff4d55",
+        "monochrome": "#f4f4f4",
+        "noir": "#c8c8c8",
+        "teal": "#35d0ba",
+    ]
+
     init() {
         if let saved = UserDefaults.standard.string(forKey: "synflix.lastURL"),
            let savedURL = URL(string: saved),
            savedURL.host == allowedHost {
             initialURL = savedURL
             currentURL = savedURL
+            currentSection = AppSection.section(for: savedURL) ?? .home
+            isPlayerSurface = Self.playerSurface(savedURL)
         } else {
             initialURL = AppSection.home.url
         }
@@ -101,8 +142,20 @@ final class SynFlixBrowserModel: ObservableObject {
         monitor.cancel()
     }
 
+    var accentColor: Color { Color(hex: accentHex) }
+
     func navigate(to section: AppSection) {
         UISelectionFeedbackGenerator().selectionChanged()
+
+        if currentSection == section, let webView {
+            webView.scrollView.setContentOffset(
+                CGPoint(x: 0, y: -webView.scrollView.adjustedContentInset.top),
+                animated: true
+            )
+            return
+        }
+
+        currentSection = section
         load(section.url)
     }
 
@@ -110,6 +163,7 @@ final class SynFlixBrowserModel: ObservableObject {
         currentURL = url
         errorMessage = nil
         isLoading = true
+        updateSurface(for: url)
 
         let policy: NSURLRequest.CachePolicy
         if forceNetwork && isOnline {
@@ -138,6 +192,7 @@ final class SynFlixBrowserModel: ObservableObject {
     }
 
     func openCachedHome() {
+        currentSection = .home
         load(AppSection.home.url)
     }
 
@@ -145,15 +200,17 @@ final class SynFlixBrowserModel: ObservableObject {
         webView?.goBack()
     }
 
-    func goForward() {
-        webView?.goForward()
-    }
-
     func sync(from webView: WKWebView) {
         canGoBack = webView.canGoBack
         canGoForward = webView.canGoForward
+
         let trimmedTitle = webView.title?.trimmingCharacters(in: .whitespacesAndNewlines)
         pageTitle = (trimmedTitle?.isEmpty == false ? trimmedTitle : nil) ?? "SynFlix"
+
+        if let section = AppSection.section(for: webView.url) {
+            currentSection = section
+        }
+        updateSurface(for: webView.url)
     }
 
     func navigationFinished(_ webView: WKWebView) {
@@ -186,8 +243,30 @@ final class SynFlixBrowserModel: ObservableObject {
         }
 
         errorMessage = isOnline
-            ? "SynFlix couldn't reach the service. Your saved shell is still available."
-            : "You're offline. Recent SynFlix screens and artwork are available when cached."
+            ? "SynFlix couldn't reach the service. Your saved library is still available."
+            : "You're offline. Recently loaded screens, artwork, and saved titles remain available when cached."
+    }
+
+    func updateTheme(id: String, accent: String?) {
+        let normalizedID = themeAccents[id] == nil ? "synflix" : id
+        let proposed = accent?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let normalizedAccent = proposed.hasPrefix("#") && proposed.count == 7
+            ? proposed
+            : (themeAccents[normalizedID] ?? "#ffd400")
+
+        if themeID != normalizedID { themeID = normalizedID }
+        if accentHex.lowercased() != normalizedAccent.lowercased() {
+            accentHex = normalizedAccent
+        }
+    }
+
+    private func updateSurface(for url: URL?) {
+        isPlayerSurface = Self.playerSurface(url)
+    }
+
+    private static func playerSurface(_ url: URL?) -> Bool {
+        guard let path = url?.path else { return false }
+        return path.hasPrefix("/watch/") || path.hasPrefix("/embed/")
     }
 
     private func warmOfflineCache(in webView: WKWebView) {
@@ -213,304 +292,211 @@ final class SynFlixBrowserModel: ObservableObject {
 
 struct ContentView: View {
     @StateObject private var browser = SynFlixBrowserModel()
-    @State private var selectedSection: AppSection = .home
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
     var body: some View {
         ZStack {
-            appBackground
+            Color(red: 0.027, green: 0.027, blue: 0.024)
+                .ignoresSafeArea()
 
             SynFlixWebView(model: browser)
                 .ignoresSafeArea()
-                .overlay(alignment: .top) {
-                    LinearGradient(
-                        colors: [
-                            Color.black.opacity(0.54),
-                            Color.black.opacity(0.20),
-                            Color.clear
-                        ],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                    .frame(height: 132)
-                    .allowsHitTesting(false)
+
+            if !browser.isPlayerSurface {
+                VStack(spacing: 0) {
+                    topBar
+                    Spacer(minLength: 0)
+
+                    if !browser.isOnline {
+                        offlineBanner
+                            .padding(.horizontal, 14)
+                            .padding(.bottom, 8)
+                    }
+
+                    tabBar
                 }
-                .overlay(alignment: .bottom) {
-                    LinearGradient(
-                        colors: [
-                            Color.clear,
-                            Color.black.opacity(0.16),
-                            Color.black.opacity(0.52)
-                        ],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                    .frame(height: 150)
-                    .allowsHitTesting(false)
-                }
-
-            VStack(spacing: 0) {
-                topChrome
-                    .padding(.horizontal, 12)
-                    .padding(.top, 8)
-
-                Spacer(minLength: 0)
-
-                if !browser.isOnline {
-                    offlineStatusPill
-                        .padding(.bottom, 8)
-                        .transition(.opacity.combined(with: .move(edge: .bottom)))
-                }
-
-                bottomDock
-                    .frame(maxWidth: horizontalSizeClass == .regular ? 560 : .infinity)
-                    .padding(.horizontal, horizontalSizeClass == .regular ? 28 : 12)
-                    .padding(.bottom, 8)
+                .transition(.opacity)
             }
 
             if let message = browser.errorMessage, !browser.hasRenderedPage {
                 offlineFallback(message)
                     .padding(24)
-                    .frame(maxWidth: 460)
-                    .transition(.opacity.combined(with: .scale(scale: 0.98)))
+                    .frame(maxWidth: 440)
                     .zIndex(10)
             }
 
             if browser.isInitialLoad {
                 launchOverlay
-                    .transition(.opacity)
                     .zIndex(20)
             }
         }
         .preferredColorScheme(.dark)
-        .tint(Color(red: 0.67, green: 0.62, blue: 1.0))
-        .animation(.easeOut(duration: 0.22), value: browser.isOnline)
-        .animation(.easeOut(duration: 0.20), value: browser.isInitialLoad)
+        .tint(browser.accentColor)
+        .animation(.easeOut(duration: 0.18), value: browser.isOnline)
+        .animation(.easeOut(duration: 0.16), value: browser.isInitialLoad)
+        .animation(.easeOut(duration: 0.16), value: browser.isPlayerSurface)
     }
 
-    private var appBackground: some View {
-        ZStack {
-            Color(red: 0.018, green: 0.022, blue: 0.040)
-            RadialGradient(
-                colors: [
-                    Color(red: 0.30, green: 0.20, blue: 0.70).opacity(0.25),
-                    Color.clear
-                ],
-                center: .topTrailing,
-                startRadius: 8,
-                endRadius: 560
-            )
-            RadialGradient(
-                colors: [
-                    Color(red: 0.08, green: 0.30, blue: 0.68).opacity(0.18),
-                    Color.clear
-                ],
-                center: .bottomLeading,
-                startRadius: 14,
-                endRadius: 620
-            )
-        }
-        .ignoresSafeArea()
-    }
+    private var topBar: some View {
+        HStack(spacing: 12) {
+            HStack(spacing: 10) {
+                SynFlixBrandMark(size: 32)
 
-    private var topChrome: some View {
-        HStack(spacing: 8) {
-            HStack(spacing: 9) {
-                SynFlixMark(size: 34)
+                Text("SynFlix")
+                    .font(.system(size: 17, weight: .semibold))
+                    .tracking(-0.35)
 
                 if horizontalSizeClass == .regular {
-                    VStack(alignment: .leading, spacing: 0) {
-                        Text("SynFlix")
-                            .font(.system(size: 15.5, weight: .semibold, design: .rounded))
-                            .tracking(-0.25)
-                        Text(contextSubtitle)
-                            .font(.system(size: 10, weight: .medium))
-                            .foregroundStyle(.white.opacity(0.46))
-                            .lineLimit(1)
-                    }
+                    Rectangle()
+                        .fill(.white.opacity(0.12))
+                        .frame(width: 1, height: 17)
+
+                    Text(browser.currentSection.title)
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(.white.opacity(0.50))
                 }
             }
 
-            Spacer(minLength: 6)
+            Spacer(minLength: 8)
 
-            if horizontalSizeClass == .regular {
-                Text(selectedSection.title)
-                    .font(.system(size: 13, weight: .semibold, design: .rounded))
-                    .foregroundStyle(.white.opacity(0.58))
-                    .lineLimit(1)
+            if browser.isLoading {
+                ProgressView()
+                    .controlSize(.small)
+                    .tint(browser.accentColor)
+                    .frame(width: 28, height: 36)
             }
 
-            Spacer(minLength: 6)
-
             if browser.canGoBack {
-                glassIconButton("chevron.left") {
+                chromeButton("chevron.left") {
                     browser.goBack()
                 }
             }
 
-            glassIconButton("magnifyingglass") {
-                selectedSection = .search
-                browser.navigate(to: .search)
-            }
-
-            glassIconButton(browser.isLoading ? "xmark" : "arrow.clockwise") {
-                if browser.isLoading {
-                    browser.webView?.stopLoading()
-                    browser.isLoading = false
-                } else {
-                    browser.reload()
-                }
+            chromeButton("arrow.clockwise") {
+                browser.reload()
             }
         }
-        .padding(7)
-        .padding(.leading, 2)
-        .frame(height: 52)
-        .synflixLiquidGlass(in: Capsule())
-        .overlay {
-            Capsule()
-                .stroke(
-                    LinearGradient(
-                        colors: [.white.opacity(0.20), .white.opacity(0.035)],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    ),
-                    lineWidth: 0.7
-                )
+        .padding(.horizontal, horizontalSizeClass == .regular ? 20 : 14)
+        .frame(height: 54)
+        .background(.ultraThinMaterial)
+        .overlay(alignment: .bottom) {
+            Rectangle()
+                .fill(.white.opacity(0.075))
+                .frame(height: 0.5)
         }
-        .shadow(color: .black.opacity(0.24), radius: 20, y: 8)
     }
 
-    private var contextSubtitle: String {
-        if !browser.isOnline { return "Offline · saved content" }
-        if browser.isLoading { return "Updating" }
-        return browser.pageTitle == "SynFlix" ? "Your cinema" : browser.pageTitle
-    }
-
-    private func glassIconButton(_ symbol: String, action: @escaping () -> Void) -> some View {
-        Button(action: {
-            UIImpactFeedbackGenerator(style: .soft).impactOccurred()
+    private func chromeButton(_ symbol: String, action: @escaping () -> Void) -> some View {
+        Button {
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
             action()
-        }) {
+        } label: {
             Image(systemName: symbol)
                 .font(.system(size: 14, weight: .semibold))
-                .symbolRenderingMode(.hierarchical)
-                .foregroundStyle(.white.opacity(0.86))
-                .frame(width: 38, height: 38)
+                .foregroundStyle(.white.opacity(0.72))
+                .frame(width: 36, height: 36)
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .synflixLiquidGlass(in: Circle(), interactive: true)
-        .overlay(Circle().stroke(.white.opacity(0.08), lineWidth: 0.6))
         .accessibilityAddTraits(.isButton)
     }
 
-    private var bottomDock: some View {
-        HStack(spacing: 2) {
+    private var tabBar: some View {
+        HStack(spacing: 0) {
             ForEach(AppSection.allCases) { section in
                 Button {
-                    selectedSection = section
                     browser.navigate(to: section)
                 } label: {
-                    VStack(spacing: 3.5) {
+                    VStack(spacing: 4) {
                         Image(systemName: section.symbol)
                             .font(.system(size: 17, weight: .semibold))
                             .symbolRenderingMode(.hierarchical)
+
                         Text(section.title)
-                            .font(.system(size: 9.5, weight: .semibold, design: .rounded))
+                            .font(.system(size: 10, weight: .medium))
                             .lineLimit(1)
                     }
-                    .foregroundStyle(selectedSection == section ? Color.white : Color.white.opacity(0.46))
+                    .foregroundStyle(
+                        browser.currentSection == section
+                            ? browser.accentColor
+                            : Color.white.opacity(0.43)
+                    )
                     .frame(maxWidth: .infinity)
-                    .frame(height: 50)
+                    .frame(height: 56)
                     .contentShape(Rectangle())
-                    .background {
-                        if selectedSection == section {
+                    .overlay(alignment: .top) {
+                        if browser.currentSection == section {
                             Capsule()
-                                .fill(Color.white.opacity(0.085))
-                                .overlay {
-                                    Capsule().stroke(Color.white.opacity(0.10), lineWidth: 0.6)
-                                }
-                                .padding(.horizontal, 2)
+                                .fill(browser.accentColor)
+                                .frame(width: 24, height: 2)
                         }
                     }
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel(section.title)
-                .accessibilityAddTraits(selectedSection == section ? [.isSelected] : [])
+                .accessibilityAddTraits(browser.currentSection == section ? [.isSelected] : [])
             }
         }
-        .padding(6)
-        .synflixLiquidGlass(in: Capsule())
-        .overlay {
-            Capsule()
-                .stroke(
-                    LinearGradient(
-                        colors: [.white.opacity(0.20), .white.opacity(0.035)],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    ),
-                    lineWidth: 0.7
-                )
+        .padding(.horizontal, horizontalSizeClass == .regular ? 120 : 4)
+        .padding(.top, 4)
+        .background(.ultraThinMaterial)
+        .overlay(alignment: .top) {
+            Rectangle()
+                .fill(.white.opacity(0.075))
+                .frame(height: 0.5)
         }
-        .shadow(color: .black.opacity(0.30), radius: 24, y: 12)
     }
 
-    private var offlineStatusPill: some View {
-        HStack(spacing: 7) {
+    private var offlineBanner: some View {
+        HStack(spacing: 8) {
             Circle()
-                .fill(Color.orange.opacity(0.95))
+                .fill(browser.accentColor)
                 .frame(width: 6, height: 6)
+
             Text("Offline · showing saved SynFlix")
-                .font(.system(size: 11, weight: .semibold, design: .rounded))
-                .foregroundStyle(.white.opacity(0.82))
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(.white.opacity(0.72))
         }
         .padding(.horizontal, 12)
         .frame(height: 32)
-        .synflixLiquidGlass(in: Capsule())
-        .overlay(Capsule().stroke(.white.opacity(0.08), lineWidth: 0.6))
+        .background(Color.black.opacity(0.72), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .stroke(.white.opacity(0.08), lineWidth: 0.5)
+        }
     }
 
     private var launchOverlay: some View {
         ZStack {
-            appBackground
-            VStack(spacing: 20) {
-                SynFlixMark(size: 108)
-                    .shadow(color: Color(red: 0.45, green: 0.36, blue: 1).opacity(0.46), radius: 40)
-                VStack(spacing: 5) {
-                    Text("SynFlix")
-                        .font(.system(size: 34, weight: .bold, design: .rounded))
-                        .tracking(-1.0)
-                    Text(browser.isOnline ? "Preparing your cinema" : "Opening saved SynFlix")
-                        .font(.system(size: 13.5, weight: .medium, design: .rounded))
-                        .foregroundStyle(.white.opacity(0.46))
-                }
+            Color(red: 0.027, green: 0.027, blue: 0.024)
+
+            VStack(spacing: 18) {
+                SynFlixBrandMark(size: 88)
+
+                Text("SynFlix")
+                    .font(.system(size: 28, weight: .semibold))
+                    .tracking(-0.8)
+
                 ProgressView()
                     .controlSize(.regular)
-                    .tint(.white.opacity(0.84))
-                    .padding(.top, 3)
+                    .tint(browser.accentColor)
+                    .padding(.top, 2)
             }
-            .padding(.horizontal, 36)
         }
         .ignoresSafeArea()
     }
 
     private func offlineFallback(_ message: String) -> some View {
         VStack(spacing: 18) {
-            ZStack {
-                Circle()
-                    .fill(.white.opacity(0.07))
-                    .frame(width: 58, height: 58)
-                Image(systemName: browser.isOnline ? "exclamationmark.icloud.fill" : "icloud.slash.fill")
-                    .font(.system(size: 24, weight: .semibold))
-                    .symbolRenderingMode(.hierarchical)
-                    .foregroundStyle(.white.opacity(0.86))
-            }
+            SynFlixBrandMark(size: 52)
 
-            VStack(spacing: 6) {
-                Text(browser.isOnline ? "SynFlix is taking a moment" : "You're offline")
-                    .font(.system(size: 20, weight: .semibold, design: .rounded))
-                    .tracking(-0.3)
+            VStack(spacing: 7) {
+                Text(browser.isOnline ? "Unable to connect" : "You're offline")
+                    .font(.system(size: 20, weight: .semibold))
+                    .tracking(-0.35)
+
                 Text(message)
-                    .font(.system(size: 12.5, weight: .medium))
+                    .font(.system(size: 13, weight: .regular))
                     .foregroundStyle(.white.opacity(0.48))
                     .multilineTextAlignment(.center)
                     .lineSpacing(2)
@@ -520,78 +506,60 @@ struct ContentView: View {
                 Button("Saved Home") {
                     browser.openCachedHome()
                 }
-                .font(.system(size: 12.5, weight: .semibold, design: .rounded))
-                .foregroundStyle(.white.opacity(0.82))
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(.white.opacity(0.86))
                 .padding(.horizontal, 16)
                 .frame(height: 40)
-                .synflixLiquidGlass(in: Capsule(), interactive: true)
+                .background(Color.white.opacity(0.07), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .stroke(.white.opacity(0.09), lineWidth: 0.5)
+                }
 
                 if browser.isOnline {
                     Button("Try Again") {
                         browser.reload()
                     }
-                    .font(.system(size: 12.5, weight: .semibold, design: .rounded))
-                    .foregroundStyle(.white)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(.black)
                     .padding(.horizontal, 18)
                     .frame(height: 40)
-                    .background(
-                        LinearGradient(
-                            colors: [
-                                Color(red: 0.50, green: 0.39, blue: 1.0),
-                                Color(red: 0.27, green: 0.50, blue: 1.0)
-                            ],
-                            startPoint: .leading,
-                            endPoint: .trailing
-                        ),
-                        in: Capsule()
-                    )
+                    .background(browser.accentColor, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
                 }
             }
         }
         .padding(.horizontal, 28)
         .padding(.vertical, 26)
-        .synflixLiquidGlass(in: RoundedRectangle(cornerRadius: 30, style: .continuous))
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
         .overlay {
-            RoundedRectangle(cornerRadius: 30, style: .continuous)
-                .stroke(.white.opacity(0.10), lineWidth: 0.7)
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(.white.opacity(0.09), lineWidth: 0.6)
         }
-        .shadow(color: .black.opacity(0.34), radius: 32, y: 18)
+        .shadow(color: .black.opacity(0.28), radius: 24, y: 14)
     }
 }
 
-private struct SynFlixMark: View {
+private struct SynFlixBrandMark: View {
     let size: CGFloat
 
     var body: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: size * 0.28, style: .continuous)
-                .fill(
-                    LinearGradient(
-                        colors: [
-                            Color(red: 0.55, green: 0.35, blue: 1.0),
-                            Color(red: 0.24, green: 0.50, blue: 1.0)
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-                .overlay {
-                    RoundedRectangle(cornerRadius: size * 0.28, style: .continuous)
-                        .stroke(.white.opacity(0.24), lineWidth: max(0.7, size * 0.011))
+        Group {
+            if let image = UIImage(named: "SynFlixLogo") {
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFit()
+            } else {
+                ZStack {
+                    RoundedRectangle(cornerRadius: size * 0.20, style: .continuous)
+                        .fill(Color(red: 1.0, green: 0.83, blue: 0.0))
+                    Text("S")
+                        .font(.system(size: size * 0.50, weight: .black))
+                        .foregroundStyle(.black)
                 }
-
-            RoundedRectangle(cornerRadius: size * 0.15, style: .continuous)
-                .fill(.white.opacity(0.12))
-                .frame(width: size * 0.60, height: size * 0.60)
-                .rotationEffect(.degrees(45))
-
-            Image(systemName: "play.fill")
-                .font(.system(size: size * 0.35, weight: .black))
-                .foregroundStyle(.white)
-                .offset(x: size * 0.025)
+            }
         }
         .frame(width: size, height: size)
-        .shadow(color: Color(red: 0.43, green: 0.34, blue: 1).opacity(0.26), radius: size * 0.16, y: size * 0.07)
+        .accessibilityHidden(true)
     }
 }
 
@@ -613,7 +581,9 @@ struct SynFlixWebView: UIViewRepresentable {
         configuration.defaultWebpagePreferences.preferredContentMode = .mobile
         configuration.preferences.javaScriptCanOpenWindowsAutomatically = true
 
-        let appBridge = WKUserScript(
+        configuration.userContentController.add(context.coordinator, name: "synflixTheme")
+
+        let runtimeBridge = WKUserScript(
             source: """
             window.__SYNFLIX_IOS__ = true;
             document.documentElement.classList.add('synflix-ios-app');
@@ -622,25 +592,62 @@ struct SynFlixWebView: UIViewRepresentable {
             injectionTime: .atDocumentStart,
             forMainFrameOnly: true
         )
-        configuration.userContentController.addUserScript(appBridge)
+        configuration.userContentController.addUserScript(runtimeBridge)
+
+        let themeBridge = WKUserScript(
+            source: """
+            (() => {
+              const fallback = {
+                synflix:'#ffd400', aqua:'#54e7f1', autumn:'#ff9d42', cherri:'#ff5d8f',
+                evergreen:'#64d98b', rose:'#ff91ad', violet:'#a78bfa', purple:'#8b5cf6',
+                red:'#ff4d55', monochrome:'#f4f4f4', noir:'#c8c8c8', teal:'#35d0ba'
+              };
+
+              const sendTheme = () => {
+                const root = document.documentElement;
+                const id = root.dataset.siteTheme || 'synflix';
+                const surface = document.querySelector('.synflix-site');
+                const computed = surface
+                  ? getComputedStyle(surface).getPropertyValue('--site-accent').trim()
+                  : '';
+                const accent = computed || fallback[id] || fallback.synflix;
+                try {
+                  window.webkit.messageHandlers.synflixTheme.postMessage({ id, accent });
+                } catch (_) {}
+              };
+
+              window.addEventListener('synflix-preferences', sendTheme);
+              new MutationObserver(sendTheme).observe(document.documentElement, {
+                attributes: true,
+                attributeFilter: ['data-site-theme']
+              });
+
+              requestAnimationFrame(sendTheme);
+              setTimeout(sendTheme, 180);
+            })();
+            """,
+            injectionTime: .atDocumentEnd,
+            forMainFrameOnly: true
+        )
+        configuration.userContentController.addUserScript(themeBridge)
 
         let webView = WKWebView(frame: .zero, configuration: configuration)
         webView.navigationDelegate = context.coordinator
         webView.uiDelegate = context.coordinator
         webView.allowsBackForwardNavigationGestures = true
-        webView.allowsLinkPreview = true
+        webView.allowsLinkPreview = false
         webView.isOpaque = false
-        webView.backgroundColor = .clear
-        webView.underPageBackgroundColor = UIColor(red: 0.018, green: 0.022, blue: 0.040, alpha: 1)
-        webView.scrollView.backgroundColor = webView.underPageBackgroundColor
+        webView.backgroundColor = UIColor(red: 0.027, green: 0.027, blue: 0.024, alpha: 1)
+        webView.underPageBackgroundColor = webView.backgroundColor
+        webView.scrollView.backgroundColor = webView.backgroundColor
         webView.scrollView.keyboardDismissMode = .interactive
         webView.scrollView.contentInsetAdjustmentBehavior = .never
         webView.scrollView.decelerationRate = .normal
         webView.scrollView.alwaysBounceVertical = true
-        webView.customUserAgent = "SynFlix-iOS/1.3 Mobile Safari WebKit"
+        webView.customUserAgent = "SynFlix-iOS/1.4 Mobile Safari WebKit"
 
         let refresh = UIRefreshControl()
-        refresh.tintColor = UIColor.white.withAlphaComponent(0.66)
+        refresh.tintColor = UIColor.white.withAlphaComponent(0.55)
         refresh.addTarget(context.coordinator, action: #selector(Coordinator.refresh(_:)), for: .valueChanged)
         webView.scrollView.refreshControl = refresh
 
@@ -664,7 +671,7 @@ struct SynFlixWebView: UIViewRepresentable {
         model.webView = webView
     }
 
-    final class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
+    final class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate, WKScriptMessageHandler {
         private let model: SynFlixBrowserModel
         private let allowedHost = "synscraper-tffk.vercel.app"
 
@@ -675,6 +682,19 @@ struct SynFlixWebView: UIViewRepresentable {
         @objc func refresh(_ sender: UIRefreshControl) {
             UIImpactFeedbackGenerator(style: .light).impactOccurred()
             model.reload()
+        }
+
+        func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
+            guard message.name == "synflixTheme",
+                  let body = message.body as? [String: Any],
+                  let id = body["id"] as? String else {
+                return
+            }
+
+            let accent = body["accent"] as? String
+            DispatchQueue.main.async {
+                self.model.updateTheme(id: id, accent: accent)
+            }
         }
 
         func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
@@ -738,7 +758,13 @@ struct SynFlixWebView: UIViewRepresentable {
             }
 
             if requestURL.host == allowedHost {
-                webView.load(URLRequest(url: requestURL, cachePolicy: .useProtocolCachePolicy, timeoutInterval: 12))
+                webView.load(
+                    URLRequest(
+                        url: requestURL,
+                        cachePolicy: .useProtocolCachePolicy,
+                        timeoutInterval: 12
+                    )
+                )
             } else {
                 UIApplication.shared.open(requestURL)
             }
