@@ -1,5 +1,14 @@
 import SwiftUI
 
+private struct MediaPressStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.985 : 1)
+            .opacity(configuration.isPressed ? 0.92 : 1)
+            .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
+    }
+}
+
 struct ArtworkView: View {
     let url: URL?
     let cornerRadius: CGFloat
@@ -21,7 +30,7 @@ struct ArtworkView: View {
                     .overlay {
                         ProgressView()
                             .controlSize(.small)
-                            .tint(.white.opacity(0.38))
+                            .tint(.white.opacity(0.34))
                     }
             @unknown default:
                 placeholder
@@ -33,7 +42,7 @@ struct ArtworkView: View {
 
     private var placeholder: some View {
         LinearGradient(
-            colors: [Color.white.opacity(0.055), Color.white.opacity(0.018)],
+            colors: [Color.white.opacity(0.050), Color.white.opacity(0.016)],
             startPoint: .topLeading,
             endPoint: .bottomTrailing
         )
@@ -43,7 +52,7 @@ struct ArtworkView: View {
 struct PosterCard: View {
     let item: MediaItem
     var width: CGFloat = 142
-    var showMeta: Bool = true
+    var showMeta: Bool = false
     @EnvironmentObject private var router: AppRouter
 
     var body: some View {
@@ -55,8 +64,9 @@ struct PosterCard: View {
                     .frame(width: width, height: width * 1.50)
                     .overlay {
                         RoundedRectangle(cornerRadius: 8, style: .continuous)
-                            .stroke(.white.opacity(0.055), lineWidth: 0.6)
+                            .stroke(.white.opacity(0.050), lineWidth: 0.55)
                     }
+                    .shadow(color: .black.opacity(0.20), radius: 8, y: 4)
 
                 if showMeta {
                     VStack(alignment: .leading, spacing: 2) {
@@ -77,7 +87,7 @@ struct PosterCard: View {
                 }
             }
         }
-        .buttonStyle(.plain)
+        .buttonStyle(MediaPressStyle())
         .accessibilityLabel(item.displayTitle)
     }
 }
@@ -96,7 +106,7 @@ struct LandscapeCard: View {
                     .frame(width: width, height: width * 0.5625)
                     .overlay {
                         LinearGradient(
-                            colors: [.clear, .black.opacity(0.76)],
+                            colors: [.clear, .black.opacity(0.78)],
                             startPoint: .center,
                             endPoint: .bottom
                         )
@@ -104,8 +114,9 @@ struct LandscapeCard: View {
                     }
                     .overlay {
                         RoundedRectangle(cornerRadius: 9, style: .continuous)
-                            .stroke(.white.opacity(0.055), lineWidth: 0.6)
+                            .stroke(.white.opacity(0.050), lineWidth: 0.55)
                     }
+                    .shadow(color: .black.opacity(0.22), radius: 10, y: 5)
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(item.displayTitle)
@@ -122,7 +133,8 @@ struct LandscapeCard: View {
                 .frame(width: width, alignment: .leading)
             }
         }
-        .buttonStyle(.plain)
+        .buttonStyle(MediaPressStyle())
+        .accessibilityLabel(item.displayTitle)
     }
 }
 
@@ -136,16 +148,16 @@ struct MediaShelf: View {
 
     var body: some View {
         if !items.isEmpty {
-            let edge = edgePadding ?? (horizontalSizeClass == .regular ? 28 : 18)
+            let edge = edgePadding ?? (horizontalSizeClass == .regular ? 34 : 18)
             let width = cardWidth ?? (landscape
-                ? (horizontalSizeClass == .regular ? 300 : 250)
-                : (horizontalSizeClass == .regular ? 166 : 138))
+                ? (horizontalSizeClass == .regular ? 304 : 250)
+                : (horizontalSizeClass == .regular ? 174 : 138))
             let spacing: CGFloat = horizontalSizeClass == .regular ? 14 : 11
 
-            VStack(alignment: .leading, spacing: 10) {
+            VStack(alignment: .leading, spacing: horizontalSizeClass == .regular ? 12 : 10) {
                 Text(title)
-                    .font(.system(size: horizontalSizeClass == .regular ? 20 : 18, weight: .bold))
-                    .tracking(-0.38)
+                    .font(.system(size: horizontalSizeClass == .regular ? 21 : 18, weight: .bold))
+                    .tracking(horizontalSizeClass == .regular ? -0.46 : -0.38)
                     .foregroundStyle(.white)
                     .padding(.horizontal, edge)
 
@@ -155,12 +167,12 @@ struct MediaShelf: View {
                             if landscape {
                                 LandscapeCard(item: item, width: width)
                             } else {
-                                PosterCard(item: item, width: width)
+                                PosterCard(item: item, width: width, showMeta: false)
                             }
                         }
                     }
                     .padding(.horizontal, edge)
-                    .padding(.bottom, 3)
+                    .padding(.bottom, 5)
                 }
             }
         }
@@ -181,7 +193,7 @@ struct GlassIconButton: View {
                 .frame(width: 40, height: 40)
                 .contentShape(Circle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(MediaPressStyle())
         .synflixCircleGlass(tint: tint)
         .accessibilityLabel(label)
     }
@@ -207,7 +219,7 @@ struct AccentActionButton: View {
             .background(accent, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
             .contentShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
         }
-        .buttonStyle(.plain)
+        .buttonStyle(MediaPressStyle())
     }
 }
 
@@ -230,7 +242,7 @@ struct GlassActionButton: View {
             .frame(height: 42)
             .contentShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
         }
-        .buttonStyle(.plain)
+        .buttonStyle(MediaPressStyle())
         .synflixGlass(tint: tint, cornerRadius: 10, interactive: true)
     }
 }

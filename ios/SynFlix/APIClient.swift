@@ -33,7 +33,7 @@ actor SynFlixAPI {
         var request = URLRequest(url: url)
         request.timeoutInterval = timeout
         request.cachePolicy = .returnCacheDataElseLoad
-        request.setValue("SynFlix-iOS-Native/1.6", forHTTPHeaderField: "User-Agent")
+        request.setValue("SynFlix-iOS-Native/1.7", forHTTPHeaderField: "User-Agent")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
 
         let (data, response) = try await URLSession.shared.data(for: request)

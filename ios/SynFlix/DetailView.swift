@@ -4,7 +4,6 @@ struct DetailView: View {
     let item: MediaItem
 
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @EnvironmentObject private var theme: ThemeStore
     @EnvironmentObject private var library: LibraryStore
     @EnvironmentObject private var router: AppRouter
@@ -19,24 +18,49 @@ struct DetailView: View {
 
     var body: some View {
         GeometryReader { geometry in
+            let isPad = UIDevice.current.userInterfaceIdiom == .pad
+            let isLandscape = geometry.size.width > geometry.size.height
+            let edge = isPad ? max(34, min(52, geometry.size.width * 0.036)) : 18
+            let heroHeight: CGFloat = {
+                guard isPad else { return 520 }
+                if isLandscape {
+                    return min(620, max(500, geometry.size.height * 0.70))
+                }
+                return min(600, max(520, geometry.size.height * 0.48))
+            }()
+
             ZStack(alignment: .top) {
                 Color.black.ignoresSafeArea()
 
                 if let details {
                     ScrollView(showsIndicators: false) {
                         VStack(alignment: .leading, spacing: 0) {
-                            detailHero(details, height: horizontalSizeClass == .regular ? 610 : 520)
-                            detailBody(details)
+                            detailHero(
+                                details,
+                                height: heroHeight,
+                                width: geometry.size.width,
+                                edge: edge,
+                                isPad: isPad,
+                                isLandscape: isLandscape
+                            )
+                            detailBody(
+                                details,
+                                edge: edge,
+                                isPad: isPad,
+                                availableWidth: geometry.size.width
+                            )
                         }
                     }
                     .ignoresSafeArea(edges: .top)
                 } else if isLoading {
                     NativeLoadingView(text: "Opening \(item.displayTitle)")
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else if let errorMessage {
                     ErrorPanel(title: "Couldn't open this title", message: errorMessage) {
                         Task { await loadDetails() }
                     }
                     .padding(24)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
 
                 HStack {
@@ -46,7 +70,7 @@ struct DetailView: View {
                     }
                     Spacer()
 
-                    if let details {
+                    if details != nil {
                         Button {
                             library.toggle(item, haptics: theme.hapticsEnabled)
                         } label: {
@@ -58,10 +82,9 @@ struct DetailView: View {
                         .buttonStyle(.plain)
                         .synflixCircleGlass(tint: theme.accent.opacity(library.contains(item) ? 0.12 : 0.025))
                         .accessibilityLabel(library.contains(item) ? "Remove from My List" : "Add to My List")
-                        .id(details.id)
                     }
                 }
-                .padding(.horizontal, horizontalSizeClass == .regular ? 28 : 18)
+                .padding(.horizontal, edge)
                 .padding(.top, geometry.safeAreaInsets.top + 9)
             }
         }
@@ -72,7 +95,14 @@ struct DetailView: View {
         }
     }
 
-    private func detailHero(_ details: MediaDetails, height: CGFloat) -> some View {
+    private func detailHero(
+        _ details: MediaDetails,
+        height: CGFloat,
+        width: CGFloat,
+        edge: CGFloat,
+        isPad: Bool,
+        isLandscape: Bool
+    ) -> some View {
         ZStack(alignment: .bottomLeading) {
             AsyncImage(url: details.backdropURL ?? item.backdropURL ?? details.posterURL) { phase in
                 switch phase {
@@ -80,28 +110,28 @@ struct DetailView: View {
                     image.resizable().scaledToFill()
                 default:
                     LinearGradient(
-                        colors: [theme.accent.opacity(0.15), .black],
+                        colors: [theme.accent.opacity(0.14), .black],
                         startPoint: .topTrailing,
                         endPoint: .bottomLeading
                     )
                 }
             }
-            .frame(height: height)
+            .frame(width: width, height: height)
             .clipped()
 
             LinearGradient(
-                colors: [.black.opacity(0.10), .black.opacity(0.12), .black.opacity(0.86), .black],
+                colors: [.black.opacity(0.08), .black.opacity(0.08), .black.opacity(0.78), .black],
                 startPoint: .top,
                 endPoint: .bottom
             )
 
             LinearGradient(
-                colors: [.black.opacity(0.60), .clear],
+                colors: [.black.opacity(isPad ? 0.78 : 0.60), .black.opacity(0.18), .clear],
                 startPoint: .leading,
                 endPoint: .trailing
             )
 
-            VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: isPad ? 13 : 12) {
                 HStack(spacing: 7) {
                     SynFlixBrandMark(size: 18)
                     Text(item.kind == "tv" ? "SYNFLIX SERIES" : "SYNFLIX MOVIE")
@@ -111,10 +141,11 @@ struct DetailView: View {
                 }
 
                 Text(details.displayTitle)
-                    .font(.system(size: horizontalSizeClass == .regular ? 50 : 37, weight: .heavy))
-                    .tracking(horizontalSizeClass == .regular ? -1.7 : -1.2)
+                    .font(.system(size: isPad ? (isLandscape ? 54 : 48) : 37, weight: .heavy))
+                    .tracking(isPad ? -1.65 : -1.2)
                     .lineLimit(2)
-                    .frame(maxWidth: horizontalSizeClass == .regular ? 700 : 440, alignment: .leading)
+                    .minimumScaleFactor(0.82)
+                    .frame(maxWidth: isPad ? min(720, width * (isLandscape ? 0.52 : 0.66)) : 440, alignment: .leading)
 
                 HStack(spacing: 8) {
                     if !details.year.isEmpty { Text(details.year) }
@@ -133,8 +164,17 @@ struct DetailView: View {
                         Text("\(seasons) \(seasons == 1 ? "Season" : "Seasons")")
                     }
                 }
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(.white.opacity(0.65))
+                .font(.system(size: 12.5, weight: .semibold))
+                .foregroundStyle(.white.opacity(0.66))
+
+                if isPad, let overview = details.overview, !overview.isEmpty {
+                    Text(overview)
+                        .font(.system(size: 14.5))
+                        .foregroundStyle(.white.opacity(0.64))
+                        .lineSpacing(3)
+                        .lineLimit(3)
+                        .frame(maxWidth: min(620, width * (isLandscape ? 0.46 : 0.62)), alignment: .leading)
+                }
 
                 HStack(spacing: 10) {
                     AccentActionButton(title: item.kind == "tv" ? "Play S\(selectedSeason) E1" : "Play", symbol: "play.fill", accent: theme.accent) {
@@ -149,23 +189,30 @@ struct DetailView: View {
                     GlassActionButton(
                         title: library.contains(item) ? "In My List" : "My List",
                         symbol: library.contains(item) ? "checkmark" : "plus",
-                        tint: theme.accent.opacity(0.06)
+                        tint: theme.accent.opacity(0.045)
                     ) {
                         library.toggle(item, haptics: theme.hapticsEnabled)
                     }
                 }
             }
-            .padding(.horizontal, horizontalSizeClass == .regular ? 28 : 18)
-            .padding(.bottom, 26)
+            .padding(.horizontal, edge)
+            .padding(.bottom, isPad ? 34 : 26)
         }
-        .frame(height: height)
+        .frame(width: width, height: height)
         .clipped()
     }
 
     @ViewBuilder
-    private func detailBody(_ details: MediaDetails) -> some View {
-        VStack(alignment: .leading, spacing: 28) {
-            if let overview = details.overview, !overview.isEmpty {
+    private func detailBody(
+        _ details: MediaDetails,
+        edge: CGFloat,
+        isPad: Bool,
+        availableWidth: CGFloat
+    ) -> some View {
+        let contentWidth = isPad ? min(1180, availableWidth - edge * 2) : availableWidth
+
+        VStack(alignment: .leading, spacing: isPad ? 32 : 28) {
+            if let overview = details.overview, !overview.isEmpty, !isPad {
                 VStack(alignment: .leading, spacing: 10) {
                     Text("About")
                         .font(.system(size: 19, weight: .bold))
@@ -174,9 +221,8 @@ struct DetailView: View {
                         .font(.system(size: 14.5))
                         .foregroundStyle(.white.opacity(0.62))
                         .lineSpacing(4)
-                        .frame(maxWidth: 760, alignment: .leading)
                 }
-                .padding(.horizontal, horizontalSizeClass == .regular ? 28 : 18)
+                .padding(.horizontal, edge)
             }
 
             if let genres = details.genres, !genres.isEmpty {
@@ -188,32 +234,32 @@ struct DetailView: View {
                                 .foregroundStyle(.white.opacity(0.72))
                                 .padding(.horizontal, 13)
                                 .frame(height: 34)
-                                .synflixGlass(tint: theme.accent.opacity(0.025), cornerRadius: 17)
+                                .synflixGlass(tint: theme.accent.opacity(0.020), cornerRadius: 17)
                         }
                     }
-                    .padding(.horizontal, horizontalSizeClass == .regular ? 28 : 18)
+                    .padding(.horizontal, edge)
                 }
             }
 
             if item.kind == "tv" {
-                episodesSection(details)
+                episodesSection(details, edge: edge, isPad: isPad)
             }
 
             if let cast = details.credits?.cast, !cast.isEmpty {
                 VStack(alignment: .leading, spacing: 13) {
                     Text("Cast")
-                        .font(.system(size: 19, weight: .bold))
+                        .font(.system(size: isPad ? 21 : 19, weight: .bold))
                         .tracking(-0.4)
-                        .padding(.horizontal, horizontalSizeClass == .regular ? 28 : 18)
+                        .padding(.horizontal, edge)
 
                     ScrollView(.horizontal, showsIndicators: false) {
-                        LazyHStack(spacing: 14) {
-                            ForEach(Array(cast.prefix(16))) { person in
+                        LazyHStack(spacing: isPad ? 16 : 14) {
+                            ForEach(Array(cast.prefix(18))) { person in
                                 VStack(alignment: .leading, spacing: 7) {
-                                    ArtworkView(url: person.profileURL, cornerRadius: 18)
-                                        .frame(width: 96, height: 118)
+                                    ArtworkView(url: person.profileURL, cornerRadius: isPad ? 16 : 18)
+                                        .frame(width: isPad ? 108 : 96, height: isPad ? 136 : 118)
                                     Text(person.name)
-                                        .font(.system(size: 11.5, weight: .semibold))
+                                        .font(.system(size: isPad ? 12 : 11.5, weight: .semibold))
                                         .lineLimit(1)
                                     if let character = person.character, !character.isEmpty {
                                         Text(character)
@@ -222,31 +268,38 @@ struct DetailView: View {
                                             .lineLimit(1)
                                     }
                                 }
-                                .frame(width: 96, alignment: .leading)
+                                .frame(width: isPad ? 108 : 96, alignment: .leading)
                             }
                         }
-                        .padding(.horizontal, horizontalSizeClass == .regular ? 28 : 18)
+                        .padding(.horizontal, edge)
                     }
                 }
             }
 
             let related = details.recommendations?.results ?? details.similar?.results ?? []
             if !related.isEmpty {
-                MediaShelf(title: "More Like This", items: Array(related.prefix(20)))
+                MediaShelf(
+                    title: "More Like This",
+                    items: Array(related.prefix(20)),
+                    cardWidth: isPad ? 172 : 138,
+                    edgePadding: edge
+                )
             }
 
             Spacer(minLength: 50)
         }
-        .padding(.top, 8)
-        .padding(.bottom, 30)
+        .frame(width: contentWidth, alignment: .leading)
+        .frame(maxWidth: .infinity)
+        .padding(.top, isPad ? 14 : 8)
+        .padding(.bottom, 36)
         .background(Color.black)
     }
 
-    private func episodesSection(_ details: MediaDetails) -> some View {
+    private func episodesSection(_ details: MediaDetails, edge: CGFloat, isPad: Bool) -> some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack {
                 Text("Episodes")
-                    .font(.system(size: 19, weight: .bold))
+                    .font(.system(size: isPad ? 21 : 19, weight: .bold))
                     .tracking(-0.4)
 
                 Spacer()
@@ -271,10 +324,10 @@ struct DetailView: View {
                         .padding(.horizontal, 13)
                         .frame(height: 34)
                     }
-                    .synflixGlass(tint: theme.accent.opacity(0.035), cornerRadius: 17, interactive: true)
+                    .synflixGlass(tint: theme.accent.opacity(0.028), cornerRadius: 17, interactive: true)
                 }
             }
-            .padding(.horizontal, horizontalSizeClass == .regular ? 28 : 18)
+            .padding(.horizontal, edge)
 
             if seasonLoading {
                 HStack {
@@ -285,33 +338,33 @@ struct DetailView: View {
                 .padding(.vertical, 18)
             } else if let episodes = seasonDetails?.episodes, !episodes.isEmpty {
                 ScrollView(.horizontal, showsIndicators: false) {
-                    LazyHStack(spacing: 12) {
+                    LazyHStack(spacing: isPad ? 14 : 12) {
                         ForEach(episodes) { episode in
                             Button {
                                 playerRequest = PlayerRequest(media: item, season: episode.season_number, episode: episode.episode_number)
                             } label: {
                                 VStack(alignment: .leading, spacing: 8) {
                                     ZStack(alignment: .bottomLeading) {
-                                        ArtworkView(url: episode.stillURL, cornerRadius: 12)
-                                            .frame(width: horizontalSizeClass == .regular ? 286 : 240, height: horizontalSizeClass == .regular ? 161 : 135)
+                                        ArtworkView(url: episode.stillURL, cornerRadius: 10)
+                                            .frame(width: isPad ? 318 : 240, height: isPad ? 179 : 135)
                                         LinearGradient(colors: [.clear, .black.opacity(0.66)], startPoint: .center, endPoint: .bottom)
-                                            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                                            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                                         Text("E\(episode.episode_number)")
                                             .font(.system(size: 10, weight: .black))
                                             .foregroundStyle(theme.accent)
                                             .padding(10)
                                     }
                                     Text(episode.name)
-                                        .font(.system(size: 13, weight: .semibold))
+                                        .font(.system(size: isPad ? 13.5 : 13, weight: .semibold))
                                         .foregroundStyle(.white.opacity(0.90))
                                         .lineLimit(1)
-                                        .frame(width: horizontalSizeClass == .regular ? 286 : 240, alignment: .leading)
+                                        .frame(width: isPad ? 318 : 240, alignment: .leading)
                                 }
                             }
                             .buttonStyle(.plain)
                         }
                     }
-                    .padding(.horizontal, horizontalSizeClass == .regular ? 28 : 18)
+                    .padding(.horizontal, edge)
                 }
             }
         }

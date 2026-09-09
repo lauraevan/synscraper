@@ -12,31 +12,42 @@ struct HomeView: View {
     var body: some View {
         GeometryReader { geometry in
             let width = geometry.size.width
+            let height = geometry.size.height
             let isPad = UIDevice.current.userInterfaceIdiom == .pad
-            let edge = isPad ? max(28, min(44, width * 0.032)) : 18
+            let isLandscape = width > height
+            let edge = isPad ? max(34, min(52, width * 0.036)) : 18
+            let posterCount: CGFloat = isPad ? (isLandscape ? 7 : 5) : 2.65
+            let posterSpacing: CGFloat = isPad ? 14 : 11
             let posterWidth = isPad
-                ? min(170, max(138, (width - edge * 2 - 70) / 6))
+                ? min(184, max(146, (width - edge * 2 - posterSpacing * (posterCount - 1)) / posterCount))
                 : 138
+            let landscapeCount: CGFloat = isPad ? (isLandscape ? 4 : 3) : 1.5
+            let landscapeSpacing: CGFloat = isPad ? 16 : 11
             let landscapeWidth = isPad
-                ? min(300, max(236, (width - edge * 2 - 48) / 4))
+                ? min(318, max(242, (width - edge * 2 - landscapeSpacing * (landscapeCount - 1)) / landscapeCount))
                 : 250
-            let heroHeight = isPad
-                ? min(560, max(440, width * 0.47))
-                : 565
+            let heroHeight: CGFloat = {
+                guard isPad else { return 565 }
+                if isLandscape {
+                    return min(590, max(480, height * 0.69))
+                }
+                return min(575, max(500, height * 0.48))
+            }()
 
             ZStack {
                 Color.black.ignoresSafeArea()
 
                 if let feed {
                     ScrollView(showsIndicators: false) {
-                        LazyVStack(spacing: isPad ? 24 : 20) {
+                        LazyVStack(spacing: isPad ? 28 : 20) {
                             if let hero = heroItem(from: feed) {
                                 heroView(
                                     hero,
                                     width: width,
                                     height: heroHeight,
                                     edge: edge,
-                                    isPad: isPad
+                                    isPad: isPad,
+                                    isLandscape: isLandscape
                                 )
                             }
 
@@ -48,12 +59,12 @@ struct HomeView: View {
                             MediaShelf(title: "Coming Soon", items: feed.upcoming ?? [], cardWidth: posterWidth, edgePadding: edge)
                             MediaShelf(title: "Top Rated Series", items: feed.top_rated_tv ?? [], cardWidth: posterWidth, edgePadding: edge)
 
-                            Spacer(minLength: isPad ? 54 : 96)
+                            Spacer(minLength: isPad ? 48 : 96)
                         }
                     }
                     .refreshable { await load(force: true) }
                 } else if isLoading {
-                    NativeLoadingView(text: "Loading SynFlix")
+                    homeSkeleton(width: width, edge: edge, isPad: isPad)
                 } else if let errorMessage {
                     ErrorPanel(title: "Couldn't load SynFlix", message: errorMessage) {
                         Task { await load(force: true) }
@@ -71,7 +82,8 @@ struct HomeView: View {
         width: CGFloat,
         height: CGFloat,
         edge: CGFloat,
-        isPad: Bool
+        isPad: Bool,
+        isLandscape: Bool
     ) -> some View {
         ZStack(alignment: .bottomLeading) {
             AsyncImage(url: item.backdropURL ?? item.posterURL) { phase in
@@ -82,7 +94,7 @@ struct HomeView: View {
                         .scaledToFill()
                 default:
                     LinearGradient(
-                        colors: [theme.accent.opacity(0.13), Color.black],
+                        colors: [theme.accent.opacity(0.12), Color.black],
                         startPoint: .topTrailing,
                         endPoint: .bottomLeading
                     )
@@ -93,10 +105,10 @@ struct HomeView: View {
 
             LinearGradient(
                 colors: [
-                    .black.opacity(0.30),
-                    .black.opacity(0.04),
-                    .black.opacity(0.24),
-                    .black.opacity(0.82),
+                    .black.opacity(0.16),
+                    .black.opacity(0.02),
+                    .black.opacity(0.18),
+                    .black.opacity(0.78),
                     .black
                 ],
                 startPoint: .top,
@@ -104,26 +116,27 @@ struct HomeView: View {
             )
 
             LinearGradient(
-                colors: [.black.opacity(isPad ? 0.76 : 0.68), .clear],
+                colors: [.black.opacity(isPad ? 0.82 : 0.70), .black.opacity(0.15), .clear],
                 startPoint: .leading,
                 endPoint: .trailing
             )
 
             VStack(alignment: .leading, spacing: isPad ? 12 : 11) {
                 HStack(spacing: 7) {
-                    SynFlixBrandMark(size: 17)
+                    SynFlixBrandMark(size: isPad ? 18 : 17)
                     Text("FEATURED")
                         .font(.system(size: 9.5, weight: .bold))
                         .tracking(1.35)
-                        .foregroundStyle(.white.opacity(0.58))
+                        .foregroundStyle(.white.opacity(0.56))
                 }
 
                 Text(item.displayTitle)
-                    .font(.system(size: isPad ? min(48, max(40, width * 0.042)) : 36, weight: .heavy))
-                    .tracking(isPad ? -1.45 : -1.1)
+                    .font(.system(size: isPad ? (isLandscape ? 52 : 46) : 36, weight: .heavy))
+                    .tracking(isPad ? -1.5 : -1.1)
                     .foregroundStyle(.white)
                     .lineLimit(2)
-                    .frame(maxWidth: isPad ? min(620, width * 0.50) : width * 0.78, alignment: .leading)
+                    .minimumScaleFactor(0.82)
+                    .frame(maxWidth: isPad ? min(690, width * (isLandscape ? 0.50 : 0.64)) : width * 0.80, alignment: .leading)
 
                 HStack(spacing: 8) {
                     if !item.year.isEmpty { Text(item.year) }
@@ -137,16 +150,16 @@ struct HomeView: View {
                     Text("•")
                     Text(item.kind == "tv" ? "Series" : "Movie")
                 }
-                .font(.system(size: 12, weight: .semibold))
+                .font(.system(size: isPad ? 12.5 : 12, weight: .semibold))
                 .foregroundStyle(.white.opacity(0.66))
 
                 if let overview = item.overview, !overview.isEmpty {
                     Text(overview)
-                        .font(.system(size: isPad ? 14 : 13.5))
-                        .foregroundStyle(.white.opacity(0.66))
-                        .lineSpacing(2.5)
+                        .font(.system(size: isPad ? 14.5 : 13.5))
+                        .foregroundStyle(.white.opacity(0.67))
+                        .lineSpacing(2.7)
                         .lineLimit(isPad ? 3 : 2)
-                        .frame(maxWidth: isPad ? min(570, width * 0.47) : width * 0.78, alignment: .leading)
+                        .frame(maxWidth: isPad ? min(620, width * (isLandscape ? 0.46 : 0.62)) : width * 0.80, alignment: .leading)
                 }
 
                 HStack(spacing: 9) {
@@ -155,7 +168,7 @@ struct HomeView: View {
                         router.play(item)
                     }
 
-                    GlassActionButton(title: "More Info", symbol: "info.circle", tint: theme.accent.opacity(0.035)) {
+                    GlassActionButton(title: "More Info", symbol: "info.circle", tint: theme.accent.opacity(0.026)) {
                         theme.impact()
                         router.open(item)
                     }
@@ -169,15 +182,61 @@ struct HomeView: View {
                             .frame(width: 42, height: 42)
                     }
                     .buttonStyle(.plain)
-                    .synflixCircleGlass(tint: theme.accent.opacity(0.035))
+                    .synflixCircleGlass(tint: theme.accent.opacity(0.028))
                     .accessibilityLabel(library.contains(item) ? "Remove from My List" : "Add to My List")
                 }
             }
             .padding(.horizontal, edge)
-            .padding(.bottom, isPad ? 34 : 28)
+            .padding(.bottom, isPad ? 38 : 28)
         }
         .frame(width: width, height: height)
         .clipped()
+    }
+
+    private func homeSkeleton(width: CGFloat, edge: CGFloat, isPad: Bool) -> some View {
+        ScrollView(showsIndicators: false) {
+            VStack(alignment: .leading, spacing: isPad ? 30 : 24) {
+                LinearGradient(
+                    colors: [theme.accent.opacity(0.08), Color.white.opacity(0.018), .black],
+                    startPoint: .topTrailing,
+                    endPoint: .bottomLeading
+                )
+                .frame(height: isPad ? 520 : 500)
+                .overlay(alignment: .bottomLeading) {
+                    VStack(alignment: .leading, spacing: 12) {
+                        RoundedRectangle(cornerRadius: 5).fill(.white.opacity(0.10)).frame(width: isPad ? 340 : 220, height: 28)
+                        RoundedRectangle(cornerRadius: 4).fill(.white.opacity(0.07)).frame(width: isPad ? 420 : 280, height: 14)
+                        HStack(spacing: 10) {
+                            RoundedRectangle(cornerRadius: 9).fill(theme.accent.opacity(0.55)).frame(width: 96, height: 42)
+                            RoundedRectangle(cornerRadius: 9).fill(.white.opacity(0.08)).frame(width: 120, height: 42)
+                        }
+                    }
+                    .padding(.horizontal, edge)
+                    .padding(.bottom, 40)
+                }
+
+                ForEach(0..<3, id: \.self) { _ in
+                    VStack(alignment: .leading, spacing: 12) {
+                        RoundedRectangle(cornerRadius: 4)
+                            .fill(.white.opacity(0.08))
+                            .frame(width: 150, height: 18)
+                            .padding(.horizontal, edge)
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 13) {
+                                ForEach(0..<7, id: \.self) { _ in
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .fill(.white.opacity(0.035))
+                                        .frame(width: isPad ? 166 : 138, height: isPad ? 249 : 207)
+                                }
+                            }
+                            .padding(.horizontal, edge)
+                        }
+                    }
+                }
+            }
+        }
+        .redacted(reason: .placeholder)
+        .allowsHitTesting(false)
     }
 
     private func heroItem(from feed: HomeFeed) -> MediaItem? {
