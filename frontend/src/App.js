@@ -4,6 +4,7 @@ import "@/theme-system.css";
 import "@/light-mode.css";
 import "@/synflix-polish.css";
 import "@/mobile-app.css";
+import "@/web-premium.css";
 import "@/ios-native.css";
 import "@/desktop-app.css";
 import "@/desktop-v2-polish.css";
@@ -11,10 +12,9 @@ import "@/desktop-reference-exact.css";
 import "@/desktop-tv-reference.css";
 import "@/desktop-product.css";
 import { useEffect } from "react";
-import { BrowserRouter, Routes, Route, useLocation, Link } from "react-router-dom";
-import { Navbar } from "@/components/Navbar";
-import { MobileDock } from "@/components/MobileDock";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { DesktopShell } from "@/components/DesktopShell";
+import { WebClientShell } from "@/components/WebClientShell";
 import { Toaster } from "@/components/ui/sonner";
 import Home from "@/pages/Home";
 import Browse from "@/pages/Browse";
@@ -57,34 +57,6 @@ const iosRuntime = () => {
   const params = new URLSearchParams(window.location.search);
   return Boolean(window.__SYNFLIX_IOS__ || params.get("iosApp") === "1");
 };
-
-function Footer() {
-  return (
-    <footer className="border-t border-[#ffd400]/10 bg-[#070707] px-5 py-10 md:px-8">
-      <div className="mx-auto flex max-w-[1500px] flex-col gap-7 md:flex-row md:items-end md:justify-between">
-        <div>
-          <Link to="/" className="inline-flex items-center gap-2.5 text-white">
-            <img src="/synflix-logo.webp" alt="SynFlix" className="synflix-brand-logo h-9 w-9" />
-            <span className="synflix-brand-text text-[15px] font-semibold tracking-[-0.02em]">SynFlix</span>
-          </Link>
-          <p className="mt-3 max-w-md text-sm leading-6 text-white/34">Discover, preview, save, and watch from your available sources in one clean place.</p>
-        </div>
-        <div className="flex flex-wrap gap-x-6 gap-y-3 text-sm text-white/38">
-          <Link to="/browse/movie" className="transition hover:text-[#ffd400]">Movies</Link>
-          <Link to="/browse/tv" className="transition hover:text-[#ffd400]">TV</Link>
-          <Link to="/roulette" className="transition hover:text-[#ffd400]">Roulette</Link>
-          <Link to="/my-list" className="transition hover:text-[#ffd400]">My List</Link>
-          <Link to="/settings" className="transition hover:text-[#ffd400]">Settings</Link>
-          <Link to="/synplayer-api" className="transition hover:text-[#ffd400]">API</Link>
-          <Link to="/privacy" className="transition hover:text-[#ffd400]">Privacy</Link>
-          <Link to="/terms" className="transition hover:text-[#ffd400]">Terms</Link>
-          <Link to="/demo" className="transition hover:text-[#ffd400]">Demo</Link>
-          <Link to="/docs" className="transition hover:text-[#ffd400]">Docs</Link>
-        </div>
-      </div>
-    </footer>
-  );
-}
 
 function AppRoutes() {
   return (
@@ -135,17 +107,19 @@ function Shell() {
   const isPlayerSurface = isWatch || isEmbed;
   const isDesktopApp = desktopRuntime() && !isEmbed;
   const isIOSApp = iosRuntime() && !isEmbed;
+  const isWebClient = !isEmbed && !isDesktopApp && !isIOSApp;
 
   useEffect(() => {
     document.title = isPlayerSurface ? "SynPlayer · SynFlix" : "SynFlix";
     document.documentElement.dataset.synflixDesktop = isDesktopApp ? "true" : "false";
     document.documentElement.dataset.synflixIos = isIOSApp ? "true" : "false";
+    document.documentElement.dataset.synflixWebClient = isWebClient ? "true" : "false";
 
     const syncBrowserChrome = () => {
       const meta = document.querySelector('meta[name="theme-color"]');
       if (meta) {
         const light = document.documentElement.dataset.siteMode === "light";
-        meta.setAttribute("content", isPlayerSurface || isDesktopApp || isIOSApp ? "#080a14" : light ? "#f5f3ed" : "#070707");
+        meta.setAttribute("content", isPlayerSurface || isDesktopApp || isIOSApp ? "#080a14" : light ? "#f5f3ed" : "#050505");
       }
     };
     syncBrowserChrome();
@@ -160,7 +134,7 @@ function Shell() {
     icon.setAttribute("href", "/synflix-logo.webp");
 
     return () => window.removeEventListener("synflix-preferences", syncBrowserChrome);
-  }, [isPlayerSurface, isDesktopApp, isIOSApp, location.pathname]);
+  }, [isPlayerSurface, isDesktopApp, isIOSApp, isWebClient, location.pathname]);
 
   if (isEmbed) return <AppRoutes />;
 
@@ -181,19 +155,18 @@ function Shell() {
     );
   }
 
+  if (isWatch) return <AppRoutes />;
+
   return (
-    <div className={isPlayerSurface ? "" : "synflix-site"}>
-      {!isPlayerSurface && <Navbar />}
+    <WebClientShell>
       <AppRoutes />
-      {!isPlayerSurface && <MobileDock />}
-      {!isPlayerSurface && <Footer />}
-    </div>
+    </WebClientShell>
   );
 }
 
 export default function App() {
   return (
-    <div className="App min-h-screen bg-[#070707] text-white">
+    <div className="App min-h-screen bg-[#050505] text-white">
       <BrowserRouter>
         <Shell />
       </BrowserRouter>
