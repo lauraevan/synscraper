@@ -55,6 +55,15 @@ struct HomeView: View {
                                 MediaShelf(title: "Popular Movies", items: feed.popular_movies ?? [], landscape: true, cardWidth: landscapeWidth, edgePadding: edge)
                                 MediaShelf(title: "Now Playing", items: feed.now_playing ?? [], cardWidth: posterWidth, edgePadding: edge)
                                 MediaShelf(title: "Popular Series", items: feed.popular_tv ?? [], cardWidth: posterWidth, edgePadding: edge)
+
+                                AutoCarouselShelf(
+                                    title: "Spotlight",
+                                    items: Array((feed.top_rated_movies ?? []).prefix(9)),
+                                    edgePadding: edge,
+                                    isPad: isPad,
+                                    isLandscape: isLandscape
+                                )
+
                                 MediaShelf(title: "Top Rated Movies", items: feed.top_rated_movies ?? [], landscape: true, cardWidth: landscapeWidth, edgePadding: edge)
                                 MediaShelf(title: "Coming Soon", items: feed.upcoming ?? [], cardWidth: posterWidth, edgePadding: edge)
                                 MediaShelf(title: "Top Rated Series", items: feed.top_rated_tv ?? [], cardWidth: posterWidth, edgePadding: edge)
@@ -261,6 +270,159 @@ struct HomeView: View {
             await MainActor.run {
                 errorMessage = error.localizedDescription
                 isLoading = false
+            }
+        }
+    }
+}
+
+private struct AutoCarouselShelf: View {
+    let title: String
+    let items: [MediaItem]
+    let edgePadding: CGFloat
+    let isPad: Bool
+    let isLandscape: Bool
+
+    @EnvironmentObject private var theme: ThemeStore
+    @EnvironmentObject private var router: AppRouter
+    @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.accessibilityReduceMotion) private var systemReduceMotion
+    @State private var selectedIndex = 0
+
+    private var featured: [MediaItem] {
+        let withBackdrops = items.filter { $0.backdrop_path != nil }
+        return Array((withBackdrops.isEmpty ? items : withBackdrops).prefix(9))
+    }
+
+    private var carouselHeight: CGFloat {
+        if isPad {
+            return isLandscape ? 285 : 330
+        }
+        return 226
+    }
+
+    var body: some View {
+        if !featured.isEmpty {
+            VStack(alignment: .leading, spacing: 11) {
+                HStack(alignment: .center) {
+                    Text(title)
+                        .font(.system(size: isPad ? 20 : 18, weight: .bold))
+                        .tracking(isPad ? -0.48 : -0.38)
+                        .foregroundStyle(.white)
+
+                    Spacer()
+
+                    if featured.count > 1 {
+                        HStack(spacing: 5) {
+                            ForEach(featured.indices, id: \.self) { index in
+                                Capsule()
+                                    .fill(index == selectedIndex ? theme.accent : Color.white.opacity(0.18))
+                                    .frame(width: index == selectedIndex ? 18 : 6, height: 3)
+                                    .animation(theme.reducedMotion ? nil : .easeOut(duration: 0.25), value: selectedIndex)
+                            }
+                        }
+                    }
+                }
+                .padding(.horizontal, edgePadding)
+
+                TabView(selection: $selectedIndex) {
+                    ForEach(featured.indices, id: \.self) { index in
+                        let item = featured[index]
+                        Button {
+                            theme.impact()
+                            router.open(item)
+                        } label: {
+                            ZStack(alignment: .bottomLeading) {
+                                ArtworkView(url: item.backdropURL ?? item.posterURL, cornerRadius: 14)
+                                    .frame(maxWidth: .infinity)
+                                    .frame(height: carouselHeight)
+
+                                LinearGradient(
+                                    colors: [.clear, .black.opacity(0.10), .black.opacity(0.82)],
+                                    startPoint: .top,
+                                    endPoint: .bottom
+                                )
+                                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+
+                                HStack(alignment: .bottom, spacing: 18) {
+                                    VStack(alignment: .leading, spacing: 6) {
+                                        Text("FEATURED")
+                                            .font(.system(size: 9.5, weight: .black))
+                                            .tracking(1.6)
+                                            .foregroundStyle(theme.accent)
+
+                                        Text(item.displayTitle)
+                                            .font(.system(size: isPad ? 26 : 20, weight: .bold))
+                                            .tracking(isPad ? -0.7 : -0.45)
+                                            .foregroundStyle(.white)
+                                            .lineLimit(1)
+
+                                        HStack(spacing: 6) {
+                                            if !item.year.isEmpty { Text(item.year) }
+                                            if !item.year.isEmpty { Text("•") }
+                                            Text(item.kind == "tv" ? "Series" : "Movie")
+                                            if let vote = item.vote_average, vote > 0 {
+                                                Text("•")
+                                                Image(systemName: "star.fill")
+                                                    .font(.system(size: 8.5, weight: .bold))
+                                                    .foregroundStyle(theme.accent)
+                                                Text(String(format: "%.1f", vote))
+                                            }
+                                        }
+                                        .font(.system(size: 11.5, weight: .semibold))
+                                        .foregroundStyle(.white.opacity(0.60))
+                                    }
+
+                                    Spacer(minLength: 10)
+
+                                    Image(systemName: "play.fill")
+                                        .font(.system(size: 16, weight: .bold))
+                                        .foregroundStyle(.black)
+                                        .frame(width: 42, height: 42)
+                                        .background(theme.accent, in: Circle())
+                                        .shadow(color: .black.opacity(0.25), radius: 10, y: 5)
+                                }
+                                .padding(isPad ? 20 : 15)
+                            }
+                            .overlay {
+                                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                    .stroke(.white.opacity(0.055), lineWidth: 0.7)
+                            }
+                            .padding(.horizontal, edgePadding)
+                        }
+                        .buttonStyle(.plain)
+                        .tag(index)
+                        .accessibilityLabel("\(item.displayTitle), featured title")
+                    }
+                }
+                .frame(height: carouselHeight)
+                .tabViewStyle(.page(indexDisplayMode: .never))
+                .onChange(of: featured.count) { count in
+                    if selectedIndex >= count { selectedIndex = 0 }
+                }
+            }
+            .task(id: featured.count) {
+                guard featured.count > 1 else { return }
+
+                while !Task.isCancelled {
+                    do {
+                        try await Task.sleep(nanoseconds: 4_750_000_000)
+                    } catch {
+                        return
+                    }
+
+                    guard scenePhase == .active,
+                          !systemReduceMotion,
+                          !theme.reducedMotion,
+                          !Task.isCancelled else {
+                        continue
+                    }
+
+                    await MainActor.run {
+                        withAnimation(.easeInOut(duration: 0.58)) {
+                            selectedIndex = (selectedIndex + 1) % featured.count
+                        }
+                    }
+                }
             }
         }
     }
