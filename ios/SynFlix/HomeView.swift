@@ -13,27 +13,27 @@ struct HomeView: View {
         GeometryReader { geometry in
             let width = geometry.size.width
             let height = geometry.size.height
-            let isPad = UIDevice.current.userInterfaceIdiom == .pad || width >= 700
+            let isWide = width >= 700
             let isLandscape = width > height
-            let edge = isPad ? max(28, min(46, width * 0.034)) : 18
-            let posterSpacing: CGFloat = isPad ? 13 : 10
-            let visiblePosters: CGFloat = isPad ? (isLandscape ? 7.0 : 5.2) : 2.72
-            let posterWidth = isPad
-                ? min(176, max(142, (width - edge * 2 - posterSpacing * (visiblePosters - 1)) / visiblePosters))
+            let edge = isWide ? max(24, min(42, width * 0.032)) : 18
+            let posterSpacing: CGFloat = isWide ? 12 : 10
+            let visiblePosters: CGFloat = isWide ? (isLandscape ? 6.2 : 4.7) : 2.72
+            let posterWidth = isWide
+                ? min(174, max(136, (width - edge * 2 - posterSpacing * (visiblePosters - 1)) / visiblePosters))
                 : 136
-            let landscapeSpacing: CGFloat = isPad ? 14 : 10
-            let visibleLandscape: CGFloat = isPad ? (isLandscape ? 4.0 : 2.8) : 1.48
-            let landscapeWidth = isPad
-                ? min(314, max(232, (width - edge * 2 - landscapeSpacing * (visibleLandscape - 1)) / visibleLandscape))
+            let landscapeSpacing: CGFloat = isWide ? 13 : 10
+            let visibleLandscape: CGFloat = isWide ? (isLandscape ? 3.65 : 2.55) : 1.48
+            let landscapeWidth = isWide
+                ? min(306, max(224, (width - edge * 2 - landscapeSpacing * (visibleLandscape - 1)) / visibleLandscape))
                 : 248
             let heroHeight: CGFloat = {
-                if !isPad { return min(570, max(500, height * 0.62)) }
-                if isLandscape { return min(520, max(420, height * 0.53)) }
-                return min(520, max(450, height * 0.39))
+                if !isWide { return min(555, max(480, height * 0.60)) }
+                if isLandscape { return min(455, max(360, height * 0.46)) }
+                return min(485, max(405, height * 0.38))
             }()
 
             ZStack {
-                Color(red: 0.018, green: 0.018, blue: 0.018)
+                Color(red: 0.012, green: 0.012, blue: 0.012)
                     .ignoresSafeArea()
 
                 if let feed {
@@ -45,37 +45,27 @@ struct HomeView: View {
                                     width: width,
                                     height: heroHeight,
                                     edge: edge,
-                                    isPad: isPad,
+                                    isWide: isWide,
                                     isLandscape: isLandscape
                                 )
                             }
 
-                            VStack(spacing: isPad ? 25 : 21) {
+                            VStack(spacing: isWide ? 22 : 19) {
                                 MediaShelf(title: "Trending Now", items: feed.trending ?? [], cardWidth: posterWidth, edgePadding: edge)
                                 MediaShelf(title: "Popular Movies", items: feed.popular_movies ?? [], landscape: true, cardWidth: landscapeWidth, edgePadding: edge)
                                 MediaShelf(title: "Now Playing", items: feed.now_playing ?? [], cardWidth: posterWidth, edgePadding: edge)
                                 MediaShelf(title: "Popular Series", items: feed.popular_tv ?? [], cardWidth: posterWidth, edgePadding: edge)
-
-                                AutoCarouselShelf(
-                                    title: "Spotlight",
-                                    items: Array((feed.top_rated_movies ?? []).prefix(9)),
-                                    edgePadding: edge,
-                                    isPad: isPad,
-                                    isLandscape: isLandscape
-                                )
-
                                 MediaShelf(title: "Top Rated Movies", items: feed.top_rated_movies ?? [], landscape: true, cardWidth: landscapeWidth, edgePadding: edge)
                                 MediaShelf(title: "Coming Soon", items: feed.upcoming ?? [], cardWidth: posterWidth, edgePadding: edge)
                                 MediaShelf(title: "Top Rated Series", items: feed.top_rated_tv ?? [], cardWidth: posterWidth, edgePadding: edge)
-
-                                Spacer(minLength: isPad ? 110 : 104)
+                                Spacer(minLength: isWide ? 36 : 84)
                             }
-                            .padding(.top, isPad ? 8 : 4)
+                            .padding(.top, isWide ? 4 : 2)
                         }
                     }
                     .refreshable { await load(force: true) }
                 } else if isLoading {
-                    homeSkeleton(width: width, edge: edge, isPad: isPad, heroHeight: heroHeight)
+                    homeSkeleton(width: width, edge: edge, isWide: isWide, heroHeight: heroHeight)
                 } else if let errorMessage {
                     ErrorPanel(title: "Couldn't load SynFlix", message: errorMessage) {
                         Task { await load(force: true) }
@@ -93,7 +83,7 @@ struct HomeView: View {
         width: CGFloat,
         height: CGFloat,
         edge: CGFloat,
-        isPad: Bool,
+        isWide: Bool,
         isLandscape: Bool
     ) -> some View {
         ZStack(alignment: .bottomLeading) {
@@ -105,7 +95,7 @@ struct HomeView: View {
                         .scaledToFill()
                 default:
                     LinearGradient(
-                        colors: [theme.accent.opacity(0.10), Color(red: 0.03, green: 0.03, blue: 0.03)],
+                        colors: [theme.accent.opacity(0.07), Color(red: 0.025, green: 0.025, blue: 0.025)],
                         startPoint: .topTrailing,
                         endPoint: .bottomLeading
                     )
@@ -116,11 +106,11 @@ struct HomeView: View {
 
             LinearGradient(
                 stops: [
-                    .init(color: .black.opacity(0.56), location: 0.0),
-                    .init(color: .clear, location: 0.23),
-                    .init(color: .clear, location: 0.50),
-                    .init(color: .black.opacity(0.42), location: 0.73),
-                    .init(color: Color(red: 0.018, green: 0.018, blue: 0.018), location: 1.0)
+                    .init(color: .black.opacity(0.52), location: 0.0),
+                    .init(color: .clear, location: 0.24),
+                    .init(color: .clear, location: 0.52),
+                    .init(color: .black.opacity(0.46), location: 0.76),
+                    .init(color: Color(red: 0.012, green: 0.012, blue: 0.012), location: 1.0)
                 ],
                 startPoint: .top,
                 endPoint: .bottom
@@ -128,56 +118,54 @@ struct HomeView: View {
 
             LinearGradient(
                 colors: [
-                    .black.opacity(isPad ? 0.74 : 0.65),
-                    .black.opacity(isPad ? 0.30 : 0.22),
+                    .black.opacity(isWide ? 0.72 : 0.64),
+                    .black.opacity(isWide ? 0.25 : 0.20),
                     .clear
                 ],
                 startPoint: .leading,
                 endPoint: .trailing
             )
 
-            VStack(alignment: .leading, spacing: isPad ? 10 : 9) {
+            VStack(alignment: .leading, spacing: isWide ? 9 : 8) {
                 HStack(spacing: 7) {
-                    if !item.year.isEmpty {
-                        Text(item.year)
-                    }
+                    if !item.year.isEmpty { Text(item.year) }
                     if !item.year.isEmpty { Text("•") }
                     Text(item.kind == "tv" ? "Series" : "Movie")
                     if let vote = item.vote_average, vote > 0 {
                         Text("•")
                         Image(systemName: "star.fill")
-                            .font(.system(size: 9, weight: .bold))
+                            .font(.system(size: 8.5, weight: .bold))
                             .foregroundStyle(theme.accent)
                         Text(String(format: "%.1f", vote))
                     }
                 }
-                .font(.system(size: isPad ? 12.5 : 11.5, weight: .semibold))
-                .foregroundStyle(.white.opacity(0.69))
+                .font(.system(size: isWide ? 12 : 11.5, weight: .semibold))
+                .foregroundStyle(.white.opacity(0.66))
 
                 Text(item.displayTitle)
-                    .font(.system(size: isPad ? (isLandscape ? 48 : 44) : 35, weight: .heavy))
-                    .tracking(isPad ? -1.45 : -1.05)
+                    .font(.system(size: isWide ? (isLandscape ? 44 : 41) : 34, weight: .bold))
+                    .tracking(isWide ? -1.25 : -0.95)
                     .foregroundStyle(.white)
                     .lineLimit(2)
-                    .minimumScaleFactor(0.78)
-                    .frame(maxWidth: isPad ? min(620, width * (isLandscape ? 0.48 : 0.66)) : width * 0.82, alignment: .leading)
+                    .minimumScaleFactor(0.80)
+                    .frame(maxWidth: isWide ? min(580, width * (isLandscape ? 0.50 : 0.67)) : width * 0.82, alignment: .leading)
 
                 if let overview = item.overview, !overview.isEmpty {
                     Text(overview)
-                        .font(.system(size: isPad ? 14 : 13.25, weight: .regular))
-                        .foregroundStyle(.white.opacity(0.66))
-                        .lineSpacing(2.4)
-                        .lineLimit(isPad ? 2 : 2)
-                        .frame(maxWidth: isPad ? min(590, width * (isLandscape ? 0.46 : 0.64)) : width * 0.82, alignment: .leading)
+                        .font(.system(size: isWide ? 13.5 : 13, weight: .regular))
+                        .foregroundStyle(.white.opacity(0.63))
+                        .lineSpacing(2)
+                        .lineLimit(2)
+                        .frame(maxWidth: isWide ? min(560, width * (isLandscape ? 0.49 : 0.66)) : width * 0.82, alignment: .leading)
                 }
 
-                HStack(spacing: 9) {
+                HStack(spacing: 8) {
                     AccentActionButton(title: "Play", symbol: "play.fill", accent: theme.accent) {
                         theme.impact(.medium)
                         router.play(item)
                     }
 
-                    GlassActionButton(title: "More Info", symbol: "info.circle", tint: Color.white.opacity(0.012)) {
+                    GlassActionButton(title: "Details", symbol: "info.circle", tint: Color.white.opacity(0.008)) {
                         theme.impact()
                         router.open(item)
                     }
@@ -188,55 +176,55 @@ struct HomeView: View {
                         Image(systemName: library.contains(item) ? "checkmark" : "plus")
                             .font(.system(size: 14, weight: .bold))
                             .foregroundStyle(.white)
-                            .frame(width: 42, height: 42)
+                            .frame(width: 40, height: 40)
                     }
                     .buttonStyle(.plain)
-                    .synflixCircleGlass(tint: Color.white.opacity(0.010))
+                    .synflixCircleGlass(tint: Color.white.opacity(0.008))
                     .accessibilityLabel(library.contains(item) ? "Remove from My List" : "Add to My List")
                 }
                 .padding(.top, 2)
             }
             .padding(.horizontal, edge)
-            .padding(.bottom, isPad ? 30 : 25)
+            .padding(.bottom, isWide ? 25 : 23)
         }
         .frame(width: width, height: height)
         .clipped()
     }
 
-    private func homeSkeleton(width: CGFloat, edge: CGFloat, isPad: Bool, heroHeight: CGFloat) -> some View {
+    private func homeSkeleton(width: CGFloat, edge: CGFloat, isWide: Bool, heroHeight: CGFloat) -> some View {
         ScrollView(showsIndicators: false) {
-            VStack(alignment: .leading, spacing: isPad ? 24 : 20) {
+            VStack(alignment: .leading, spacing: isWide ? 22 : 19) {
                 LinearGradient(
-                    colors: [theme.accent.opacity(0.07), Color.white.opacity(0.014), Color(red: 0.018, green: 0.018, blue: 0.018)],
+                    colors: [theme.accent.opacity(0.05), Color.white.opacity(0.012), Color(red: 0.012, green: 0.012, blue: 0.012)],
                     startPoint: .topTrailing,
                     endPoint: .bottomLeading
                 )
                 .frame(width: width, height: heroHeight)
                 .overlay(alignment: .bottomLeading) {
-                    VStack(alignment: .leading, spacing: 10) {
-                        RoundedRectangle(cornerRadius: 4).fill(.white.opacity(0.10)).frame(width: isPad ? 320 : 220, height: 26)
-                        RoundedRectangle(cornerRadius: 4).fill(.white.opacity(0.06)).frame(width: isPad ? 430 : 280, height: 13)
-                        HStack(spacing: 9) {
-                            RoundedRectangle(cornerRadius: 10).fill(theme.accent.opacity(0.48)).frame(width: 92, height: 42)
-                            RoundedRectangle(cornerRadius: 10).fill(.white.opacity(0.07)).frame(width: 116, height: 42)
+                    VStack(alignment: .leading, spacing: 9) {
+                        RoundedRectangle(cornerRadius: 3).fill(.white.opacity(0.09)).frame(width: isWide ? 290 : 210, height: 24)
+                        RoundedRectangle(cornerRadius: 3).fill(.white.opacity(0.05)).frame(width: isWide ? 410 : 270, height: 12)
+                        HStack(spacing: 8) {
+                            RoundedRectangle(cornerRadius: 8).fill(theme.accent.opacity(0.42)).frame(width: 88, height: 40)
+                            RoundedRectangle(cornerRadius: 8).fill(.white.opacity(0.06)).frame(width: 106, height: 40)
                         }
                     }
                     .padding(.horizontal, edge)
-                    .padding(.bottom, 30)
+                    .padding(.bottom, 26)
                 }
 
                 ForEach(0..<3, id: \.self) { _ in
-                    VStack(alignment: .leading, spacing: 11) {
-                        RoundedRectangle(cornerRadius: 4)
-                            .fill(.white.opacity(0.08))
-                            .frame(width: 150, height: 18)
+                    VStack(alignment: .leading, spacing: 10) {
+                        RoundedRectangle(cornerRadius: 3)
+                            .fill(.white.opacity(0.07))
+                            .frame(width: 140, height: 17)
                             .padding(.horizontal, edge)
                         ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: 12) {
+                            HStack(spacing: 11) {
                                 ForEach(0..<7, id: \.self) { _ in
-                                    RoundedRectangle(cornerRadius: 7)
-                                        .fill(.white.opacity(0.03))
-                                        .frame(width: isPad ? 160 : 136, height: isPad ? 240 : 204)
+                                    RoundedRectangle(cornerRadius: 6)
+                                        .fill(.white.opacity(0.026))
+                                        .frame(width: isWide ? 154 : 136, height: isWide ? 231 : 204)
                                 }
                             }
                             .padding(.horizontal, edge)
@@ -270,159 +258,6 @@ struct HomeView: View {
             await MainActor.run {
                 errorMessage = error.localizedDescription
                 isLoading = false
-            }
-        }
-    }
-}
-
-private struct AutoCarouselShelf: View {
-    let title: String
-    let items: [MediaItem]
-    let edgePadding: CGFloat
-    let isPad: Bool
-    let isLandscape: Bool
-
-    @EnvironmentObject private var theme: ThemeStore
-    @EnvironmentObject private var router: AppRouter
-    @Environment(\.scenePhase) private var scenePhase
-    @Environment(\.accessibilityReduceMotion) private var systemReduceMotion
-    @State private var selectedIndex = 0
-
-    private var featured: [MediaItem] {
-        let withBackdrops = items.filter { $0.backdrop_path != nil }
-        return Array((withBackdrops.isEmpty ? items : withBackdrops).prefix(9))
-    }
-
-    private var carouselHeight: CGFloat {
-        if isPad {
-            return isLandscape ? 285 : 330
-        }
-        return 226
-    }
-
-    var body: some View {
-        if !featured.isEmpty {
-            VStack(alignment: .leading, spacing: 11) {
-                HStack(alignment: .center) {
-                    Text(title)
-                        .font(.system(size: isPad ? 20 : 18, weight: .bold))
-                        .tracking(isPad ? -0.48 : -0.38)
-                        .foregroundStyle(.white)
-
-                    Spacer()
-
-                    if featured.count > 1 {
-                        HStack(spacing: 5) {
-                            ForEach(featured.indices, id: \.self) { index in
-                                Capsule()
-                                    .fill(index == selectedIndex ? theme.accent : Color.white.opacity(0.18))
-                                    .frame(width: index == selectedIndex ? 18 : 6, height: 3)
-                                    .animation(theme.reducedMotion ? nil : .easeOut(duration: 0.25), value: selectedIndex)
-                            }
-                        }
-                    }
-                }
-                .padding(.horizontal, edgePadding)
-
-                TabView(selection: $selectedIndex) {
-                    ForEach(featured.indices, id: \.self) { index in
-                        let item = featured[index]
-                        Button {
-                            theme.impact()
-                            router.open(item)
-                        } label: {
-                            ZStack(alignment: .bottomLeading) {
-                                ArtworkView(url: item.backdropURL ?? item.posterURL, cornerRadius: 14)
-                                    .frame(maxWidth: .infinity)
-                                    .frame(height: carouselHeight)
-
-                                LinearGradient(
-                                    colors: [.clear, .black.opacity(0.10), .black.opacity(0.82)],
-                                    startPoint: .top,
-                                    endPoint: .bottom
-                                )
-                                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-
-                                HStack(alignment: .bottom, spacing: 18) {
-                                    VStack(alignment: .leading, spacing: 6) {
-                                        Text("FEATURED")
-                                            .font(.system(size: 9.5, weight: .black))
-                                            .tracking(1.6)
-                                            .foregroundStyle(theme.accent)
-
-                                        Text(item.displayTitle)
-                                            .font(.system(size: isPad ? 26 : 20, weight: .bold))
-                                            .tracking(isPad ? -0.7 : -0.45)
-                                            .foregroundStyle(.white)
-                                            .lineLimit(1)
-
-                                        HStack(spacing: 6) {
-                                            if !item.year.isEmpty { Text(item.year) }
-                                            if !item.year.isEmpty { Text("•") }
-                                            Text(item.kind == "tv" ? "Series" : "Movie")
-                                            if let vote = item.vote_average, vote > 0 {
-                                                Text("•")
-                                                Image(systemName: "star.fill")
-                                                    .font(.system(size: 8.5, weight: .bold))
-                                                    .foregroundStyle(theme.accent)
-                                                Text(String(format: "%.1f", vote))
-                                            }
-                                        }
-                                        .font(.system(size: 11.5, weight: .semibold))
-                                        .foregroundStyle(.white.opacity(0.60))
-                                    }
-
-                                    Spacer(minLength: 10)
-
-                                    Image(systemName: "play.fill")
-                                        .font(.system(size: 16, weight: .bold))
-                                        .foregroundStyle(.black)
-                                        .frame(width: 42, height: 42)
-                                        .background(theme.accent, in: Circle())
-                                        .shadow(color: .black.opacity(0.25), radius: 10, y: 5)
-                                }
-                                .padding(isPad ? 20 : 15)
-                            }
-                            .overlay {
-                                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                    .stroke(.white.opacity(0.055), lineWidth: 0.7)
-                            }
-                            .padding(.horizontal, edgePadding)
-                        }
-                        .buttonStyle(.plain)
-                        .tag(index)
-                        .accessibilityLabel("\(item.displayTitle), featured title")
-                    }
-                }
-                .frame(height: carouselHeight)
-                .tabViewStyle(.page(indexDisplayMode: .never))
-                .onChange(of: featured.count) { count in
-                    if selectedIndex >= count { selectedIndex = 0 }
-                }
-            }
-            .task(id: featured.count) {
-                guard featured.count > 1 else { return }
-
-                while !Task.isCancelled {
-                    do {
-                        try await Task.sleep(nanoseconds: 4_750_000_000)
-                    } catch {
-                        return
-                    }
-
-                    guard scenePhase == .active,
-                          !systemReduceMotion,
-                          !theme.reducedMotion,
-                          !Task.isCancelled else {
-                        continue
-                    }
-
-                    await MainActor.run {
-                        withAnimation(.easeInOut(duration: 0.58)) {
-                            selectedIndex = (selectedIndex + 1) % featured.count
-                        }
-                    }
-                }
             }
         }
     }

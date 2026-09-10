@@ -6,6 +6,8 @@ actor SynFlixAPI {
     private let apiBase = URL(string: "https://synscraper-tffk.vercel.app/api")!
     private let siteBase = URL(string: "https://synscraper-tffk.vercel.app")!
     private let decoder = JSONDecoder()
+    private let cache: URLCache
+    private let session: URLSession
 
     enum APIError: LocalizedError {
         case invalidURL
@@ -21,6 +23,27 @@ actor SynFlixAPI {
         }
     }
 
+    private init() {
+        let cache = URLCache(
+            memoryCapacity: 8 * 1024 * 1024,
+            diskCapacity: 24 * 1024 * 1024,
+            diskPath: "synflix-api-cache"
+        )
+        self.cache = cache
+
+        let configuration = URLSessionConfiguration.default
+        configuration.urlCache = cache
+        configuration.requestCachePolicy = .returnCacheDataElseLoad
+        configuration.httpCookieStorage = nil
+        configuration.httpShouldSetCookies = false
+        configuration.urlCredentialStorage = nil
+        configuration.waitsForConnectivity = true
+        configuration.timeoutIntervalForRequest = 24
+        configuration.timeoutIntervalForResource = 90
+        configuration.httpMaximumConnectionsPerHost = 6
+        self.session = URLSession(configuration: configuration)
+    }
+
     private func request<T: Decodable>(
         _ path: String,
         query: [URLQueryItem] = [],
@@ -33,34 +56,36 @@ actor SynFlixAPI {
         var request = URLRequest(url: url)
         request.timeoutInterval = timeout
         request.cachePolicy = .returnCacheDataElseLoad
-        request.setValue("SynFlix-iOS-Native/1.7", forHTTPHeaderField: "User-Agent")
+        request.setValue("SynFlix-iOS-Native/2.0", forHTTPHeaderField: "User-Agent")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.setValue("1", forHTTPHeaderField: "DNT")
+        request.setValue("1", forHTTPHeaderField: "Sec-GPC")
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await session.data(for: request)
         guard let http = response as? HTTPURLResponse else { throw APIError.badStatus(-1) }
         guard (200..<300).contains(http.statusCode) else { throw APIError.badStatus(http.statusCode) }
         return try decoder.decode(T.self, from: data)
     }
 
     func home() async throws -> HomeFeed {
-        try await request("home", timeout: 24)
+        try await request("home", timeout: 20)
     }
 
     func search(_ query: String) async throws -> [MediaItem] {
         let response: MediaEnvelope = try await request(
             "search",
             query: [URLQueryItem(name: "q", value: query), URLQueryItem(name: "page", value: "1")],
-            timeout: 24
+            timeout: 20
         )
         return response.results ?? []
     }
 
     func details(kind: String, id: Int) async throws -> MediaDetails {
-        try await request("details/\(kind)/\(id)", timeout: 24)
+        try await request("details/\(kind)/\(id)", timeout: 20)
     }
 
     func season(showID: Int, season: Int) async throws -> SeasonDetails {
-        try await request("tv/\(showID)/season/\(season)", timeout: 24)
+        try await request("tv/\(showID)/season/\(season)", timeout: 20)
     }
 
     func discover(kind: String, genre: Int? = nil, page: Int = 1) async throws -> [MediaItem] {
@@ -69,7 +94,7 @@ actor SynFlixAPI {
             URLQueryItem(name: "page", value: String(page))
         ]
         if let genre { query.append(URLQueryItem(name: "with_genres", value: String(genre))) }
-        let response: MediaEnvelope = try await request("discover/\(kind)", query: query, timeout: 24)
+        let response: MediaEnvelope = try await request("discover/\(kind)", query: query, timeout: 20)
         return response.results ?? []
     }
 
@@ -100,5 +125,9 @@ actor SynFlixAPI {
             return URL(string: server.play_url)
         }
         return URL(string: server.play_url, relativeTo: siteBase)?.absoluteURL
+    }
+
+    func clearCache() {
+        cache.removeAllCachedResponses()
     }
 }

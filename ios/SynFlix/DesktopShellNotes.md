@@ -1,1 +1,0 @@
-SynFlix iPad uses a wide desktop-style navigation rail when enough horizontal space is available, and the compact bottom dock only on narrow layouts. The native client does not embed the web frontend and does not include analytics SDKs.

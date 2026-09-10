@@ -80,4 +80,13 @@ enum RootSection: String, CaseIterable, Identifiable {
         case .settings: return "slider.horizontal.3"
         }
     }
+
+    var shortcut: KeyEquivalent {
+        switch self {
+        case .home: return "1"
+        case .search: return "2"
+        case .library: return "3"
+        case .settings: return "4"
+        }
+    }
 }

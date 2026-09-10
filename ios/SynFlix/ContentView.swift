@@ -1,5 +1,4 @@
 import SwiftUI
-import UIKit
 
 struct ContentView: View {
     @StateObject private var theme = ThemeStore()
@@ -11,37 +10,15 @@ struct ContentView: View {
 
     var body: some View {
         GeometryReader { geometry in
-            let isPad = UIDevice.current.userInterfaceIdiom == .pad || geometry.size.width >= 700
-            let safeTop = geometry.safeAreaInsets.top
-            let safeBottom = geometry.safeAreaInsets.bottom
-            let dockWidth = min(geometry.size.width - (isPad ? 56 : 24), isPad ? 540 : 420)
+            let desktopLayout = UIDevice.current.userInterfaceIdiom == .pad && geometry.size.width >= 720
 
             ZStack {
-                Color(red: 0.018, green: 0.018, blue: 0.018)
-                    .ignoresSafeArea()
+                Color.black.ignoresSafeArea()
 
-                rootContent
-                    .environmentObject(theme)
-                    .environmentObject(library)
-                    .environmentObject(router)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .padding(.top, selectedSection == .home ? 0 : safeTop + (isPad ? 58 : 62))
-                    .ignoresSafeArea()
-                    .animation(theme.reducedMotion ? nil : .easeOut(duration: 0.16), value: selectedSection)
-
-                VStack(spacing: 0) {
-                    header(isPad: isPad)
-                        .padding(.top, safeTop + (isPad ? 10 : 7))
-                        .padding(.horizontal, isPad ? 30 : 14)
-                    Spacer(minLength: 0)
-                }
-                .allowsHitTesting(true)
-
-                VStack(spacing: 0) {
-                    Spacer(minLength: 0)
-                    dock(isPad: isPad)
-                        .frame(width: dockWidth)
-                        .padding(.bottom, max(isPad ? 10 : 7, safeBottom + 2))
+                if desktopLayout {
+                    desktopShell
+                } else {
+                    compactShell
                 }
 
                 if showLaunch {
@@ -50,13 +27,12 @@ struct ContentView: View {
                         .zIndex(50)
                 }
             }
-            .ignoresSafeArea()
+            .environmentObject(theme)
+            .environmentObject(library)
+            .environmentObject(router)
         }
         .preferredColorScheme(.dark)
         .tint(theme.accent)
-        .environmentObject(theme)
-        .environmentObject(library)
-        .environmentObject(router)
         .fullScreenCover(item: $router.selectedItem) { item in
             DetailView(item: item)
                 .environmentObject(theme)
@@ -68,9 +44,38 @@ struct ContentView: View {
                 .environmentObject(theme)
         }
         .task {
-            try? await Task.sleep(nanoseconds: 340_000_000)
+            try? await Task.sleep(nanoseconds: 460_000_000)
             withAnimation(theme.reducedMotion ? nil : .easeOut(duration: 0.22)) {
                 showLaunch = false
+            }
+        }
+    }
+
+    private var desktopShell: some View {
+        HStack(spacing: 0) {
+            desktopSidebar
+                .frame(width: 76)
+
+            ZStack(alignment: .top) {
+                rootContent
+                    .padding(.top, selectedSection == .home ? 0 : 54)
+
+                desktopToolbar
+            }
+            .background(Color.black)
+        }
+    }
+
+    private var compactShell: some View {
+        ZStack {
+            rootContent
+                .padding(.top, selectedSection == .home ? 0 : 54)
+                .padding(.bottom, 67)
+
+            VStack(spacing: 0) {
+                compactTopBar
+                Spacer(minLength: 0)
+                compactDock
             }
         }
     }
@@ -79,142 +84,181 @@ struct ContentView: View {
     private var rootContent: some View {
         switch selectedSection {
         case .home:
-            HomeView().transition(.opacity)
+            HomeView()
         case .search:
-            SearchView().transition(.opacity)
+            SearchView()
         case .library:
-            LibraryView().transition(.opacity)
+            LibraryView()
         case .settings:
-            SettingsView().transition(.opacity)
+            SettingsView()
         }
     }
 
-    private func header(isPad: Bool) -> some View {
-        HStack(spacing: 11) {
-            Button {
-                theme.impact(.light)
-                selectedSection = .home
-            } label: {
-                HStack(spacing: 9) {
-                    SynFlixBrandMark(size: isPad ? 34 : 31)
+    private var desktopSidebar: some View {
+        VStack(spacing: 8) {
+            SynFlixBrandMark(size: 36)
+                .padding(.top, 14)
+                .padding(.bottom, 15)
 
-                    Text("SynFlix")
-                        .font(.system(size: isPad ? 18 : 16.5, weight: .bold))
-                        .tracking(-0.55)
-                        .foregroundStyle(.white)
-                }
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("SynFlix Home")
+            Rectangle()
+                .fill(.white.opacity(0.08))
+                .frame(width: 28, height: 0.5)
+                .padding(.bottom, 8)
 
-            if isPad && selectedSection != .home {
-                Rectangle()
-                    .fill(.white.opacity(0.12))
-                    .frame(width: 1, height: 18)
-
-                Text(selectedSection.title)
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(.white.opacity(0.48))
+            ForEach(RootSection.allCases) { section in
+                sidebarButton(section)
             }
 
             Spacer(minLength: 10)
 
-            if isPad {
-                HStack(spacing: 3) {
-                    headerDestination("Home", section: .home)
-                    headerDestination("My List", section: .library)
-                }
-                .padding(4)
-                .synflixGlass(tint: theme.accent.opacity(0.018), cornerRadius: 18, interactive: true)
+            VStack(spacing: 6) {
+                Circle()
+                    .fill(theme.accent.opacity(0.85))
+                    .frame(width: 5, height: 5)
+                Text("LOCAL")
+                    .font(.system(size: 7.5, weight: .bold))
+                    .tracking(1.1)
+                    .foregroundStyle(.white.opacity(0.28))
             }
-
-            if selectedSection != .search {
-                chromeButton(symbol: "magnifyingglass", label: "Search", isPad: isPad) {
-                    selectedSection = .search
-                }
-            }
-
-            chromeButton(symbol: "person.fill", label: "Settings", isPad: isPad, selected: selectedSection == .settings) {
-                selectedSection = .settings
-            }
+            .padding(.bottom, 15)
         }
-        .frame(maxWidth: .infinity)
+        .frame(maxHeight: .infinity)
+        .background(.ultraThinMaterial)
+        .overlay(alignment: .trailing) {
+            Rectangle()
+                .fill(.white.opacity(0.07))
+                .frame(width: 0.5)
+        }
     }
 
-    private func headerDestination(_ title: String, section: RootSection) -> some View {
-        Button {
-            if selectedSection != section {
-                theme.impact()
-                selectedSection = section
-            }
-        } label: {
-            Text(title)
-                .font(.system(size: 11.5, weight: .semibold))
-                .foregroundStyle(selectedSection == section ? .white : .white.opacity(0.50))
-                .padding(.horizontal, 13)
-                .frame(height: 30)
-                .background {
-                    if selectedSection == section {
-                        Capsule().fill(.white.opacity(0.085))
-                    }
-                }
-        }
-        .buttonStyle(.plain)
-    }
-
-    private func chromeButton(
-        symbol: String,
-        label: String,
-        isPad: Bool,
-        selected: Bool = false,
-        action: @escaping () -> Void
-    ) -> some View {
+    private func sidebarButton(_ section: RootSection) -> some View {
         Button {
             theme.impact()
-            action()
+            selectedSection = section
         } label: {
-            Image(systemName: symbol)
-                .font(.system(size: isPad ? 14.5 : 14, weight: .semibold))
-                .foregroundStyle(selected ? theme.accent : .white.opacity(0.88))
-                .frame(width: isPad ? 40 : 38, height: isPad ? 40 : 38)
+            ZStack(alignment: .leading) {
+                Color.clear
+                    .frame(width: 54, height: 48)
+
+                if selectedSection == section {
+                    Capsule()
+                        .fill(theme.accent)
+                        .frame(width: 2.5, height: 20)
+                        .offset(x: -1)
+                }
+
+                Image(systemName: section.symbol)
+                    .font(.system(size: 17, weight: .semibold))
+                    .symbolRenderingMode(.hierarchical)
+                    .foregroundStyle(selectedSection == section ? theme.accent : .white.opacity(0.44))
+                    .frame(width: 54, height: 48)
+            }
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .synflixCircleGlass(tint: selected ? theme.accent.opacity(0.07) : Color.white.opacity(0.008))
-        .accessibilityLabel(label)
+        .hoverEffect(.highlight)
+        .keyboardShortcut(section.shortcut, modifiers: .command)
+        .accessibilityLabel(section.title)
+        .accessibilityAddTraits(selectedSection == section ? [.isSelected] : [])
     }
 
-    private func dock(isPad: Bool) -> some View {
-        HStack(spacing: isPad ? 2 : 0) {
+    private var desktopToolbar: some View {
+        HStack(spacing: 12) {
+            Text(selectedSection == .home ? "Browse" : selectedSection.title)
+                .font(.system(size: 17, weight: .semibold))
+                .tracking(-0.35)
+                .foregroundStyle(.white.opacity(0.90))
+
+            Spacer(minLength: 12)
+
+            Button {
+                theme.impact()
+                selectedSection = .search
+            } label: {
+                Image(systemName: "magnifyingglass")
+                    .font(.system(size: 14.5, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.78))
+                    .frame(width: 38, height: 38)
+            }
+            .buttonStyle(.plain)
+            .synflixCircleGlass(tint: Color.white.opacity(0.01))
+            .hoverEffect(.highlight)
+            .accessibilityLabel("Search")
+
+            Button {
+                theme.impact()
+                selectedSection = .settings
+            } label: {
+                Image(systemName: "person.crop.circle.fill")
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundStyle(theme.accent.opacity(0.92))
+                    .frame(width: 38, height: 38)
+            }
+            .buttonStyle(.plain)
+            .synflixCircleGlass(tint: theme.accent.opacity(0.025))
+            .hoverEffect(.highlight)
+            .accessibilityLabel("Settings")
+        }
+        .padding(.horizontal, 18)
+        .frame(height: 54)
+        .background(.ultraThinMaterial)
+        .overlay(alignment: .bottom) {
+            Rectangle()
+                .fill(.white.opacity(0.065))
+                .frame(height: 0.5)
+        }
+    }
+
+    private var compactTopBar: some View {
+        HStack(spacing: 10) {
+            SynFlixBrandMark(size: 30)
+            Text("SynFlix")
+                .font(.system(size: 16, weight: .bold))
+                .tracking(-0.35)
+            Spacer()
+            Button {
+                theme.impact()
+                selectedSection = .search
+            } label: {
+                Image(systemName: "magnifyingglass")
+                    .font(.system(size: 14.5, weight: .semibold))
+                    .frame(width: 36, height: 36)
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(.white.opacity(0.84))
+        }
+        .padding(.horizontal, 14)
+        .frame(height: 54)
+        .background(.ultraThinMaterial)
+        .overlay(alignment: .bottom) {
+            Rectangle().fill(.white.opacity(0.065)).frame(height: 0.5)
+        }
+    }
+
+    private var compactDock: some View {
+        HStack(spacing: 0) {
             ForEach(RootSection.allCases) { section in
                 Button {
-                    if selectedSection != section {
-                        theme.impact()
-                        withAnimation(theme.reducedMotion ? nil : .spring(response: 0.26, dampingFraction: 0.86)) {
-                            selectedSection = section
-                        }
-                    } else {
-                        theme.impact(.light)
-                    }
+                    theme.impact()
+                    selectedSection = section
                 } label: {
-                    VStack(spacing: isPad ? 4 : 3) {
+                    VStack(spacing: 4) {
                         Image(systemName: section.symbol)
-                            .font(.system(size: isPad ? 17 : 16, weight: .semibold))
+                            .font(.system(size: 16.5, weight: .semibold))
                             .symbolRenderingMode(.hierarchical)
-
                         Text(section.title)
-                            .font(.system(size: isPad ? 10 : 9.3, weight: .semibold))
+                            .font(.system(size: 9.5, weight: .semibold))
                             .lineLimit(1)
                     }
-                    .foregroundStyle(selectedSection == section ? theme.accent : .white.opacity(0.43))
+                    .foregroundStyle(selectedSection == section ? theme.accent : .white.opacity(0.42))
                     .frame(maxWidth: .infinity)
-                    .frame(height: isPad ? 50 : 48)
+                    .frame(height: 58)
                     .contentShape(Rectangle())
-                    .background {
+                    .overlay(alignment: .top) {
                         if selectedSection == section {
                             Capsule()
-                                .fill(theme.accent.opacity(0.075))
-                                .padding(.horizontal, 4)
-                                .padding(.vertical, 2)
+                                .fill(theme.accent)
+                                .frame(width: 20, height: 2)
                         }
                     }
                 }
@@ -223,32 +267,26 @@ struct ContentView: View {
                 .accessibilityAddTraits(selectedSection == section ? [.isSelected] : [])
             }
         }
-        .padding(isPad ? 6 : 5)
-        .synflixGlass(tint: theme.accent.opacity(0.026), cornerRadius: isPad ? 31 : 29, interactive: true)
-        .overlay {
-            RoundedRectangle(cornerRadius: isPad ? 31 : 29, style: .continuous)
-                .stroke(
-                    LinearGradient(
-                        colors: [.white.opacity(0.18), .white.opacity(0.055), .clear],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    ),
-                    lineWidth: 0.65
-                )
-                .allowsHitTesting(false)
+        .padding(.top, 3)
+        .background(.ultraThinMaterial)
+        .overlay(alignment: .top) {
+            Rectangle().fill(.white.opacity(0.065)).frame(height: 0.5)
         }
-        .shadow(color: .black.opacity(0.30), radius: 20, y: 8)
     }
 
     private var launchOverlay: some View {
         ZStack {
             Color.black.ignoresSafeArea()
 
-            VStack(spacing: 11) {
-                SynFlixBrandMark(size: 92)
+            VStack(spacing: 14) {
+                SynFlixBrandMark(size: 78)
                 Text("SynFlix")
-                    .font(.system(size: 27, weight: .bold))
-                    .tracking(-0.85)
+                    .font(.system(size: 26, weight: .bold))
+                    .tracking(-0.75)
+                ProgressView()
+                    .controlSize(.small)
+                    .tint(theme.accent)
+                    .padding(.top, 2)
             }
         }
     }

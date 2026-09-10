@@ -33,7 +33,7 @@ struct MediaItem: Codable, Identifiable, Hashable {
 
     var backdropURL: URL? {
         guard let backdrop_path else { return nil }
-        return URL(string: "https://image.tmdb.org/t/p/original\(backdrop_path)")
+        return URL(string: "https://image.tmdb.org/t/p/w1280\(backdrop_path)")
     }
 
     static func == (lhs: MediaItem, rhs: MediaItem) -> Bool {
@@ -92,12 +92,12 @@ struct MediaDetails: Codable {
 
     var posterURL: URL? {
         guard let poster_path else { return nil }
-        return URL(string: "https://image.tmdb.org/t/p/w780\(poster_path)")
+        return URL(string: "https://image.tmdb.org/t/p/w500\(poster_path)")
     }
 
     var backdropURL: URL? {
         guard let backdrop_path else { return nil }
-        return URL(string: "https://image.tmdb.org/t/p/original\(backdrop_path)")
+        return URL(string: "https://image.tmdb.org/t/p/w1280\(backdrop_path)")
     }
 
     var runtimeText: String? {
@@ -121,7 +121,7 @@ struct CastMember: Codable, Identifiable, Hashable {
 
     var profileURL: URL? {
         guard let profile_path else { return nil }
-        return URL(string: "https://image.tmdb.org/t/p/w342\(profile_path)")
+        return URL(string: "https://image.tmdb.org/t/p/w185\(profile_path)")
     }
 }
 
@@ -134,7 +134,7 @@ struct SeasonSummary: Codable, Identifiable, Hashable {
 
     var posterURL: URL? {
         guard let poster_path else { return nil }
-        return URL(string: "https://image.tmdb.org/t/p/w500\(poster_path)")
+        return URL(string: "https://image.tmdb.org/t/p/w342\(poster_path)")
     }
 }
 
