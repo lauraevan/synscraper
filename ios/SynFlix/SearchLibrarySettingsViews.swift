@@ -288,161 +288,103 @@ struct SettingsView: View {
     @EnvironmentObject private var theme: ThemeStore
 
     var body: some View {
-        GeometryReader { geometry in
-            let isPad = UIDevice.current.userInterfaceIdiom == .pad && geometry.size.width >= 760
-            let edge = isPad ? max(30, min(46, geometry.size.width * 0.034)) : 18
-
-            ScrollView(showsIndicators: false) {
-                VStack(alignment: .leading, spacing: 20) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Settings")
-                            .font(.system(size: isPad ? 34 : 31, weight: .heavy))
-                            .tracking(-1.0)
-                        Text("Appearance and playback")
-                            .font(.system(size: 12.5, weight: .medium))
-                            .foregroundStyle(.white.opacity(0.40))
-                    }
-
-                    if isPad {
-                        HStack(alignment: .top, spacing: 18) {
-                            appearancePanel
-                                .frame(maxWidth: .infinity)
-
-                            VStack(spacing: 18) {
-                                playbackPanel
-                                aboutPanel
-                            }
-                            .frame(width: min(360, geometry.size.width * 0.34))
-                        }
-                    } else {
-                        appearancePanel
-                        playbackPanel
-                        aboutPanel
-                    }
-
-                    Spacer(minLength: 72)
-                }
-                .padding(.horizontal, edge)
-                .padding(.top, 8)
-            }
-            .background(Color.black)
-        }
-    }
-
-    private var appearancePanel: some View {
-        VStack(alignment: .leading, spacing: 18) {
-            HStack {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("Appearance")
-                        .font(.system(size: 17, weight: .bold))
-                    Text("Choose the accent used by native Liquid Glass controls.")
-                        .font(.system(size: 11.5))
-                        .foregroundStyle(.white.opacity(0.42))
-                }
-                Spacer()
-                SynFlixBrandMark(size: 36)
-            }
-
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 72), spacing: 12)], spacing: 14) {
-                ForEach(SynFlixTheme.allCases) { choice in
-                    Button {
-                        theme.theme = choice
-                    } label: {
-                        VStack(spacing: 7) {
-                            ZStack {
-                                Circle()
-                                    .fill(choice.accent)
-                                    .frame(width: 36, height: 36)
-                                if theme.theme == choice {
-                                    Image(systemName: "checkmark")
-                                        .font(.system(size: 12.5, weight: .black))
-                                        .foregroundStyle(choice == .monochrome || choice == .noir || choice == .synflix ? .black : .white)
-                                }
-                            }
+        List {
+            Section {
+                Picker(selection: $theme.theme) {
+                    ForEach(SynFlixTheme.allCases) { choice in
+                        Label {
                             Text(choice.name)
-                                .font(.system(size: 10.25, weight: .semibold))
-                                .foregroundStyle(theme.theme == choice ? .white : .white.opacity(0.46))
-                                .lineLimit(1)
+                        } icon: {
+                            Circle()
+                                .fill(choice.accent)
+                                .frame(width: 10, height: 10)
                         }
+                        .tag(choice)
                     }
-                    .buttonStyle(.plain)
+                } label: {
+                    Label("Theme", systemImage: "paintpalette.fill")
                 }
-            }
-
-            Divider().overlay(.white.opacity(0.06))
-            settingToggle(title: "Haptics", subtitle: "Feedback on important controls", isOn: $theme.hapticsEnabled)
-            settingToggle(title: "Reduce motion", subtitle: "Use quieter transitions", isOn: $theme.reducedMotion)
-        }
-        .padding(20)
-        .background(Color.white.opacity(0.022), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(.white.opacity(0.055), lineWidth: 0.6)
-        }
-    }
-
-    private var playbackPanel: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("Playback")
-                .font(.system(size: 17, weight: .bold))
-            settingToggle(title: "Autoplay", subtitle: "Start when a source is ready", isOn: $theme.autoplayEnabled)
-
-            HStack(spacing: 11) {
-                Image(systemName: "play.rectangle.on.rectangle.fill")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(theme.accent)
-                    .frame(width: 28)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Native playback")
-                        .font(.system(size: 13.5, weight: .semibold))
-                    Text("AVPlayer · AirPlay · Picture in Picture")
-                        .font(.system(size: 11))
-                        .foregroundStyle(.white.opacity(0.42))
-                }
-                Spacer()
-            }
-        }
-        .padding(20)
-        .background(Color.white.opacity(0.022), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(.white.opacity(0.055), lineWidth: 0.6)
-        }
-    }
-
-    private var aboutPanel: some View {
-        HStack(spacing: 13) {
-            SynFlixBrandMark(size: 40)
-            VStack(alignment: .leading, spacing: 3) {
-                Text("SynFlix")
-                    .font(.system(size: 14.5, weight: .bold))
-                Text("Version 1.6 · iPhone and iPad")
-                    .font(.system(size: 11))
-                    .foregroundStyle(.white.opacity(0.42))
-            }
-            Spacer()
-        }
-        .padding(18)
-        .background(Color.white.opacity(0.022), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(.white.opacity(0.055), lineWidth: 0.6)
-        }
-    }
-
-    private func settingToggle(title: String, subtitle: String, isOn: Binding<Bool>) -> some View {
-        HStack(spacing: 12) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                    .font(.system(size: 13.5, weight: .semibold))
-                Text(subtitle)
-                    .font(.system(size: 11))
-                    .foregroundStyle(.white.opacity(0.42))
-            }
-            Spacer()
-            Toggle("", isOn: isOn)
-                .labelsHidden()
+                .pickerStyle(.menu)
                 .tint(theme.accent)
+
+                HStack(spacing: 12) {
+                    Label("Accent", systemImage: "circle.lefthalf.filled")
+                    Spacer()
+                    Circle()
+                        .fill(theme.accent)
+                        .frame(width: 18, height: 18)
+                        .overlay(Circle().stroke(.white.opacity(0.22), lineWidth: 0.7))
+                    Text(theme.theme.name)
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(.white.opacity(0.55))
+                }
+            } header: {
+                Text("Appearance")
+            }
+
+            Section {
+                Toggle(isOn: $theme.autoplayEnabled) {
+                    Label("Autoplay", systemImage: "play.fill")
+                }
+                .tint(theme.accent)
+
+                HStack(spacing: 12) {
+                    Label("Player", systemImage: "play.rectangle.on.rectangle.fill")
+                    Spacer()
+                    Text("Native")
+                        .foregroundStyle(.white.opacity(0.48))
+                }
+
+                HStack(spacing: 12) {
+                    Label("External playback", systemImage: "airplayvideo")
+                    Spacer()
+                    Text("AirPlay + PiP")
+                        .foregroundStyle(.white.opacity(0.48))
+                }
+            } header: {
+                Text("Playback")
+            }
+
+            Section {
+                Toggle(isOn: $theme.hapticsEnabled) {
+                    Label("Haptics", systemImage: "hand.tap.fill")
+                }
+                .tint(theme.accent)
+
+                Toggle(isOn: $theme.reducedMotion) {
+                    Label("Reduce Motion", systemImage: "figure.walk.motion")
+                }
+                .tint(theme.accent)
+            } header: {
+                Text("Interface")
+            }
+
+            Section {
+                HStack(spacing: 12) {
+                    SynFlixBrandMark(size: 32)
+                    Text("SynFlix")
+                        .font(.system(size: 15, weight: .semibold))
+                    Spacer()
+                    Text("1.9")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(.white.opacity(0.45))
+                }
+
+                HStack(spacing: 12) {
+                    Label("Device", systemImage: "ipad.and.iphone")
+                    Spacer()
+                    Text(UIDevice.current.userInterfaceIdiom == .pad ? "iPad" : "iPhone")
+                        .foregroundStyle(.white.opacity(0.48))
+                }
+            } header: {
+                Text("About")
+            }
         }
+        .environment(\.defaultMinListRowHeight, 48)
+        .listStyle(.insetGrouped)
+        .scrollContentBackground(.hidden)
+        .background(Color.black)
+        .foregroundStyle(.white.opacity(0.90))
+        .tint(theme.accent)
     }
 }
