@@ -21,6 +21,7 @@ export const SystemPlayer = ({
   onBack,
   hasNext,
   onNextEpisode,
+  fullscreen = false,
 }) => {
   const videoRef = useRef(null);
   const hlsRef = useRef(null);
@@ -216,9 +217,12 @@ export const SystemPlayer = ({
   }, [episode, hasNext, id, mediaType, meta, onNextEpisode, phase, season]);
 
   const captions = selectedServer?.captions || [];
+  const shellClass = fullscreen
+    ? "fixed inset-0 isolate h-[100dvh] w-full overflow-hidden rounded-none bg-black"
+    : "relative isolate aspect-video w-full overflow-hidden rounded-[18px] bg-black shadow-[0_28px_90px_rgba(0,0,0,.55)]";
 
   return (
-    <section className="relative isolate aspect-video w-full overflow-hidden rounded-[18px] bg-black shadow-[0_28px_90px_rgba(0,0,0,.55)]" data-testid="system-player">
+    <section className={shellClass} data-testid="system-player" data-fullscreen={fullscreen ? "true" : "false"}>
       <video
         ref={videoRef}
         className="h-full w-full bg-black object-contain"
@@ -240,21 +244,21 @@ export const SystemPlayer = ({
         ))}
       </video>
 
-      <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex items-start justify-between gap-3 bg-gradient-to-b from-black/75 via-black/25 to-transparent px-3 pb-12 pt-3 sm:px-4 sm:pt-4">
+      <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex items-start justify-between gap-3 bg-gradient-to-b from-black/75 via-black/25 to-transparent px-3 pb-12 pt-[max(12px,env(safe-area-inset-top))] sm:px-4">
         <button
           type="button"
           onClick={onBack}
-          className="pointer-events-auto grid h-10 w-10 place-items-center rounded-full border border-white/15 bg-black/35 text-white/90 shadow-lg backdrop-blur-2xl transition hover:bg-black/55 active:scale-95"
+          className="pointer-events-auto grid h-11 w-11 place-items-center rounded-full border border-white/15 bg-black/45 text-white/95 shadow-lg backdrop-blur-2xl transition hover:bg-black/60 active:scale-95"
           aria-label="Close player"
         >
-          <ChevronDown className="h-5 w-5" />
+          <X className="h-5 w-5" />
         </button>
 
         <div className="pointer-events-auto relative">
           <button
             type="button"
             onClick={() => setSourceOpen((open) => !open)}
-            className="inline-flex h-10 items-center gap-2 rounded-full border border-white/15 bg-black/35 px-3.5 text-xs font-semibold text-white/90 shadow-lg backdrop-blur-2xl transition hover:bg-black/55"
+            className="inline-flex h-10 items-center gap-2 rounded-full border border-white/15 bg-black/40 px-3.5 text-xs font-semibold text-white/90 shadow-lg backdrop-blur-2xl transition hover:bg-black/55"
             aria-expanded={sourceOpen}
             aria-label="Choose playback source"
           >
