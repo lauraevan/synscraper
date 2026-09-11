@@ -1,5 +1,25 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AlertCircle, Check, ChevronDown, Loader2, RefreshCw, X } from "lucide-react";
+import {
+  AlertCircle,
+  Captions,
+  Check,
+  ChevronDown,
+  Expand,
+  Loader2,
+  Maximize,
+  Minimize,
+  Pause,
+  PictureInPicture2,
+  Play,
+  RefreshCw,
+  RotateCcw,
+  RotateCw,
+  SkipForward,
+  Volume1,
+  Volume2,
+  VolumeX,
+  X,
+} from "lucide-react";
 import { getStreams, hlsProxyUrl } from "@/lib/api";
 import { getProgress, saveProgress } from "@/lib/storage";
 
@@ -9,8 +29,20 @@ const loadHls = () => {
   return hlsLoaderPromise;
 };
 
-const serverLabel = (server) => server?.quality || server?.name || "Source";
-const playerAccent = "var(--player-accent, #ffd400)";
+const playerAccent = "var(--player-accent, var(--site-accent, #ffd400))";
+const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+const formatTime = (seconds) => {
+  if (!Number.isFinite(seconds) || seconds < 0) return "0:00";
+  const total = Math.floor(seconds);
+  const hours = Math.floor(total / 3600);
+  const minutes = Math.floor((total % 3600) / 60);
+  const secs = total % 60;
+  return hours > 0
+    ? `${hours}:${String(minutes).padStart(2, "0")}:${String(secs).padStart(2, "0")}`
+    : `${minutes}:${String(secs).padStart(2, "0")}`;
+};
+
+const sourceLabel = (server) => server?.quality || server?.name || "Auto";
 
 export const SystemPlayer = ({
   mediaType,
@@ -23,25 +55,58 @@ export const SystemPlayer = ({
   onNextEpisode,
   fullscreen = false,
 }) => {
+  const shellRef = useRef(null);
   const videoRef = useRef(null);
   const hlsRef = useRef(null);
+  const hideTimerRef = useRef(null);
   const saveTimerRef = useRef(0);
   const restoreRef = useRef(false);
   const preservedTimeRef = useRef(null);
   const preservedPausedRef = useRef(false);
+  const fatalRecoveryRef = useRef(0);
 
   const [servers, setServers] = useState([]);
   const [selectedID, setSelectedID] = useState(null);
   const [phase, setPhase] = useState("loading");
   const [message, setMessage] = useState("");
   const [sourceOpen, setSourceOpen] = useState(false);
+  const [controlsVisible, setControlsVisible] = useState(true);
+  const [playing, setPlaying] = useState(false);
+  const [duration, setDuration] = useState(0);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [buffered, setBuffered] = useState(0);
+  const [volume, setVolume] = useState(1);
+  const [muted, setMuted] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [captionsEnabled, setCaptionsEnabled] = useState(false);
 
   const selectedServer = useMemo(
     () => servers.find((server) => server.id === selectedID) || servers[0] || null,
     [servers, selectedID]
   );
 
+  const captions = selectedServer?.captions || [];
+
+  const stopHideTimer = useCallback(() => {
+    if (hideTimerRef.current) {
+      window.clearTimeout(hideTimerRef.current);
+      hideTimerRef.current = null;
+    }
+  }, []);
+
+  const scheduleHide = useCallback(() => {
+    stopHideTimer();
+    if (!playing || phase !== "ready" || sourceOpen) return;
+    hideTimerRef.current = window.setTimeout(() => setControlsVisible(false), 2800);
+  }, [phase, playing, sourceOpen, stopHideTimer]);
+
+  const revealControls = useCallback(() => {
+    setControlsVisible(true);
+    scheduleHide();
+  }, [scheduleHide]);
+
   const cleanupPlayback = useCallback(() => {
+    stopHideTimer();
     if (hlsRef.current) {
       hlsRef.current.destroy();
       hlsRef.current = null;
@@ -52,7 +117,7 @@ export const SystemPlayer = ({
       video.removeAttribute("src");
       video.load();
     }
-  }, []);
+  }, [stopHideTimer]);
 
   const attachServer = useCallback(async (server, { preserve = false } = {}) => {
     const video = videoRef.current;
@@ -71,20 +136,22 @@ export const SystemPlayer = ({
       hlsRef.current = null;
     }
 
+    fatalRecoveryRef.current = 0;
     setSelectedID(server.id);
     setSourceOpen(false);
     setPhase("loading");
     setMessage("");
+    revealControls();
 
     const playURL = hlsProxyUrl(server.play_url);
     if (!playURL) {
       setPhase("failed");
-      setMessage("That source did not return a playable URL.");
+      setMessage("This source did not return a playable stream.");
       return;
     }
 
-    const canNativeHls = Boolean(video.canPlayType("application/vnd.apple.mpegurl"));
     const likelyHls = server.type === "hls" || /\.m3u8(?:$|\?)/i.test(playURL);
+    const canNativeHls = Boolean(video.canPlayType("application/vnd.apple.mpegurl"));
 
     try {
       if (likelyHls && !canNativeHls) {
@@ -93,21 +160,29 @@ export const SystemPlayer = ({
           const hls = new Hls({
             enableWorker: true,
             lowLatencyMode: false,
-            backBufferLength: 60,
-            maxBufferLength: 24,
-            maxMaxBufferLength: 48,
+            backBufferLength: 90,
+            maxBufferLength: 30,
+            maxMaxBufferLength: 75,
+            startFragPrefetch: true,
           });
           hlsRef.current = hls;
           hls.loadSource(playURL);
           hls.attachMedia(video);
           hls.on(Hls.Events.ERROR, (_event, data) => {
             if (!data?.fatal) return;
-            if (data.type === Hls.ErrorTypes.NETWORK_ERROR) hls.startLoad();
-            else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) hls.recoverMediaError();
-            else {
-              setPhase("failed");
-              setMessage("Playback stopped because this source could not be decoded.");
+            if (data.type === Hls.ErrorTypes.NETWORK_ERROR && fatalRecoveryRef.current < 2) {
+              fatalRecoveryRef.current += 1;
+              hls.startLoad();
+              return;
             }
+            if (data.type === Hls.ErrorTypes.MEDIA_ERROR && fatalRecoveryRef.current < 2) {
+              fatalRecoveryRef.current += 1;
+              hls.recoverMediaError();
+              return;
+            }
+            setPhase("failed");
+            setMessage("This source became unstable. Switch sources or retry.");
+            revealControls();
           });
         } else {
           video.src = playURL;
@@ -118,13 +193,15 @@ export const SystemPlayer = ({
       video.load();
     } catch (error) {
       setPhase("failed");
-      setMessage(error?.message || "That source could not be opened.");
+      setMessage(error?.message || "This source could not be opened.");
     }
-  }, []);
+  }, [revealControls]);
 
   const loadSources = useCallback(async () => {
     setPhase("loading");
     setMessage("");
+    setServers([]);
+    revealControls();
     try {
       const response = await getStreams(mediaType, id, season, episode, {
         title: meta?.title,
@@ -139,10 +216,13 @@ export const SystemPlayer = ({
       setPhase("failed");
       setMessage(error?.message || "SynFlix could not find a playable source.");
     }
-  }, [attachServer, episode, id, mediaType, meta, season]);
+  }, [attachServer, episode, id, mediaType, meta, revealControls, season]);
 
   useEffect(() => {
     restoreRef.current = false;
+    setCurrentTime(0);
+    setDuration(0);
+    setBuffered(0);
     loadSources();
     return cleanupPlayback;
   }, [cleanupPlayback, loadSources]);
@@ -151,11 +231,10 @@ export const SystemPlayer = ({
     const video = videoRef.current;
     if (!video) return undefined;
 
-    const onLoaded = () => {
-      setPhase("ready");
-
+    const restorePosition = () => {
       if (preservedTimeRef.current != null) {
-        video.currentTime = Math.min(preservedTimeRef.current, Math.max(0, video.duration - 0.25));
+        const target = Math.min(preservedTimeRef.current, Math.max(0, video.duration - 0.25));
+        if (Number.isFinite(target)) video.currentTime = target;
         const stayPaused = preservedPausedRef.current;
         preservedTimeRef.current = null;
         if (!stayPaused) video.play().catch(() => {});
@@ -169,13 +248,18 @@ export const SystemPlayer = ({
           video.currentTime = saved.position;
         }
       }
-
-      video.play().catch(() => {});
     };
 
-    const persist = () => {
+    const onLoaded = () => {
+      setDuration(Number.isFinite(video.duration) ? video.duration : 0);
+      setPhase("ready");
+      restorePosition();
+      video.play().catch(() => setPlaying(false));
+    };
+
+    const persist = (force = false) => {
       const now = Date.now();
-      if (now - saveTimerRef.current < 5000) return;
+      if (!force && now - saveTimerRef.current < 5000) return;
       saveTimerRef.current = now;
       if (!Number.isFinite(video.duration) || video.duration <= 0) return;
       saveProgress({
@@ -191,45 +275,219 @@ export const SystemPlayer = ({
       });
     };
 
-    const onError = () => {
-      if (phase === "loading") return;
-      setPhase("failed");
-      setMessage("This source stopped responding. Try another source.");
+    const updateTimeline = () => {
+      setCurrentTime(Number.isFinite(video.currentTime) ? video.currentTime : 0);
+      setDuration(Number.isFinite(video.duration) ? video.duration : 0);
+      if (video.buffered?.length && Number.isFinite(video.duration) && video.duration > 0) {
+        const end = video.buffered.end(video.buffered.length - 1);
+        setBuffered(clamp((end / video.duration) * 100, 0, 100));
+      }
+      persist();
     };
 
+    const onPlay = () => {
+      setPlaying(true);
+      scheduleHide();
+    };
+    const onPause = () => {
+      setPlaying(false);
+      setControlsVisible(true);
+      stopHideTimer();
+      persist(true);
+    };
+    const onWaiting = () => setPhase((value) => value === "failed" ? value : "buffering");
+    const onPlaying = () => setPhase("ready");
+    const onError = () => {
+      setPhase("failed");
+      setMessage("Playback stopped. Try another source or retry this one.");
+      setControlsVisible(true);
+    };
     const onEnded = () => {
-      persist();
+      persist(true);
+      setPlaying(false);
+      setControlsVisible(true);
       if (hasNext && onNextEpisode) onNextEpisode();
+    };
+    const onVolume = () => {
+      setVolume(video.volume);
+      setMuted(video.muted || video.volume === 0);
     };
 
     video.addEventListener("loadedmetadata", onLoaded);
     video.addEventListener("canplay", onLoaded);
-    video.addEventListener("timeupdate", persist);
+    video.addEventListener("durationchange", updateTimeline);
+    video.addEventListener("timeupdate", updateTimeline);
+    video.addEventListener("progress", updateTimeline);
+    video.addEventListener("play", onPlay);
+    video.addEventListener("pause", onPause);
+    video.addEventListener("waiting", onWaiting);
+    video.addEventListener("playing", onPlaying);
+    video.addEventListener("volumechange", onVolume);
     video.addEventListener("error", onError);
     video.addEventListener("ended", onEnded);
+
     return () => {
+      persist(true);
       video.removeEventListener("loadedmetadata", onLoaded);
       video.removeEventListener("canplay", onLoaded);
-      video.removeEventListener("timeupdate", persist);
+      video.removeEventListener("durationchange", updateTimeline);
+      video.removeEventListener("timeupdate", updateTimeline);
+      video.removeEventListener("progress", updateTimeline);
+      video.removeEventListener("play", onPlay);
+      video.removeEventListener("pause", onPause);
+      video.removeEventListener("waiting", onWaiting);
+      video.removeEventListener("playing", onPlaying);
+      video.removeEventListener("volumechange", onVolume);
       video.removeEventListener("error", onError);
       video.removeEventListener("ended", onEnded);
     };
-  }, [episode, hasNext, id, mediaType, meta, onNextEpisode, phase, season]);
+  }, [episode, hasNext, id, mediaType, meta, onNextEpisode, scheduleHide, season, stopHideTimer]);
 
-  const captions = selectedServer?.captions || [];
+  useEffect(() => {
+    const onFullscreen = () => setIsFullscreen(document.fullscreenElement === shellRef.current);
+    document.addEventListener("fullscreenchange", onFullscreen);
+    return () => document.removeEventListener("fullscreenchange", onFullscreen);
+  }, []);
+
+  const togglePlayback = useCallback(() => {
+    const video = videoRef.current;
+    if (!video || phase === "failed") return;
+    revealControls();
+    if (video.paused) video.play().catch(() => {});
+    else video.pause();
+  }, [phase, revealControls]);
+
+  const seekBy = useCallback((delta) => {
+    const video = videoRef.current;
+    if (!video || !Number.isFinite(video.duration)) return;
+    video.currentTime = clamp(video.currentTime + delta, 0, video.duration);
+    setCurrentTime(video.currentTime);
+    revealControls();
+  }, [revealControls]);
+
+  const seekTo = (event) => {
+    const video = videoRef.current;
+    if (!video || !Number.isFinite(video.duration)) return;
+    const next = (Number(event.target.value) / 1000) * video.duration;
+    video.currentTime = next;
+    setCurrentTime(next);
+    revealControls();
+  };
+
+  const toggleMute = () => {
+    const video = videoRef.current;
+    if (!video) return;
+    video.muted = !video.muted;
+    revealControls();
+  };
+
+  const changeVolume = (event) => {
+    const video = videoRef.current;
+    if (!video) return;
+    const next = Number(event.target.value);
+    video.volume = next;
+    video.muted = next === 0;
+    setVolume(next);
+    revealControls();
+  };
+
+  const toggleFullscreen = async () => {
+    const shell = shellRef.current;
+    if (!shell) return;
+    revealControls();
+    try {
+      if (document.fullscreenElement) await document.exitFullscreen();
+      else if (shell.requestFullscreen) await shell.requestFullscreen();
+      else if (videoRef.current?.webkitEnterFullscreen) videoRef.current.webkitEnterFullscreen();
+    } catch { /* browser denied fullscreen */ }
+  };
+
+  const togglePiP = async () => {
+    const video = videoRef.current;
+    if (!video || !document.pictureInPictureEnabled) return;
+    revealControls();
+    try {
+      if (document.pictureInPictureElement) await document.exitPictureInPicture();
+      else await video.requestPictureInPicture();
+    } catch { /* PiP unavailable for this stream */ }
+  };
+
+  const toggleCaptions = () => {
+    const video = videoRef.current;
+    if (!video?.textTracks?.length) return;
+    const next = !captionsEnabled;
+    Array.from(video.textTracks).forEach((track, index) => {
+      track.mode = next && index === 0 ? "showing" : "disabled";
+    });
+    setCaptionsEnabled(next);
+    revealControls();
+  };
+
+  useEffect(() => {
+    const onKey = (event) => {
+      const target = event.target;
+      if (["INPUT", "TEXTAREA", "SELECT"].includes(target?.tagName)) return;
+      if (!shellRef.current) return;
+
+      if (event.key === "Escape" && !document.fullscreenElement) {
+        event.preventDefault();
+        onBack?.();
+        return;
+      }
+      if (event.code === "Space" || event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        togglePlayback();
+      } else if (event.key === "ArrowLeft" || event.key.toLowerCase() === "j") {
+        event.preventDefault();
+        seekBy(-10);
+      } else if (event.key === "ArrowRight" || event.key.toLowerCase() === "l") {
+        event.preventDefault();
+        seekBy(10);
+      } else if (event.key.toLowerCase() === "m") {
+        event.preventDefault();
+        toggleMute();
+      } else if (event.key.toLowerCase() === "f") {
+        event.preventDefault();
+        toggleFullscreen();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onBack, seekBy, togglePlayback]);
+
+  useEffect(() => {
+    if (sourceOpen) {
+      setControlsVisible(true);
+      stopHideTimer();
+    } else {
+      scheduleHide();
+    }
+  }, [scheduleHide, sourceOpen, stopHideTimer]);
+
+  const timelineValue = duration > 0 ? clamp((currentTime / duration) * 1000, 0, 1000) : 0;
   const shellClass = fullscreen
-    ? "fixed inset-0 isolate h-[100dvh] w-full overflow-hidden rounded-none bg-black"
-    : "relative isolate aspect-video w-full overflow-hidden rounded-[18px] bg-black shadow-[0_28px_90px_rgba(0,0,0,.55)]";
+    ? "synplayer3-shell synplayer3-fullscreen"
+    : "synplayer3-shell synplayer3-inline";
+  const VolumeIcon = muted || volume === 0 ? VolumeX : volume < 0.55 ? Volume1 : Volume2;
 
   return (
-    <section className={shellClass} data-testid="system-player" data-fullscreen={fullscreen ? "true" : "false"}>
+    <section
+      ref={shellRef}
+      className={`${shellClass} ${controlsVisible ? "controls-visible" : "controls-hidden"}`}
+      data-testid="system-player"
+      data-fullscreen={fullscreen ? "true" : "false"}
+      onPointerMove={revealControls}
+      onPointerDown={revealControls}
+      onMouseLeave={() => playing && !sourceOpen && setControlsVisible(false)}
+    >
       <video
         ref={videoRef}
-        className="h-full w-full bg-black object-contain"
-        controls
+        className="synplayer3-video"
         playsInline
-        preload="metadata"
+        preload="auto"
         disablePictureInPicture={false}
+        onClick={togglePlayback}
+        onDoubleClick={toggleFullscreen}
         aria-label={`${meta?.title || "SynFlix"} player`}
       >
         {captions.map((caption, index) => (
@@ -239,91 +497,150 @@ export const SystemPlayer = ({
             src={hlsProxyUrl(caption.play_url)}
             srcLang={caption.lang || "en"}
             label={caption.name || caption.lang || "Subtitles"}
-            default={index === 0}
           />
         ))}
       </video>
 
-      <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex items-start justify-between gap-3 bg-gradient-to-b from-black/75 via-black/25 to-transparent px-3 pb-12 pt-[max(12px,env(safe-area-inset-top))] sm:px-4">
-        <button
-          type="button"
-          onClick={onBack}
-          className="pointer-events-auto grid h-11 w-11 place-items-center rounded-full border border-white/15 bg-black/45 text-white/95 shadow-lg backdrop-blur-2xl transition hover:bg-black/60 active:scale-95"
-          aria-label="Close player"
-        >
-          <X className="h-5 w-5" />
+      <div className="synplayer3-vignette synplayer3-vignette-top" />
+      <div className="synplayer3-vignette synplayer3-vignette-bottom" />
+
+      <div className="synplayer3-topbar">
+        <button type="button" className="synplayer3-close" onClick={onBack} aria-label="Exit player">
+          <X />
         </button>
 
-        <div className="pointer-events-auto relative">
-          <button
-            type="button"
-            onClick={() => setSourceOpen((open) => !open)}
-            className="inline-flex h-10 items-center gap-2 rounded-full border border-white/15 bg-black/40 px-3.5 text-xs font-semibold text-white/90 shadow-lg backdrop-blur-2xl transition hover:bg-black/55"
-            aria-expanded={sourceOpen}
-            aria-label="Choose playback source"
-          >
-            <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: playerAccent }} />
-            <span>{serverLabel(selectedServer)}</span>
-            <ChevronDown className={`h-3.5 w-3.5 text-white/55 transition ${sourceOpen ? "rotate-180" : ""}`} />
-          </button>
+        <div className="synplayer3-heading">
+          <strong>{meta?.title || "SynFlix"}</strong>
+          {mediaType === "tv" && <span>Season {season} · Episode {episode}</span>}
+        </div>
 
-          {sourceOpen && (
-            <div className="absolute right-0 top-12 w-[260px] overflow-hidden rounded-2xl border border-white/12 bg-[#0b0b0d]/92 p-1.5 shadow-[0_24px_70px_rgba(0,0,0,.65)] backdrop-blur-2xl">
-              <div className="px-2.5 pb-1.5 pt-2 text-[10px] font-semibold uppercase tracking-[0.15em] text-white/35">Playback source</div>
-              <div className="max-h-64 overflow-y-auto">
-                {servers.map((server) => {
-                  const active = server.id === selectedID;
-                  return (
-                    <button
-                      key={server.id}
-                      type="button"
-                      onClick={() => attachServer(server, { preserve: true })}
-                      className={`flex w-full items-center gap-3 rounded-xl px-2.5 py-2.5 text-left transition ${active ? "bg-white/[0.08] text-white" : "text-white/70 hover:bg-white/[0.05] hover:text-white"}`}
-                    >
-                      <span className={`grid h-7 w-7 shrink-0 place-items-center rounded-full ${active ? "text-black" : "bg-white/[0.05] text-white/45"}`} style={active ? { backgroundColor: playerAccent } : undefined}>
-                        {active ? <Check className="h-3.5 w-3.5" /> : <span className="h-1.5 w-1.5 rounded-full bg-current" />}
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate text-xs font-semibold">{server.name || "Source"}</span>
-                        <span className="mt-0.5 block truncate text-[10px] text-white/35">{server.quality || server.provider || "Automatic"}</span>
-                      </span>
-                    </button>
-                  );
-                })}
+        <div className="synplayer3-top-actions">
+          <div className="synplayer3-source-wrap">
+            <button
+              type="button"
+              className="synplayer3-source-button"
+              onClick={() => setSourceOpen((open) => !open)}
+              aria-expanded={sourceOpen}
+              aria-label="Choose playback source"
+            >
+              <span className="synplayer3-source-dot" />
+              <span>{sourceLabel(selectedServer)}</span>
+              <ChevronDown className={sourceOpen ? "rotate-180" : ""} />
+            </button>
+
+            {sourceOpen && (
+              <div className="synplayer3-source-menu">
+                <div className="synplayer3-source-title">Playback source</div>
+                <div className="synplayer3-source-list">
+                  {servers.map((server) => {
+                    const active = server.id === selectedID;
+                    return (
+                      <button
+                        key={server.id}
+                        type="button"
+                        onClick={() => attachServer(server, { preserve: true })}
+                        className={active ? "is-active" : ""}
+                      >
+                        <span className="synplayer3-source-check">{active ? <Check /> : null}</span>
+                        <span className="synplayer3-source-copy">
+                          <strong>{server.name || "Source"}</strong>
+                          <small>{server.quality || server.provider || "Automatic"}</small>
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
 
-      {phase !== "ready" && (
-        <div className="absolute inset-0 z-10 grid place-items-center bg-black/72 px-6 text-center backdrop-blur-sm">
-          {phase === "loading" ? (
-            <div className="flex flex-col items-center gap-4">
-              <img src="/synflix-logo.webp" alt="" className="h-16 w-16 object-contain" />
-              <Loader2 className="h-6 w-6 animate-spin" style={{ color: playerAccent }} />
-              <div>
-                <div className="text-sm font-semibold text-white">{meta?.title || "SynFlix"}</div>
-                <div className="mt-1 text-xs text-white/40">Finding the best source</div>
-              </div>
-            </div>
-          ) : (
-            <div className="max-w-sm">
-              <AlertCircle className="mx-auto h-8 w-8" style={{ color: playerAccent }} />
-              <div className="mt-4 text-lg font-semibold text-white">Playback unavailable</div>
-              <p className="mt-2 text-sm leading-6 text-white/45">{message}</p>
-              <div className="mt-5 flex justify-center gap-2">
-                <button type="button" onClick={onBack} className="inline-flex h-10 items-center gap-2 rounded-full border border-white/12 bg-white/[0.05] px-4 text-xs font-semibold text-white/75">
-                  <X className="h-4 w-4" /> Close
-                </button>
-                <button type="button" onClick={loadSources} className="inline-flex h-10 items-center gap-2 rounded-full px-4 text-xs font-semibold text-black" style={{ backgroundColor: playerAccent }}>
-                  <RefreshCw className="h-4 w-4" /> Retry
-                </button>
-              </div>
-            </div>
-          )}
+      {phase === "ready" && controlsVisible && !playing && (
+        <button type="button" className="synplayer3-center-play" onClick={togglePlayback} aria-label="Play">
+          <Play />
+        </button>
+      )}
+
+      {(phase === "loading" || phase === "buffering") && (
+        <div className="synplayer3-loading" aria-live="polite">
+          <Loader2 />
+          <span>{phase === "loading" ? "Starting playback" : "Buffering"}</span>
         </div>
       )}
+
+      {phase === "failed" && (
+        <div className="synplayer3-error" role="alert">
+          <AlertCircle />
+          <h2>Playback unavailable</h2>
+          <p>{message}</p>
+          <div>
+            <button type="button" onClick={onBack} className="secondary"><X /> Exit</button>
+            <button type="button" onClick={loadSources} className="primary"><RefreshCw /> Retry</button>
+          </div>
+        </div>
+      )}
+
+      <div className="synplayer3-controls">
+        <div className="synplayer3-timeline-wrap">
+          <div className="synplayer3-buffer" style={{ width: `${buffered}%` }} />
+          <div className="synplayer3-progress" style={{ width: `${timelineValue / 10}%` }} />
+          <input
+            className="synplayer3-timeline"
+            type="range"
+            min="0"
+            max="1000"
+            step="1"
+            value={timelineValue}
+            onChange={seekTo}
+            aria-label="Seek"
+          />
+        </div>
+
+        <div className="synplayer3-control-row">
+          <div className="synplayer3-control-left">
+            <button type="button" onClick={togglePlayback} aria-label={playing ? "Pause" : "Play"}>
+              {playing ? <Pause /> : <Play />}
+            </button>
+            <button type="button" onClick={() => seekBy(-10)} aria-label="Back 10 seconds"><RotateCcw /></button>
+            <button type="button" onClick={() => seekBy(10)} aria-label="Forward 10 seconds"><RotateCw /></button>
+
+            <div className="synplayer3-volume">
+              <button type="button" onClick={toggleMute} aria-label={muted ? "Unmute" : "Mute"}><VolumeIcon /></button>
+              <input
+                type="range"
+                min="0"
+                max="1"
+                step="0.02"
+                value={muted ? 0 : volume}
+                onChange={changeVolume}
+                aria-label="Volume"
+              />
+            </div>
+
+            <span className="synplayer3-time">{formatTime(currentTime)} <em>/</em> {formatTime(duration)}</span>
+          </div>
+
+          <div className="synplayer3-control-right">
+            {hasNext && onNextEpisode && (
+              <button type="button" onClick={onNextEpisode} aria-label="Next episode" className="synplayer3-next">
+                <SkipForward /><span>Next episode</span>
+              </button>
+            )}
+            {captions.length > 0 && (
+              <button type="button" onClick={toggleCaptions} className={captionsEnabled ? "is-active" : ""} aria-label="Subtitles">
+                <Captions />
+              </button>
+            )}
+            {typeof document !== "undefined" && document.pictureInPictureEnabled && (
+              <button type="button" onClick={togglePiP} aria-label="Picture in Picture"><PictureInPicture2 /></button>
+            )}
+            <button type="button" onClick={toggleFullscreen} aria-label={isFullscreen ? "Exit fullscreen" : "Fullscreen"}>
+              {isFullscreen ? <Minimize /> : <Maximize />}
+            </button>
+          </div>
+        </div>
+      </div>
     </section>
   );
 };
