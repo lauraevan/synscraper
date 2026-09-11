@@ -23,8 +23,8 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: app.synflix.mobile
         PRODUCT_NAME: SynFlix
-        MARKETING_VERSION: 2.0.0
-        CURRENT_PROJECT_VERSION: 10
+        MARKETING_VERSION: 2.0.1
+        CURRENT_PROJECT_VERSION: 11
         TARGETED_DEVICE_FAMILY: "1,2"
         SUPPORTS_MACCATALYST: NO
         CODE_SIGN_STYLE: Manual
