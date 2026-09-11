@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
-  Bell,
   Bookmark,
   ChevronLeft,
   ChevronRight,
@@ -23,6 +22,14 @@ const NAV_ITEMS = [
   { to: "/my-list", label: "My List", icon: Bookmark },
 ];
 
+const DOCK_ITEMS = [
+  NAV_ITEMS[0],
+  NAV_ITEMS[1],
+  { to: "/search", label: "Search", icon: Search },
+  NAV_ITEMS[3],
+  NAV_ITEMS[2],
+];
+
 const titleForPath = (pathname) => {
   if (pathname === "/") return "Home";
   if (pathname.startsWith("/browse/movie")) return "Movies";
@@ -40,6 +47,7 @@ export const WebClientShell = ({ children }) => {
   const searchRef = useRef(null);
   const [query, setQuery] = useState("");
   const [playerSession, setPlayerSession] = useState(null);
+  const [scrolled, setScrolled] = useState(false);
 
   const immersive = location.pathname === "/" || location.pathname.startsWith("/title/");
   const routeKey = `${location.pathname}${location.search}`;
@@ -49,6 +57,13 @@ export const WebClientShell = ({ children }) => {
     const handler = (event) => setPlayerSession(event.detail);
     window.addEventListener("synflix:web-play", handler);
     return () => window.removeEventListener("synflix:web-play", handler);
+  }, []);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 24);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
   useEffect(() => {
@@ -78,7 +93,10 @@ export const WebClientShell = ({ children }) => {
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "instant" });
-  }, [location.pathname]);
+    if (location.pathname.startsWith("/search")) {
+      setQuery(new URLSearchParams(location.search).get("q") || "");
+    }
+  }, [location.pathname, location.search]);
 
   const submitSearch = (event) => {
     event.preventDefault();
@@ -91,100 +109,74 @@ export const WebClientShell = ({ children }) => {
     : location.pathname === item.to || location.pathname.startsWith(`${item.to}/`);
 
   const transition = useMemo(() => ({
-    duration: 0.2,
+    duration: 0.18,
     ease: [0.22, 1, 0.36, 1],
   }), []);
 
   return (
-    <div className="synflix-web-client">
-      <aside className="synflix-client-rail" aria-label="SynFlix navigation">
-        <Link to="/" className="synflix-client-mark" aria-label="SynFlix home">
-          <img src="/synflix-logo.webp" alt="" />
-        </Link>
+    <div className="synflix-web-client synflix-web-client-v2">
+      <header className={`synflix-liquid-header ${(scrolled || !immersive) ? "is-scrolled" : ""}`}>
+        <div className="synflix-liquid-header-inner">
+          <div className="synflix-liquid-left">
+            <Link to="/" className="synflix-liquid-brand" aria-label="SynFlix home">
+              <img src="/synflix-logo.webp" alt="" />
+              <span>SynFlix</span>
+            </Link>
 
-        <nav className="synflix-client-rail-nav" aria-label="Primary navigation">
-          {NAV_ITEMS.map((item) => {
-            const Icon = item.icon;
-            return (
+            <div className="synflix-liquid-history" aria-label="Navigation history">
+              <button type="button" onClick={() => navigate(-1)} aria-label="Back">
+                <ChevronLeft aria-hidden="true" />
+              </button>
+              <button type="button" onClick={() => navigate(1)} aria-label="Forward">
+                <ChevronRight aria-hidden="true" />
+              </button>
+            </div>
+          </div>
+
+          <nav className="synflix-liquid-nav" aria-label="Primary navigation">
+            {NAV_ITEMS.map((item) => (
               <Link
                 key={item.to}
                 to={item.to}
                 className={active(item) ? "is-active" : ""}
-                aria-label={item.label}
-                data-label={item.label}
+                aria-current={active(item) ? "page" : undefined}
               >
-                <Icon aria-hidden="true" />
+                {item.label}
               </Link>
-            );
-          })}
-          <Link
-            to="/search"
-            className={location.pathname.startsWith("/search") ? "is-active" : ""}
-            aria-label="Search"
-            data-label="Search"
-          >
-            <Search aria-hidden="true" />
-          </Link>
-        </nav>
+            ))}
+          </nav>
 
-        <div className="synflix-client-rail-bottom">
-          <Link
-            to="/settings"
-            className={location.pathname.startsWith("/settings") ? "is-active" : ""}
-            aria-label="Settings"
-            data-label="Settings"
-          >
-            <Settings aria-hidden="true" />
-          </Link>
-          <button type="button" className="synflix-client-avatar" aria-label="Profile" data-label="Profile">
-            <UserRound aria-hidden="true" />
-          </button>
-        </div>
-      </aside>
+          <div className="synflix-liquid-actions">
+            <span className="synflix-liquid-page-title">{pageTitle}</span>
 
-      <header className="synflix-client-topbar">
-        <div className="synflix-client-history" aria-label="Navigation history">
-          <button type="button" onClick={() => navigate(-1)} aria-label="Back">
-            <ChevronLeft aria-hidden="true" />
-          </button>
-          <button type="button" onClick={() => navigate(1)} aria-label="Forward">
-            <ChevronRight aria-hidden="true" />
-          </button>
-        </div>
+            <form className="synflix-liquid-search" onSubmit={submitSearch} role="search">
+              <Search aria-hidden="true" />
+              <input
+                ref={searchRef}
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Titles, people, genres"
+                aria-label="Search movies and series"
+              />
+              {query ? (
+                <button type="button" onClick={() => setQuery("")} aria-label="Clear search">
+                  <X aria-hidden="true" />
+                </button>
+              ) : (
+                <kbd>⌘K</kbd>
+              )}
+            </form>
 
-        <div className="synflix-client-section-title">
-          <strong>{pageTitle}</strong>
-        </div>
-
-        <form className="synflix-client-search" onSubmit={submitSearch} role="search">
-          <Search aria-hidden="true" />
-          <input
-            ref={searchRef}
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Search SynFlix"
-            aria-label="Search movies and series"
-          />
-          {query ? (
-            <button type="button" onClick={() => setQuery("")} aria-label="Clear search">
-              <X aria-hidden="true" />
-            </button>
-          ) : (
-            <kbd>⌘ K</kbd>
-          )}
-        </form>
-
-        <div className="synflix-client-top-actions">
-          <button type="button" aria-label="Notifications">
-            <Bell aria-hidden="true" />
-          </button>
-          <Link to="/settings" className="synflix-client-profile-chip" aria-label="Open profile and settings">
-            <span className="synflix-client-profile-dot"><UserRound aria-hidden="true" /></span>
-            <span className="synflix-client-profile-copy">
-              <strong>SynFlix</strong>
-              <small>Profile</small>
-            </span>
-          </Link>
+            <Link to="/search" className="synflix-liquid-icon synflix-liquid-search-shortcut" aria-label="Search">
+              <Search aria-hidden="true" />
+            </Link>
+            <Link to="/settings" className="synflix-liquid-icon" aria-label="Settings">
+              <Settings aria-hidden="true" />
+            </Link>
+            <Link to="/settings" className="synflix-liquid-profile" aria-label="Profile and settings">
+              <UserRound aria-hidden="true" />
+            </Link>
+          </div>
         </div>
       </header>
 
@@ -203,20 +195,21 @@ export const WebClientShell = ({ children }) => {
         </AnimatePresence>
       </main>
 
-      <nav className="synflix-web-mobile-dock" aria-label="Mobile navigation">
-        {NAV_ITEMS.map((item) => {
+      <nav className="synflix-web-mobile-dock synflix-liquid-dock" aria-label="Adaptive navigation">
+        {DOCK_ITEMS.map((item) => {
           const Icon = item.icon;
           return (
-            <Link key={item.to} to={item.to} className={active(item) ? "is-active" : ""}>
+            <Link
+              key={item.to}
+              to={item.to}
+              className={active(item) ? "is-active" : ""}
+              aria-current={active(item) ? "page" : undefined}
+            >
               <Icon aria-hidden="true" />
               <span>{item.label}</span>
             </Link>
           );
         })}
-        <Link to="/search" className={location.pathname.startsWith("/search") ? "is-active" : ""}>
-          <Search aria-hidden="true" />
-          <span>Search</span>
-        </Link>
       </nav>
 
       <WebPlayerOverlay session={playerSession} onClose={() => setPlayerSession(null)} />

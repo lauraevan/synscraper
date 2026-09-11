@@ -1,0 +1,932 @@
+/* SynFlix web client v2 — cinematic, responsive and deliberately tablet-first.
+   Liquid Glass is reserved for navigation/chrome; content stays dark and cinematic. */
+
+html[data-synflix-web-client="true"],
+html[data-synflix-web-client="true"] body,
+html[data-synflix-web-client="true"] #root,
+html[data-synflix-web-client="true"] .App {
+  width: 100%;
+  min-width: 0;
+  min-height: 100%;
+  background: #050505 !important;
+}
+
+html[data-synflix-web-client="true"] body {
+  overflow-x: hidden;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+.synflix-web-client-v2 {
+  --client-rail: 0px !important;
+  --client-top: 82px;
+  --client-accent: var(--site-accent, #ffd400);
+  --client-bg: #050505;
+  --client-max: 1560px;
+  position: relative;
+  width: 100%;
+  min-width: 0;
+  min-height: 100vh;
+  padding-left: 0 !important;
+  background: #050505;
+  color: #fff;
+  overflow-x: clip;
+}
+
+/* Retire the old desktop rail entirely. The web client now has one adaptive shell. */
+.synflix-web-client-v2 > .synflix-client-rail,
+.synflix-web-client-v2 > .synflix-client-topbar {
+  display: none !important;
+}
+
+/* ---------- premium top chrome ---------- */
+.synflix-liquid-header {
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: 150;
+  height: var(--client-top);
+  padding: 10px 18px 0;
+  pointer-events: none;
+}
+
+.synflix-liquid-header-inner {
+  width: min(100%, var(--client-max));
+  height: 58px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: minmax(240px, 1fr) auto minmax(340px, 1fr);
+  align-items: center;
+  gap: 26px;
+  padding: 0 12px 0 14px;
+  border: 1px solid transparent;
+  border-radius: 20px;
+  background: linear-gradient(180deg, rgba(5,5,5,.20), rgba(5,5,5,.04));
+  box-shadow: none;
+  -webkit-backdrop-filter: blur(0px);
+  backdrop-filter: blur(0px);
+  pointer-events: auto;
+  transition:
+    background-color 220ms ease,
+    border-color 220ms ease,
+    box-shadow 220ms ease,
+    -webkit-backdrop-filter 220ms ease,
+    backdrop-filter 220ms ease;
+}
+
+.synflix-liquid-header.is-scrolled .synflix-liquid-header-inner {
+  border-color: rgba(255,255,255,.14);
+  background:
+    radial-gradient(130% 170% at 22% -55%, rgba(255,255,255,.17), transparent 55%),
+    linear-gradient(180deg, rgba(24,24,24,.72), rgba(9,9,9,.62));
+  -webkit-backdrop-filter: blur(34px) saturate(175%);
+  backdrop-filter: blur(34px) saturate(175%);
+  box-shadow:
+    0 18px 50px rgba(0,0,0,.30),
+    inset 0 1px 0 rgba(255,255,255,.14),
+    inset 0 -1px 0 rgba(255,255,255,.035);
+}
+
+.synflix-liquid-left,
+.synflix-liquid-actions,
+.synflix-liquid-nav {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.synflix-liquid-left { gap: 12px; }
+
+.synflix-liquid-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+  color: #fff;
+  text-decoration: none;
+}
+
+.synflix-liquid-brand img {
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
+  flex: none;
+}
+
+.synflix-liquid-brand span {
+  font-size: 16px;
+  line-height: 1;
+  font-weight: 780;
+  letter-spacing: -.045em;
+  color: var(--client-accent);
+}
+
+.synflix-liquid-history {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: 4px;
+}
+
+.synflix-liquid-history button,
+.synflix-liquid-icon {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: rgba(255,255,255,.52);
+  text-decoration: none;
+  cursor: pointer;
+  transition: color 140ms ease, background-color 140ms ease, transform 120ms ease;
+}
+
+.synflix-liquid-history button:hover,
+.synflix-liquid-icon:hover {
+  color: rgba(255,255,255,.94);
+  background: rgba(255,255,255,.075);
+}
+
+.synflix-liquid-history button:active,
+.synflix-liquid-icon:active { transform: scale(.94); }
+
+.synflix-liquid-history svg,
+.synflix-liquid-icon svg {
+  width: 17px;
+  height: 17px;
+  stroke-width: 2;
+}
+
+.synflix-liquid-nav {
+  justify-content: center;
+  gap: clamp(18px, 2.2vw, 34px);
+}
+
+.synflix-liquid-nav a {
+  position: relative;
+  padding: 20px 0 18px;
+  color: rgba(255,255,255,.54);
+  font-size: 13px;
+  line-height: 1;
+  font-weight: 650;
+  letter-spacing: -.018em;
+  text-decoration: none;
+  transition: color 150ms ease;
+}
+
+.synflix-liquid-nav a:hover,
+.synflix-liquid-nav a.is-active { color: rgba(255,255,255,.96); }
+
+.synflix-liquid-nav a::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: 10px;
+  width: 0;
+  height: 2px;
+  border-radius: 999px;
+  background: var(--client-accent);
+  transform: translateX(-50%);
+  opacity: 0;
+  transition: width 170ms cubic-bezier(.22,1,.36,1), opacity 130ms ease;
+}
+
+.synflix-liquid-nav a.is-active::after {
+  width: 18px;
+  opacity: 1;
+}
+
+.synflix-liquid-actions {
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.synflix-liquid-page-title,
+.synflix-liquid-search-shortcut { display: none; }
+
+.synflix-liquid-search {
+  width: min(330px, 25vw);
+  height: 38px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 9px 0 12px;
+  margin-right: 2px;
+  border: 1px solid rgba(255,255,255,.09);
+  border-radius: 12px;
+  background: rgba(255,255,255,.048);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.025);
+  -webkit-backdrop-filter: blur(18px) saturate(130%);
+  backdrop-filter: blur(18px) saturate(130%);
+  transition: border-color 150ms ease, background-color 150ms ease, width 180ms cubic-bezier(.22,1,.36,1);
+}
+
+.synflix-liquid-search:focus-within {
+  width: min(380px, 28vw);
+  border-color: color-mix(in srgb, var(--client-accent) 40%, rgba(255,255,255,.1));
+  background: rgba(8,8,8,.62);
+}
+
+.synflix-liquid-search > svg {
+  width: 15px;
+  height: 15px;
+  flex: none;
+  color: rgba(255,255,255,.38);
+}
+
+.synflix-liquid-search input {
+  min-width: 0;
+  flex: 1;
+  height: 100%;
+  border: 0 !important;
+  outline: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: rgba(255,255,255,.94);
+  font: inherit;
+  font-size: 13px;
+}
+
+.synflix-liquid-search input::placeholder { color: rgba(255,255,255,.28); }
+
+.synflix-liquid-search kbd {
+  padding: 2px 5px;
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 5px;
+  background: rgba(255,255,255,.025);
+  color: rgba(255,255,255,.25);
+  font: 600 9px/1.2 -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+}
+
+.synflix-liquid-search button {
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: rgba(255,255,255,.38);
+}
+
+.synflix-liquid-search button:hover { background: rgba(255,255,255,.06); color: rgba(255,255,255,.84); }
+.synflix-liquid-search button svg { width: 14px; height: 14px; }
+
+.synflix-liquid-profile {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  margin-left: 2px;
+  border-radius: 50%;
+  border: 1px solid color-mix(in srgb, var(--client-accent) 30%, rgba(255,255,255,.06));
+  background: color-mix(in srgb, var(--client-accent) 14%, rgba(255,255,255,.035));
+  color: var(--client-accent);
+  text-decoration: none;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.10);
+}
+
+.synflix-liquid-profile svg { width: 15px; height: 15px; stroke-width: 2.25; }
+
+/* ---------- content surface ---------- */
+.synflix-web-client-v2 .synflix-web-surface {
+  width: 100%;
+  min-width: 0;
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 50% -8%, color-mix(in srgb, var(--client-accent) 4%, transparent), transparent 32%),
+    #050505 !important;
+}
+
+.synflix-web-client-v2 .synflix-web-route {
+  width: 100%;
+  min-width: 0;
+  min-height: 100vh;
+}
+
+.synflix-web-client-v2 .synflix-web-surface:not(.is-immersive) .synflix-web-route > main {
+  min-height: 100vh;
+  padding-top: calc(var(--client-top) + 22px) !important;
+}
+
+.synflix-web-client-v2 .synflix-site > main,
+.synflix-web-client-v2 .synflix-site section,
+.synflix-web-client-v2 .synflix-site article,
+.synflix-web-client-v2 .synflix-site aside {
+  min-width: 0;
+}
+
+/* ---------- cinematic hero ---------- */
+.synflix-web-client-v2 [data-testid="hero-banner"] {
+  height: min(78vh, 820px) !important;
+  min-height: 600px !important;
+  max-height: 820px !important;
+  background: #050505 !important;
+  contain: paint;
+}
+
+.synflix-web-client-v2 [data-testid="hero-banner"]::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, #050505 0%, rgba(5,5,5,.88) 20%, rgba(5,5,5,.46) 43%, rgba(5,5,5,.10) 72%),
+    linear-gradient(0deg, #050505 0%, rgba(5,5,5,.82) 12%, rgba(5,5,5,.12) 40%, rgba(5,5,5,.16) 100%);
+}
+
+.synflix-web-client-v2 [data-testid="hero-banner"]::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0;
+  z-index: 3;
+  height: 23%;
+  pointer-events: none;
+  background: linear-gradient(180deg, transparent, #050505 88%);
+}
+
+.synflix-web-client-v2 .synflix-hero-image {
+  animation: none !important;
+  transform: scale(1.01) !important;
+  filter: saturate(.94) contrast(1.035) brightness(.96);
+  transition: opacity 260ms ease !important;
+}
+
+.synflix-web-client-v2 [data-testid="hero-banner"]:hover .synflix-hero-image {
+  transform: scale(1.01) !important;
+}
+
+.synflix-web-client-v2 .synflix-hero-copy,
+.synflix-web-client-v2 .synflix-hero-copy > * {
+  animation: none !important;
+}
+
+.synflix-web-client-v2 [data-testid="hero-banner"] > div:last-child {
+  width: min(100%, var(--client-max));
+  padding-left: max(28px, calc((100vw - var(--client-max)) / 2 + 28px)) !important;
+  padding-right: max(28px, calc((100vw - var(--client-max)) / 2 + 28px)) !important;
+  padding-bottom: 84px !important;
+  padding-top: 112px !important;
+}
+
+.synflix-web-client-v2 .synflix-hero-copy {
+  max-width: 610px !important;
+  padding-bottom: 6px;
+}
+
+.synflix-web-client-v2 .synflix-hero-copy h1 {
+  max-width: 720px;
+  font-size: clamp(48px, 5vw, 78px) !important;
+  line-height: .94 !important;
+  letter-spacing: -.058em !important;
+}
+
+.synflix-web-client-v2 .synflix-hero-copy > div:first-child {
+  color: rgba(255,255,255,.42) !important;
+  letter-spacing: .15em !important;
+}
+
+.synflix-web-client-v2 [data-testid="hero-play-button"],
+.synflix-web-client-v2 [data-testid="title-play-button"] {
+  min-width: 112px;
+  height: 44px !important;
+  border: 0 !important;
+  border-radius: 10px !important;
+  background: var(--client-accent) !important;
+  color: #050505 !important;
+  box-shadow: 0 10px 32px color-mix(in srgb, var(--client-accent) 15%, transparent) !important;
+  transform: none !important;
+  transition: filter 130ms ease, transform 130ms ease !important;
+}
+
+.synflix-web-client-v2 [data-testid="hero-play-button"]:hover,
+.synflix-web-client-v2 [data-testid="title-play-button"]:hover {
+  filter: brightness(1.055);
+  transform: translateY(-1px) !important;
+}
+
+.synflix-web-client-v2 [data-testid="hero-info-button"],
+.synflix-web-client-v2 [data-testid="hero-watchlist-button"],
+.synflix-web-client-v2 [data-testid="title-watchlist-button"] {
+  height: 44px !important;
+  border-radius: 10px !important;
+  border-color: rgba(255,255,255,.16) !important;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,.045)),
+    rgba(10,10,10,.44) !important;
+  color: rgba(255,255,255,.90) !important;
+  -webkit-backdrop-filter: blur(22px) saturate(150%);
+  backdrop-filter: blur(22px) saturate(150%);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.11) !important;
+}
+
+/* ---------- shelves ---------- */
+.synflix-web-client-v2 [data-testid="home-page"] > div > section {
+  animation: none !important;
+  content-visibility: auto;
+  contain-intrinsic-size: auto 360px;
+}
+
+.synflix-web-client-v2 section[data-testid^="row-"] {
+  padding-block: 14px !important;
+}
+
+.synflix-web-client-v2 section[data-testid^="row-"] > div:first-child {
+  width: min(calc(100% - 56px), var(--client-max));
+  margin: 0 auto 11px !important;
+  padding-inline: 0 !important;
+}
+
+.synflix-web-client-v2 section[data-testid^="row-"] > div:last-child {
+  gap: 11px !important;
+  padding-left: max(28px, calc((100vw - var(--client-max)) / 2 + 28px)) !important;
+  padding-right: max(28px, calc((100vw - var(--client-max)) / 2 + 28px)) !important;
+  scroll-padding-inline: 28px;
+  overscroll-behavior-inline: contain;
+}
+
+.synflix-web-client-v2 section[data-testid^="row-"] h2,
+.synflix-web-client-v2 [data-testid="top-ten-row"] h2 {
+  font-size: clamp(18px, 1.3vw, 21px) !important;
+  font-weight: 700 !important;
+  letter-spacing: -.03em !important;
+}
+
+.synflix-web-client-v2 section[data-testid^="row-"] h2 + p { display: none !important; }
+
+.synflix-web-client-v2 [data-testid^="movie-card-"] {
+  width: clamp(148px, 10.8vw, 184px) !important;
+}
+
+.synflix-web-client-v2 [data-testid^="movie-card-"] > div:first-child {
+  border-radius: 9px !important;
+  border-color: rgba(255,255,255,.06) !important;
+  background: #0d0d0d !important;
+  box-shadow: none !important;
+  transform: translateZ(0) !important;
+  overflow: hidden;
+  transition: transform 180ms cubic-bezier(.22,1,.36,1), border-color 160ms ease, box-shadow 180ms ease !important;
+}
+
+.synflix-web-client-v2 [data-testid^="movie-card-"] > div:first-child::before { display: none !important; }
+.synflix-web-client-v2 [data-testid="row-popular-movies"] article::before,
+.synflix-web-client-v2 [data-testid="row-top-rated-movies"] article::before { display: none !important; }
+
+@media (hover:hover) and (pointer:fine) {
+  .synflix-web-client-v2 [data-testid^="movie-card-"]:hover > div:first-child {
+    transform: translate3d(0,-4px,0) scale(1.018) !important;
+    border-color: rgba(255,255,255,.16) !important;
+    box-shadow: 0 18px 44px rgba(0,0,0,.46) !important;
+  }
+
+  .synflix-web-client-v2 [data-testid^="movie-card-"]:hover img {
+    transform: scale(1.018) !important;
+    filter: brightness(1.045);
+  }
+}
+
+.synflix-web-client-v2 [data-testid^="movie-card-"] img {
+  transition: transform 240ms cubic-bezier(.22,1,.36,1), filter 180ms ease !important;
+}
+
+.synflix-web-client-v2 [data-testid^="movie-card-"] h3 {
+  font-size: 12.5px !important;
+  font-weight: 620 !important;
+  letter-spacing: -.015em !important;
+}
+
+.synflix-web-client-v2 [data-testid="top-ten-row"] {
+  max-width: none !important;
+  padding-left: max(28px, calc((100vw - var(--client-max)) / 2 + 28px)) !important;
+  padding-right: max(28px, calc((100vw - var(--client-max)) / 2 + 28px)) !important;
+}
+
+/* ---------- non-home pages ---------- */
+.synflix-web-client-v2 [data-testid="browse-page"],
+.synflix-web-client-v2 [data-testid="search-page"],
+.synflix-web-client-v2 [data-testid="my-list-page"],
+.synflix-web-client-v2 [data-testid="settings-page"] {
+  background: #050505 !important;
+}
+
+.synflix-web-client-v2 [data-testid="browse-page"] > div,
+.synflix-web-client-v2 [data-testid="search-page"] > div,
+.synflix-web-client-v2 [data-testid="my-list-page"] > div,
+.synflix-web-client-v2 [data-testid="settings-page"] > div {
+  max-width: var(--client-max) !important;
+}
+
+.synflix-web-client-v2 [data-testid="browse-page"] > div > div:first-child p {
+  display: none;
+}
+
+.synflix-web-client-v2 [data-testid="browse-page"] button,
+.synflix-web-client-v2 [data-testid="browse-page"] a,
+.synflix-web-client-v2 [data-testid="settings-page"] button {
+  box-shadow: none;
+}
+
+.synflix-web-client-v2 [data-testid="title-page"] > section:first-child {
+  height: min(78vh, 820px) !important;
+  min-height: 590px !important;
+}
+
+.synflix-web-client-v2 [data-testid="title-page"] > section:first-child h1 {
+  max-width: 820px;
+  font-size: clamp(48px, 5.6vw, 84px) !important;
+  line-height: .94 !important;
+  letter-spacing: -.058em !important;
+}
+
+.synflix-web-client-v2 [data-testid="season-picker"] > div:last-child {
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 9px !important;
+}
+
+.synflix-web-client-v2 [data-testid="season-picker"] > div:last-child > button {
+  border-radius: 10px !important;
+  border-color: rgba(255,255,255,.07) !important;
+  background: rgba(255,255,255,.025) !important;
+  box-shadow: none !important;
+}
+
+/* ---------- adaptive glass dock ---------- */
+.synflix-web-client-v2 .synflix-liquid-dock {
+  display: none;
+}
+
+/* iPad + smaller laptops: stop pretending a tablet is a desktop. */
+@media (min-width: 721px) and (max-width: 1279px) {
+  .synflix-web-client-v2 {
+    --client-top: 80px;
+    padding-left: 0 !important;
+    padding-bottom: calc(84px + env(safe-area-inset-bottom));
+  }
+
+  .synflix-liquid-header {
+    padding: max(8px, env(safe-area-inset-top)) 14px 0;
+  }
+
+  .synflix-liquid-header-inner {
+    height: 58px;
+    grid-template-columns: minmax(170px, auto) minmax(260px, 420px) minmax(110px, auto);
+    gap: 14px;
+    padding-inline: 12px 10px;
+    border-color: rgba(255,255,255,.12);
+    background:
+      radial-gradient(130% 180% at 20% -65%, rgba(255,255,255,.16), transparent 56%),
+      rgba(16,16,16,.56);
+    -webkit-backdrop-filter: blur(30px) saturate(165%);
+    backdrop-filter: blur(30px) saturate(165%);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.10), 0 14px 38px rgba(0,0,0,.24);
+  }
+
+  .synflix-liquid-nav,
+  .synflix-liquid-history { display: none; }
+
+  .synflix-liquid-left { min-width: 0; }
+  .synflix-liquid-brand span { font-size: 15px; }
+
+  .synflix-liquid-actions {
+    display: contents;
+  }
+
+  .synflix-liquid-search {
+    grid-column: 2;
+    justify-self: stretch;
+    width: 100%;
+    max-width: 420px;
+    margin: 0;
+  }
+
+  .synflix-liquid-search:focus-within { width: 100%; }
+
+  .synflix-liquid-icon:not(.synflix-liquid-search-shortcut) { display: none; }
+  .synflix-liquid-profile { grid-column: 3; justify-self: end; }
+
+  .synflix-web-client-v2 .synflix-liquid-dock {
+    position: fixed;
+    z-index: 145;
+    left: 50%;
+    bottom: max(12px, calc(env(safe-area-inset-bottom) + 8px));
+    width: min(calc(100vw - 32px), 590px);
+    height: 66px;
+    display: grid !important;
+    grid-template-columns: repeat(5, minmax(0,1fr));
+    align-items: center;
+    gap: 3px;
+    padding: 6px;
+    transform: translateX(-50%);
+    border: 1px solid rgba(255,255,255,.18);
+    border-radius: 27px;
+    background:
+      radial-gradient(120% 170% at 18% -65%, rgba(255,255,255,.22), transparent 54%),
+      linear-gradient(180deg, rgba(30,30,30,.72), rgba(10,10,10,.62));
+    -webkit-backdrop-filter: blur(34px) saturate(180%);
+    backdrop-filter: blur(34px) saturate(180%);
+    box-shadow:
+      0 20px 52px rgba(0,0,0,.40),
+      inset 0 1px 0 rgba(255,255,255,.16),
+      inset 0 -1px 0 rgba(255,255,255,.035);
+  }
+
+  .synflix-web-client-v2 .synflix-liquid-dock a {
+    position: relative;
+    min-width: 0;
+    height: 52px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    border-radius: 20px;
+    color: rgba(255,255,255,.46);
+    font-size: 9px;
+    line-height: 1;
+    font-weight: 620;
+    letter-spacing: -.01em;
+    text-decoration: none;
+    transition: color 130ms ease, background-color 130ms ease, transform 110ms ease;
+  }
+
+  .synflix-web-client-v2 .synflix-liquid-dock a svg {
+    width: 18px;
+    height: 18px;
+    stroke-width: 2;
+  }
+
+  .synflix-web-client-v2 .synflix-liquid-dock a.is-active {
+    color: var(--client-accent);
+    background: rgba(255,255,255,.065);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.06);
+  }
+
+  .synflix-web-client-v2 .synflix-liquid-dock a.is-active::after {
+    content: "";
+    position: absolute;
+    top: 4px;
+    width: 16px;
+    height: 2px;
+    border-radius: 999px;
+    background: var(--client-accent);
+  }
+
+  .synflix-web-client-v2 .synflix-liquid-dock a:active { transform: scale(.95); }
+
+  .synflix-web-client-v2 [data-testid="hero-banner"] {
+    height: min(70dvh, 720px) !important;
+    min-height: 560px !important;
+    max-height: 720px !important;
+  }
+
+  .synflix-web-client-v2 [data-testid="hero-banner"] > div:last-child {
+    padding-left: 30px !important;
+    padding-right: 30px !important;
+    padding-bottom: 76px !important;
+    padding-top: 108px !important;
+  }
+
+  .synflix-web-client-v2 .synflix-hero-copy {
+    max-width: min(58vw, 590px) !important;
+  }
+
+  .synflix-web-client-v2 .synflix-hero-copy p {
+    max-width: 520px;
+    -webkit-line-clamp: 2 !important;
+  }
+
+  .synflix-web-client-v2 section[data-testid^="row-"] > div:first-child {
+    width: calc(100% - 44px);
+  }
+
+  .synflix-web-client-v2 section[data-testid^="row-"] > div:last-child {
+    gap: 10px !important;
+    padding-left: 22px !important;
+    padding-right: 22px !important;
+    scroll-padding-inline: 22px;
+  }
+
+  .synflix-web-client-v2 [data-testid^="movie-card-"] {
+    width: clamp(145px, 17vw, 170px) !important;
+  }
+
+  .synflix-web-client-v2 [data-testid="top-ten-row"] {
+    padding-left: 22px !important;
+    padding-right: 22px !important;
+  }
+
+  .synflix-web-client-v2 [data-testid="title-page"] > section:first-child {
+    height: min(70dvh, 720px) !important;
+    min-height: 560px !important;
+  }
+
+  .synflix-web-client-v2 [data-testid="season-picker"] > div:last-child {
+    grid-template-columns: repeat(2, minmax(0,1fr)) !important;
+  }
+}
+
+/* iPad portrait / compact tablet. */
+@media (min-width: 721px) and (max-width: 900px) {
+  .synflix-liquid-header-inner {
+    grid-template-columns: 1fr auto;
+  }
+
+  .synflix-liquid-search { display: none; }
+  .synflix-liquid-page-title {
+    display: block;
+    margin-left: 10px;
+    color: rgba(255,255,255,.42);
+    font-size: 12px;
+    font-weight: 620;
+  }
+
+  .synflix-liquid-left { gap: 6px; }
+  .synflix-liquid-actions {
+    display: flex;
+    grid-column: 2;
+    justify-self: end;
+  }
+  .synflix-liquid-search-shortcut { display: grid; }
+  .synflix-liquid-icon:not(.synflix-liquid-search-shortcut) { display: grid; }
+
+  .synflix-web-client-v2 [data-testid="hero-banner"] {
+    height: 68dvh !important;
+    min-height: 540px !important;
+  }
+
+  .synflix-web-client-v2 [data-testid="hero-banner"]::before {
+    background:
+      linear-gradient(90deg, #050505 0%, rgba(5,5,5,.90) 23%, rgba(5,5,5,.52) 55%, rgba(5,5,5,.14) 100%),
+      linear-gradient(0deg, #050505 0%, rgba(5,5,5,.82) 13%, rgba(5,5,5,.10) 48%, rgba(5,5,5,.18) 100%);
+  }
+
+  .synflix-web-client-v2 .synflix-hero-image {
+    object-position: 66% center !important;
+  }
+
+  .synflix-web-client-v2 .synflix-hero-copy {
+    max-width: 66vw !important;
+  }
+
+  .synflix-web-client-v2 [data-testid^="movie-card-"] {
+    width: 148px !important;
+  }
+}
+
+/* Phones: same design language, simpler chrome and safe-area dock. */
+@media (max-width: 720px) {
+  .synflix-web-client-v2 {
+    --client-top: 66px;
+    padding-left: 0 !important;
+    padding-bottom: calc(74px + env(safe-area-inset-bottom));
+  }
+
+  .synflix-liquid-header {
+    height: 66px;
+    padding: max(7px, env(safe-area-inset-top)) 10px 0;
+  }
+
+  .synflix-liquid-header-inner {
+    height: 52px;
+    grid-template-columns: 1fr auto;
+    gap: 8px;
+    padding: 0 8px 0 10px;
+    border-radius: 18px;
+    border-color: rgba(255,255,255,.11);
+    background: rgba(15,15,15,.54);
+    -webkit-backdrop-filter: blur(28px) saturate(165%);
+    backdrop-filter: blur(28px) saturate(165%);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.09), 0 12px 34px rgba(0,0,0,.24);
+  }
+
+  .synflix-liquid-nav,
+  .synflix-liquid-history,
+  .synflix-liquid-search { display: none; }
+
+  .synflix-liquid-brand img { width: 30px; height: 30px; }
+  .synflix-liquid-brand span { font-size: 14px; }
+  .synflix-liquid-page-title {
+    display: block;
+    margin-left: 6px;
+    color: rgba(255,255,255,.38);
+    font-size: 11px;
+    font-weight: 620;
+  }
+
+  .synflix-liquid-left { gap: 5px; }
+  .synflix-liquid-actions { display: flex; gap: 3px; }
+  .synflix-liquid-search-shortcut { display: grid; }
+  .synflix-liquid-icon:not(.synflix-liquid-search-shortcut) { display: none; }
+  .synflix-liquid-profile { width: 32px; height: 32px; }
+
+  .synflix-web-client-v2 .synflix-liquid-dock {
+    position: fixed;
+    z-index: 145;
+    left: 10px;
+    right: 10px;
+    bottom: max(8px, calc(env(safe-area-inset-bottom) + 5px));
+    height: 62px;
+    display: grid !important;
+    grid-template-columns: repeat(5, minmax(0,1fr));
+    align-items: center;
+    gap: 2px;
+    padding: 5px;
+    border: 1px solid rgba(255,255,255,.16);
+    border-radius: 25px;
+    background:
+      radial-gradient(120% 170% at 18% -65%, rgba(255,255,255,.20), transparent 54%),
+      rgba(12,12,12,.68);
+    -webkit-backdrop-filter: blur(32px) saturate(175%);
+    backdrop-filter: blur(32px) saturate(175%);
+    box-shadow: 0 18px 46px rgba(0,0,0,.40), inset 0 1px 0 rgba(255,255,255,.14);
+  }
+
+  .synflix-web-client-v2 .synflix-liquid-dock a {
+    position: relative;
+    min-width: 0;
+    height: 50px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    border-radius: 18px;
+    color: rgba(255,255,255,.44);
+    font-size: 8px;
+    line-height: 1;
+    font-weight: 650;
+    text-decoration: none;
+  }
+
+  .synflix-web-client-v2 .synflix-liquid-dock a svg { width: 17px; height: 17px; stroke-width: 2; }
+  .synflix-web-client-v2 .synflix-liquid-dock a.is-active { color: var(--client-accent); background: rgba(255,255,255,.055); }
+  .synflix-web-client-v2 .synflix-liquid-dock a.is-active::after {
+    content: "";
+    position: absolute;
+    top: 3px;
+    width: 14px;
+    height: 2px;
+    border-radius: 999px;
+    background: var(--client-accent);
+  }
+
+  .synflix-web-client-v2 .synflix-web-surface:not(.is-immersive) .synflix-web-route > main {
+    padding-top: calc(var(--client-top) + 12px) !important;
+  }
+
+  .synflix-web-client-v2 [data-testid="hero-banner"] {
+    height: 74dvh !important;
+    min-height: 560px !important;
+    max-height: 720px !important;
+  }
+
+  .synflix-web-client-v2 [data-testid="hero-banner"]::before {
+    background:
+      linear-gradient(90deg, rgba(5,5,5,.96) 0%, rgba(5,5,5,.74) 38%, rgba(5,5,5,.20) 100%),
+      linear-gradient(0deg, #050505 0%, rgba(5,5,5,.86) 15%, rgba(5,5,5,.18) 52%, rgba(5,5,5,.16) 100%);
+  }
+
+  .synflix-web-client-v2 .synflix-hero-image { object-position: 68% center !important; }
+
+  .synflix-web-client-v2 [data-testid="hero-banner"] > div:last-child {
+    padding: 94px 18px 78px !important;
+  }
+
+  .synflix-web-client-v2 .synflix-hero-copy {
+    max-width: 92vw !important;
+  }
+
+  .synflix-web-client-v2 .synflix-hero-copy p {
+    max-width: 88vw;
+    -webkit-line-clamp: 2 !important;
+  }
+
+  .synflix-web-client-v2 section[data-testid^="row-"] { padding-block: 12px !important; }
+  .synflix-web-client-v2 section[data-testid^="row-"] > div:first-child { width: calc(100% - 36px); }
+  .synflix-web-client-v2 section[data-testid^="row-"] > div:last-child {
+    gap: 9px !important;
+    padding-left: 18px !important;
+    padding-right: 18px !important;
+    scroll-padding-inline: 18px;
+  }
+
+  .synflix-web-client-v2 [data-testid^="movie-card-"] { width: 132px !important; }
+  .synflix-web-client-v2 [data-testid="top-ten-row"] { padding-inline: 18px !important; }
+
+  .synflix-web-client-v2 [data-testid="season-picker"] > div:last-child {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .synflix-web-client-v2 *,
+  .synflix-web-client-v2 *::before,
+  .synflix-web-client-v2 *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: .01ms !important;
+  }
+}
