@@ -17,6 +17,8 @@ export default function Watch({ embed = false }) {
     const episodeMenuRef = useRef(null);
     const season = Number(sp.get("season") || 1);
     const episode = Number(sp.get("episode") || 1);
+    const forceSystemPlayer = sp.get("system") === "1" || sp.get("player") === "system" || sp.get("iosPlayer") === "1";
+    const nativeIOSPlayer = embed && sp.get("iosPlayer") === "1";
 
     useEffect(() => { window.scrollTo(0, 0); }, []);
 
@@ -58,17 +60,32 @@ export default function Watch({ embed = false }) {
     const validSeasons = (details?.seasons || []).filter((item) => item.season_number > 0);
 
     const nextEpisode = () => {
-        if (hasNext) setSp({ season: String(season), episode: String(episode + 1) });
+        if (hasNext) setSp((current) => {
+            const next = new URLSearchParams(current);
+            next.set("season", String(season));
+            next.set("episode", String(episode + 1));
+            return next;
+        });
     };
 
     const pickEpisode = (episodeNumber) => {
-        setSp({ season: String(season), episode: String(episodeNumber) });
+        setSp((current) => {
+            const next = new URLSearchParams(current);
+            next.set("season", String(season));
+            next.set("episode", String(episodeNumber));
+            return next;
+        });
         setEpisodeMenuOpen(false);
         if (embed) window.parent?.postMessage({ type: "synplayer:episodechange", mediaType, id, season, episode: episodeNumber }, "*");
     };
 
     const pickSeason = (seasonNumber) => {
-        setSp({ season: String(seasonNumber), episode: "1" });
+        setSp((current) => {
+            const next = new URLSearchParams(current);
+            next.set("season", String(seasonNumber));
+            next.set("episode", "1");
+            return next;
+        });
         setEpisodeMenuOpen(true);
         if (embed) window.parent?.postMessage({ type: "synplayer:episodechange", mediaType, id, season: seasonNumber, episode: 1 }, "*");
     };
@@ -94,12 +111,15 @@ export default function Watch({ embed = false }) {
     };
 
     const preferences = getPreferences();
-    const useLegacyPlayer = embed || preferences.playerEngine === "legacy";
+    const useLegacyPlayer = !forceSystemPlayer && (embed || preferences.playerEngine === "legacy");
     const Player = useLegacyPlayer ? SynapsePlayer : SystemPlayer;
 
     return (
-        <main data-testid={embed ? "embed-player-page" : "watch-page"} className={embed ? "min-h-screen bg-black p-0" : "min-h-screen bg-black px-3 pb-6 pt-3 md:px-6 md:pt-6"}>
-            <div className={embed ? "w-full" : "mx-auto max-w-[1600px]"}>
+        <main
+            data-testid={embed ? "embed-player-page" : "watch-page"}
+            className={nativeIOSPlayer ? "fixed inset-0 h-[100dvh] w-full overflow-hidden bg-black p-0" : embed ? "min-h-screen bg-black p-0" : "min-h-screen bg-black px-3 pb-6 pt-3 md:px-6 md:pt-6"}
+        >
+            <div className={nativeIOSPlayer ? "h-full w-full" : embed ? "w-full" : "mx-auto max-w-[1600px]"}>
                 {!embed && (
                     <div className="mb-3 flex min-h-11 items-center justify-between gap-3 md:mb-4">
                         <button
@@ -114,12 +134,12 @@ export default function Watch({ embed = false }) {
                         </button>
                         <div className="min-w-0 text-right">
                             <p className="truncate text-[13px] font-medium text-white/78 md:text-sm">{titleOf(details)}</p>
-                            <p className="mt-0.5 text-[10px] uppercase tracking-[0.14em] text-white/28">{useLegacyPlayer ? "Legacy SynPlayer" : "System Player"}</p>
+                            <p className="mt-0.5 text-[10px] uppercase tracking-[0.14em] text-white/28">{useLegacyPlayer ? "Legacy SynPlayer" : "SynPlayer"}</p>
                         </div>
                     </div>
                 )}
 
-                <div className="relative">
+                <div className={nativeIOSPlayer ? "relative h-full w-full" : "relative"}>
                     <Player
                         key={`${useLegacyPlayer ? "legacy" : "system"}-${mediaType}-${id}-${season}-${episode}`}
                         mediaType={mediaType}
@@ -130,6 +150,7 @@ export default function Watch({ embed = false }) {
                         hasNext={hasNext}
                         onNextEpisode={nextEpisode}
                         onBack={handleBack}
+                        fullscreen={nativeIOSPlayer}
                     />
 
                     {mediaType === "tv" && seasonData?.episodes?.length > 0 && (
