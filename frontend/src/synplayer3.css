@@ -1,0 +1,697 @@
+/* SynPlayer 3 — custom streaming controls, intentionally restrained and cinematic. */
+
+.synplayer3-shell {
+  --sp-accent: var(--player-accent, var(--site-accent, #ffd400));
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background: #000;
+  color: #fff;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+}
+
+.synplayer3-inline {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: 10px;
+  box-shadow: 0 28px 90px rgba(0,0,0,.52);
+}
+
+.synplayer3-fullscreen {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100dvh !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  z-index: 1000;
+}
+
+.synplayer3-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: contain;
+  background: #000;
+  outline: none;
+}
+
+.synplayer3-vignette {
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: 5;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 160ms ease;
+}
+
+.synplayer3-vignette-top {
+  top: 0;
+  height: min(28vh, 250px);
+  background: linear-gradient(180deg, rgba(0,0,0,.82), rgba(0,0,0,.26) 58%, transparent);
+}
+
+.synplayer3-vignette-bottom {
+  bottom: 0;
+  height: min(32vh, 300px);
+  background: linear-gradient(0deg, rgba(0,0,0,.88), rgba(0,0,0,.34) 58%, transparent);
+}
+
+.synplayer3-shell.controls-visible .synplayer3-vignette { opacity: 1; }
+
+.synplayer3-topbar {
+  position: absolute;
+  z-index: 30;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 76px;
+  padding: max(14px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) 0 max(16px, env(safe-area-inset-left));
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 14px;
+  opacity: 0;
+  transform: translateY(-8px);
+  pointer-events: none;
+  transition: opacity 150ms ease, transform 150ms ease;
+}
+
+.synplayer3-shell.controls-visible .synplayer3-topbar {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.synplayer3-close,
+.synplayer3-topbar button,
+.synplayer3-controls button {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.synplayer3-close {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255,255,255,.15);
+  border-radius: 50%;
+  background: rgba(7,7,7,.52);
+  color: rgba(255,255,255,.96);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  backdrop-filter: blur(18px) saturate(140%);
+  box-shadow: 0 8px 24px rgba(0,0,0,.28);
+  cursor: pointer;
+  transition: background-color 120ms ease, border-color 120ms ease, transform 100ms ease;
+}
+
+.synplayer3-close:hover {
+  background: rgba(34,34,34,.72);
+  border-color: rgba(255,255,255,.28);
+}
+
+.synplayer3-close:active { transform: scale(.94); }
+.synplayer3-close svg { width: 20px; height: 20px; stroke-width: 2.1; }
+
+.synplayer3-heading {
+  min-width: 0;
+  align-self: center;
+  padding-top: 3px;
+}
+
+.synplayer3-heading strong {
+  display: block;
+  max-width: min(50vw, 680px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14px;
+  line-height: 1.25;
+  font-weight: 650;
+  letter-spacing: -.02em;
+  text-shadow: 0 2px 12px rgba(0,0,0,.75);
+}
+
+.synplayer3-heading span {
+  display: block;
+  margin-top: 3px;
+  color: rgba(255,255,255,.48);
+  font-size: 10px;
+  font-weight: 560;
+  letter-spacing: .03em;
+  text-shadow: 0 2px 10px rgba(0,0,0,.8);
+}
+
+.synplayer3-top-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.synplayer3-source-wrap { position: relative; }
+
+.synplayer3-source-button {
+  height: 38px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 11px;
+  border: 1px solid rgba(255,255,255,.14);
+  border-radius: 7px;
+  background: rgba(7,7,7,.48);
+  color: rgba(255,255,255,.88);
+  font-size: 11px;
+  font-weight: 650;
+  -webkit-backdrop-filter: blur(18px) saturate(135%);
+  backdrop-filter: blur(18px) saturate(135%);
+  cursor: pointer;
+  transition: background-color 120ms ease, border-color 120ms ease;
+}
+
+.synplayer3-source-button:hover {
+  background: rgba(28,28,28,.7);
+  border-color: rgba(255,255,255,.24);
+}
+
+.synplayer3-source-button > svg {
+  width: 13px;
+  height: 13px;
+  color: rgba(255,255,255,.5);
+  transition: transform 120ms ease;
+}
+
+.synplayer3-source-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--sp-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--sp-accent) 12%, transparent);
+}
+
+.synplayer3-source-menu {
+  position: absolute;
+  top: 46px;
+  right: 0;
+  width: min(300px, calc(100vw - 32px));
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 9px;
+  background: rgba(10,10,11,.94);
+  box-shadow: 0 24px 70px rgba(0,0,0,.58);
+  -webkit-backdrop-filter: blur(26px) saturate(135%);
+  backdrop-filter: blur(26px) saturate(135%);
+}
+
+.synplayer3-source-title {
+  padding: 12px 13px 8px;
+  color: rgba(255,255,255,.38);
+  font-size: 9px;
+  font-weight: 750;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+
+.synplayer3-source-list {
+  max-height: min(55vh, 360px);
+  overflow-y: auto;
+  padding: 4px 5px 6px;
+}
+
+.synplayer3-source-list button {
+  width: 100%;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 8px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: rgba(255,255,255,.7);
+  text-align: left;
+  cursor: pointer;
+}
+
+.synplayer3-source-list button:hover { background: rgba(255,255,255,.055); color: #fff; }
+.synplayer3-source-list button.is-active { background: color-mix(in srgb, var(--sp-accent) 10%, transparent); color: #fff; }
+
+.synplayer3-source-check {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  flex: none;
+  border-radius: 50%;
+  background: rgba(255,255,255,.055);
+  color: #050505;
+}
+
+.synplayer3-source-list button.is-active .synplayer3-source-check { background: var(--sp-accent); }
+.synplayer3-source-check svg { width: 14px; height: 14px; stroke-width: 2.6; }
+
+.synplayer3-source-copy { min-width: 0; flex: 1; }
+.synplayer3-source-copy strong,
+.synplayer3-source-copy small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.synplayer3-source-copy strong { font-size: 11px; font-weight: 650; }
+.synplayer3-source-copy small { margin-top: 2px; color: rgba(255,255,255,.35); font-size: 9px; font-weight: 520; }
+
+.synplayer3-center-play {
+  position: absolute;
+  z-index: 16;
+  left: 50%;
+  top: 50%;
+  width: 72px;
+  height: 72px;
+  display: grid;
+  place-items: center;
+  transform: translate(-50%, -50%);
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255,255,255,.94);
+  color: #050505;
+  box-shadow: 0 16px 50px rgba(0,0,0,.38);
+  cursor: pointer;
+  transition: transform 120ms ease, background-color 120ms ease;
+}
+
+.synplayer3-center-play:hover { transform: translate(-50%, -50%) scale(1.04); background: #fff; }
+.synplayer3-center-play:active { transform: translate(-50%, -50%) scale(.96); }
+.synplayer3-center-play svg { width: 28px; height: 28px; margin-left: 3px; fill: currentColor; }
+
+.synplayer3-loading {
+  position: absolute;
+  z-index: 18;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 13px;
+  pointer-events: none;
+  background: rgba(0,0,0,.22);
+  color: rgba(255,255,255,.6);
+  font-size: 11px;
+  font-weight: 620;
+  letter-spacing: .02em;
+}
+
+.synplayer3-loading svg {
+  width: 30px;
+  height: 30px;
+  color: var(--sp-accent);
+  animation: synplayer3-spin .8s linear infinite;
+}
+
+@keyframes synplayer3-spin { to { transform: rotate(360deg); } }
+
+.synplayer3-error {
+  position: absolute;
+  z-index: 35;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  padding: 28px;
+  text-align: center;
+  background: rgba(0,0,0,.82);
+}
+
+.synplayer3-error > svg { width: 34px; height: 34px; color: var(--sp-accent); }
+.synplayer3-error h2 { margin: 14px 0 0; font-size: 21px; font-weight: 680; letter-spacing: -.03em; }
+.synplayer3-error p { max-width: 440px; margin: 8px 0 0; color: rgba(255,255,255,.45); font-size: 12px; line-height: 1.6; }
+.synplayer3-error > div { margin-top: 18px; display: flex; gap: 8px; }
+.synplayer3-error button {
+  height: 40px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 14px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 680;
+  cursor: pointer;
+}
+.synplayer3-error button svg { width: 15px; height: 15px; }
+.synplayer3-error button.secondary { border: 1px solid rgba(255,255,255,.12); background: rgba(255,255,255,.055); color: #fff; }
+.synplayer3-error button.primary { border: 0; background: var(--sp-accent); color: #050505; }
+
+.synplayer3-controls {
+  position: absolute;
+  z-index: 28;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 0 max(18px, env(safe-area-inset-right)) max(14px, env(safe-area-inset-bottom)) max(18px, env(safe-area-inset-left));
+  opacity: 0;
+  transform: translateY(8px);
+  pointer-events: none;
+  transition: opacity 150ms ease, transform 150ms ease;
+}
+
+.synplayer3-shell.controls-visible .synplayer3-controls {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.synplayer3-timeline-wrap {
+  position: relative;
+  width: 100%;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.synplayer3-timeline-wrap::before,
+.synplayer3-buffer,
+.synplayer3-progress {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  height: 3px;
+  border-radius: 999px;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.synplayer3-timeline-wrap::before { width: 100%; background: rgba(255,255,255,.19); }
+.synplayer3-buffer { z-index: 1; background: rgba(255,255,255,.36); }
+.synplayer3-progress { z-index: 2; background: var(--sp-accent); }
+
+.synplayer3-timeline {
+  position: absolute;
+  z-index: 3;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  appearance: none;
+  -webkit-appearance: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+.synplayer3-timeline::-webkit-slider-runnable-track { height: 18px; background: transparent; }
+.synplayer3-timeline::-webkit-slider-thumb {
+  width: 13px;
+  height: 13px;
+  margin-top: 2.5px;
+  appearance: none;
+  -webkit-appearance: none;
+  border: 0;
+  border-radius: 50%;
+  background: var(--sp-accent);
+  box-shadow: 0 1px 5px rgba(0,0,0,.45);
+  opacity: 0;
+  transform: scale(.7);
+  transition: opacity 90ms ease, transform 90ms ease;
+}
+
+.synplayer3-timeline-wrap:hover .synplayer3-timeline::-webkit-slider-thumb,
+.synplayer3-timeline:focus-visible::-webkit-slider-thumb { opacity: 1; transform: scale(1); }
+.synplayer3-timeline::-moz-range-track { height: 18px; background: transparent; }
+.synplayer3-timeline::-moz-range-thumb { width: 13px; height: 13px; border: 0; border-radius: 50%; background: var(--sp-accent); }
+
+.synplayer3-control-row {
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.synplayer3-control-left,
+.synplayer3-control-right {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+}
+
+.synplayer3-controls button {
+  min-width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: rgba(255,255,255,.9);
+  cursor: pointer;
+  transition: color 100ms ease, background-color 100ms ease, transform 80ms ease;
+}
+
+.synplayer3-controls button:hover { color: #fff; background: rgba(255,255,255,.07); }
+.synplayer3-controls button:active { transform: scale(.92); }
+.synplayer3-controls button.is-active { color: var(--sp-accent); }
+.synplayer3-controls button svg { width: 20px; height: 20px; stroke-width: 2; }
+.synplayer3-controls button:first-child svg { fill: currentColor; }
+
+.synplayer3-volume {
+  display: flex;
+  align-items: center;
+}
+
+.synplayer3-volume input {
+  width: 0;
+  height: 4px;
+  margin: 0;
+  appearance: none;
+  -webkit-appearance: none;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255,255,255,.22);
+  opacity: 0;
+  transition: width 140ms ease, opacity 100ms ease, margin 140ms ease;
+}
+
+.synplayer3-volume:hover input,
+.synplayer3-volume:focus-within input {
+  width: 74px;
+  margin-right: 8px;
+  opacity: 1;
+}
+
+.synplayer3-volume input::-webkit-slider-thumb {
+  width: 10px;
+  height: 10px;
+  appearance: none;
+  -webkit-appearance: none;
+  border-radius: 50%;
+  background: #fff;
+  cursor: pointer;
+}
+
+.synplayer3-time {
+  margin-left: 8px;
+  color: rgba(255,255,255,.64);
+  font-size: 10px;
+  font-weight: 560;
+  white-space: nowrap;
+}
+
+.synplayer3-time em { margin-inline: 2px; color: rgba(255,255,255,.28); font-style: normal; }
+
+.synplayer3-next {
+  width: auto !important;
+  padding-inline: 10px !important;
+  display: inline-flex !important;
+  gap: 7px;
+}
+
+.synplayer3-next span { font-size: 10px; font-weight: 650; }
+
+/* Web playback is a true full-screen application surface, not a modal card. */
+.synflix-player3 {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  width: 100vw;
+  height: 100dvh;
+  overflow: hidden;
+  background: #000;
+  color: #fff;
+}
+
+.synflix-player3-stage { position: absolute; inset: 0; }
+.synflix-player3-stage .synplayer3-shell { z-index: 1; }
+
+.synflix-player3-title {
+  display: none;
+}
+
+.synflix-player3-episodes-toggle {
+  position: fixed;
+  z-index: 1250;
+  top: max(14px, env(safe-area-inset-top));
+  right: max(156px, calc(env(safe-area-inset-right) + 156px));
+  height: 38px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 11px;
+  border: 1px solid rgba(255,255,255,.14);
+  border-radius: 7px;
+  background: rgba(7,7,7,.5);
+  color: rgba(255,255,255,.86);
+  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px);
+  font-size: 10px;
+  font-weight: 640;
+  cursor: pointer;
+}
+
+.synflix-player3-episodes-toggle:hover,
+.synflix-player3-episodes-toggle.is-active { background: rgba(28,28,28,.72); border-color: rgba(255,255,255,.24); }
+.synflix-player3-episodes-toggle svg { width: 14px; height: 14px; }
+.synflix-player3-episodes-toggle svg:last-child { width: 11px; height: 11px; }
+
+.synflix-player3-drawer {
+  position: fixed;
+  z-index: 1300;
+  top: max(66px, calc(env(safe-area-inset-top) + 66px));
+  right: max(16px, calc(env(safe-area-inset-right) + 16px));
+  bottom: max(16px, calc(env(safe-area-inset-bottom) + 16px));
+  width: min(390px, calc(100vw - 32px));
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,.11);
+  border-radius: 9px;
+  background: rgba(9,9,10,.95);
+  box-shadow: 0 28px 80px rgba(0,0,0,.58);
+  -webkit-backdrop-filter: blur(26px) saturate(130%);
+  backdrop-filter: blur(26px) saturate(130%);
+}
+
+.synflix-player3-drawer-head {
+  min-height: 68px;
+  padding: 13px 13px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border-bottom: 1px solid rgba(255,255,255,.075);
+}
+
+.synflix-player3-drawer-head small,
+.synflix-player3-drawer-head strong { display: block; }
+.synflix-player3-drawer-head small { max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: rgba(255,255,255,.36); font-size: 9px; }
+.synflix-player3-drawer-head strong { margin-top: 2px; font-size: 16px; font-weight: 650; letter-spacing: -.025em; }
+
+.synflix-player3-drawer-tools { display: flex; align-items: center; gap: 6px; }
+.synflix-player3-drawer-tools label { position: relative; display: flex; align-items: center; }
+.synflix-player3-drawer-tools select {
+  height: 34px;
+  appearance: none;
+  border: 1px solid rgba(255,255,255,.10);
+  border-radius: 5px;
+  background: rgba(255,255,255,.05);
+  color: rgba(255,255,255,.82);
+  padding: 0 28px 0 9px;
+  font-size: 10px;
+  font-weight: 600;
+  outline: none;
+}
+.synflix-player3-drawer-tools label > svg { position: absolute; right: 8px; width: 11px; height: 11px; pointer-events: none; color: rgba(255,255,255,.42); }
+.synflix-player3-drawer-tools > button { width: 34px; height: 34px; display: grid; place-items: center; border: 0; border-radius: 5px; background: transparent; color: rgba(255,255,255,.62); }
+.synflix-player3-drawer-tools > button:hover { background: rgba(255,255,255,.06); color: #fff; }
+.synflix-player3-drawer-tools > button svg { width: 15px; height: 15px; }
+
+.synflix-player3-episode-list { min-height: 0; flex: 1; overflow-y: auto; padding: 6px; }
+.synflix-player3-episode-list > button {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #fff;
+  text-align: left;
+  cursor: pointer;
+}
+.synflix-player3-episode-list > button:hover { background: rgba(255,255,255,.055); }
+.synflix-player3-episode-list > button.is-current { background: color-mix(in srgb, var(--site-accent, #ffd400) 10%, transparent); }
+
+.synflix-player3-thumb {
+  position: relative;
+  width: 116px;
+  aspect-ratio: 16 / 9;
+  flex: none;
+  overflow: hidden;
+  border-radius: 5px;
+  background: #141414;
+}
+.synflix-player3-thumb img,
+.synflix-player3-thumb-empty { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.synflix-player3-thumb-empty { background: linear-gradient(135deg, #1b1b1b, #0c0c0c); }
+.synflix-player3-thumb::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(0,0,0,.42), transparent 58%); }
+.synflix-player3-thumb em { position: absolute; z-index: 2; left: 7px; bottom: 5px; color: #fff; font-size: 13px; line-height: 1; font-style: normal; font-weight: 800; text-shadow: 0 1px 4px rgba(0,0,0,.8); }
+.synflix-player3-episode-copy { min-width: 0; flex: 1; }
+.synflix-player3-episode-copy strong,
+.synflix-player3-episode-copy span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.synflix-player3-episode-copy strong { font-size: 11px; font-weight: 620; }
+.synflix-player3-episode-copy span { margin-top: 3px; color: rgba(255,255,255,.34); font-size: 9px; }
+
+@media (max-width: 720px) {
+  .synplayer3-topbar {
+    height: 66px;
+    padding-inline: max(10px, env(safe-area-inset-left)) max(10px, env(safe-area-inset-right));
+    gap: 9px;
+  }
+  .synplayer3-heading strong { max-width: 40vw; font-size: 12px; }
+  .synplayer3-heading span { font-size: 9px; }
+  .synplayer3-source-button > span:nth-child(2) { display: none; }
+  .synplayer3-source-button { width: 40px; padding: 0; justify-content: center; }
+  .synplayer3-source-button > svg { display: none; }
+  .synplayer3-controls { padding-inline: 10px; padding-bottom: max(8px, env(safe-area-inset-bottom)); }
+  .synplayer3-control-row { min-height: 44px; }
+  .synplayer3-controls button { min-width: 38px; height: 38px; }
+  .synplayer3-controls button svg { width: 19px; height: 19px; }
+  .synplayer3-control-left > button:nth-of-type(2),
+  .synplayer3-control-left > button:nth-of-type(3),
+  .synplayer3-time,
+  .synplayer3-next span,
+  .synplayer3-control-right button[aria-label="Picture in Picture"] { display: none; }
+  .synplayer3-volume input { display: none; }
+  .synplayer3-center-play { width: 62px; height: 62px; }
+  .synflix-player3-episodes-toggle {
+    top: auto;
+    right: 12px;
+    bottom: calc(max(62px, env(safe-area-inset-bottom) + 62px));
+  }
+  .synflix-player3-drawer {
+    top: auto;
+    left: 8px;
+    right: 8px;
+    bottom: 8px;
+    width: auto;
+    max-height: min(68dvh, 620px);
+  }
+}
+
+@media (hover: none) and (pointer: coarse) {
+  .synplayer3-timeline::-webkit-slider-thumb { opacity: 1; transform: scale(.9); }
+  .synplayer3-shell.controls-hidden .synplayer3-controls,
+  .synplayer3-shell.controls-hidden .synplayer3-topbar { pointer-events: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .synplayer3-shell *,
+  .synflix-player3 * { transition-duration: .01ms !important; animation-duration: .01ms !important; }
+}
