@@ -4,7 +4,6 @@ import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, ChevronDown, ListVideo } from "lucide-react";
 import { getDetails, getSeason, img } from "@/lib/api";
 import { titleOf } from "@/lib/format";
-import { getPreferences } from "@/lib/preferences";
 import { SynapsePlayer } from "@/components/SynapsePlayer";
 import { SystemPlayer } from "@/components/SystemPlayer";
 import { Spinner } from "@/components/Spinner";
@@ -17,7 +16,7 @@ export default function Watch({ embed = false }) {
     const episodeMenuRef = useRef(null);
     const season = Number(sp.get("season") || 1);
     const episode = Number(sp.get("episode") || 1);
-    const forceSystemPlayer = sp.get("system") === "1" || sp.get("player") === "system" || sp.get("iosPlayer") === "1";
+    const legacyRequested = sp.get("player") === "legacy" || sp.get("legacy") === "1";
     const nativeIOSPlayer = embed && sp.get("iosPlayer") === "1";
 
     useEffect(() => { window.scrollTo(0, 0); }, []);
@@ -31,6 +30,16 @@ export default function Watch({ embed = false }) {
     }, []);
 
     useEffect(() => setEpisodeMenuOpen(false), [season, episode]);
+
+    useEffect(() => {
+        const onKey = (event) => {
+            if (event.key !== "Escape" || embed) return;
+            event.preventDefault();
+            navigate(`/title/${mediaType}/${id}`, { replace: true });
+        };
+        window.addEventListener("keydown", onKey);
+        return () => window.removeEventListener("keydown", onKey);
+    }, [embed, id, mediaType, navigate]);
 
     const { data: details, isLoading } = useQuery({
         queryKey: ["details", mediaType, id],
@@ -95,7 +104,7 @@ export default function Watch({ embed = false }) {
             window.parent?.postMessage({ type: "synplayer:back", mediaType, id, season, episode }, "*");
             return;
         }
-        navigate(`/title/${mediaType}/${id}`);
+        navigate(`/title/${mediaType}/${id}`, { replace: true });
     };
 
     if (isLoading || !details) {
@@ -110,8 +119,7 @@ export default function Watch({ embed = false }) {
         first_air_date: details.first_air_date,
     };
 
-    const preferences = getPreferences();
-    const useLegacyPlayer = !forceSystemPlayer && (embed || preferences.playerEngine === "legacy");
+    const useLegacyPlayer = legacyRequested;
     const Player = useLegacyPlayer ? SynapsePlayer : SystemPlayer;
 
     return (
@@ -126,15 +134,15 @@ export default function Watch({ embed = false }) {
                             type="button"
                             onClick={handleBack}
                             data-testid="watch-back-button"
-                            className="group inline-flex h-11 items-center gap-2 rounded-full border border-white/[0.12] bg-white/[0.045] px-4 text-sm font-semibold text-white/82 backdrop-blur-xl transition hover:border-white/[0.22] hover:bg-white/[0.08] hover:text-white active:scale-[0.98]"
-                            aria-label="Go back"
+                            className="group inline-flex h-11 items-center gap-2 rounded-lg border border-white/[0.12] bg-white/[0.045] px-4 text-sm font-semibold text-white/82 backdrop-blur-xl transition hover:border-white/[0.22] hover:bg-white/[0.08] hover:text-white active:scale-[0.98]"
+                            aria-label="Exit player"
                         >
                             <ArrowLeft className="h-4 w-4 transition-transform duration-200 group-hover:-translate-x-0.5" />
-                            <span>Back</span>
+                            <span>Exit Player</span>
                         </button>
                         <div className="min-w-0 text-right">
                             <p className="truncate text-[13px] font-medium text-white/78 md:text-sm">{titleOf(details)}</p>
-                            <p className="mt-0.5 text-[10px] uppercase tracking-[0.14em] text-white/28">{useLegacyPlayer ? "Legacy SynPlayer" : "SynPlayer"}</p>
+                            <p className="mt-0.5 text-[10px] uppercase tracking-[0.14em] text-white/28">{useLegacyPlayer ? "Legacy player" : "SynPlayer"}</p>
                         </div>
                     </div>
                 )}
@@ -158,7 +166,7 @@ export default function Watch({ embed = false }) {
                             <button
                                 type="button"
                                 onClick={() => setEpisodeMenuOpen((open) => !open)}
-                                className={`inline-flex h-10 items-center gap-2 rounded-full border px-3.5 text-xs font-semibold backdrop-blur-xl transition md:h-11 md:px-4 ${episodeMenuOpen ? "border-[#ffd400]/35 bg-[#ffd400]/12 text-[#ffd400]" : "border-white/15 bg-black/55 text-white/88 hover:border-white/28 hover:bg-black/72"}`}
+                                className={`inline-flex h-10 items-center gap-2 rounded-lg border px-3.5 text-xs font-semibold backdrop-blur-xl transition md:h-11 md:px-4 ${episodeMenuOpen ? "border-[#ffd400]/35 bg-[#ffd400]/12 text-[#ffd400]" : "border-white/15 bg-black/55 text-white/88 hover:border-white/28 hover:bg-black/72"}`}
                                 aria-label="Episodes"
                                 aria-expanded={episodeMenuOpen}
                             >
@@ -169,7 +177,7 @@ export default function Watch({ embed = false }) {
                             </button>
 
                             {episodeMenuOpen && (
-                                <div className="absolute right-0 top-[48px] w-[min(390px,calc(100vw-32px))] overflow-hidden rounded-2xl border border-white/12 bg-[#08090c]/95 shadow-[0_24px_70px_rgba(0,0,0,.72)] backdrop-blur-2xl md:top-[52px]">
+                                <div className="absolute right-0 top-[48px] w-[min(390px,calc(100vw-32px))] overflow-hidden rounded-xl border border-white/12 bg-[#08090c]/95 shadow-[0_24px_70px_rgba(0,0,0,.72)] backdrop-blur-2xl md:top-[52px]">
                                     <div className="flex items-center justify-between gap-3 border-b border-white/[0.08] px-3.5 py-3">
                                         <div>
                                             <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#ffd400]/65">Now playing</p>
@@ -179,7 +187,7 @@ export default function Watch({ embed = false }) {
                                             <select
                                                 value={season}
                                                 onChange={(event) => pickSeason(Number(event.target.value))}
-                                                className="max-w-[128px] rounded-full border border-white/10 bg-white/[0.05] px-2.5 py-1.5 text-[11px] font-medium text-white/80 outline-none focus:border-[#ffd400]/35"
+                                                className="max-w-[128px] rounded-md border border-white/10 bg-white/[0.05] px-2.5 py-1.5 text-[11px] font-medium text-white/80 outline-none focus:border-[#ffd400]/35"
                                                 aria-label="Season"
                                             >
                                                 {validSeasons.map((item) => (
@@ -198,9 +206,9 @@ export default function Watch({ embed = false }) {
                                                     type="button"
                                                     data-testid={`watch-ep-${ep.episode_number}`}
                                                     onClick={() => pickEpisode(ep.episode_number)}
-                                                    className={`flex w-full items-center gap-3 rounded-xl px-2.5 py-2.5 text-left transition ${selected ? "bg-[#ffd400]/10" : "hover:bg-white/[0.05]"}`}
+                                                    className={`flex w-full items-center gap-3 rounded-lg px-2.5 py-2.5 text-left transition ${selected ? "bg-[#ffd400]/10" : "hover:bg-white/[0.05]"}`}
                                                 >
-                                                    <span className={`relative h-[46px] w-[82px] shrink-0 overflow-hidden rounded-lg border bg-[#101114] ${selected ? "border-[#ffd400]/35" : "border-white/[0.08]"}`}>
+                                                    <span className={`relative h-[46px] w-[82px] shrink-0 overflow-hidden rounded-md border bg-[#101114] ${selected ? "border-[#ffd400]/35" : "border-white/[0.08]"}`}>
                                                         {ep.still_path ? (
                                                             <img src={img(ep.still_path, "w300")} alt="" loading="lazy" className="absolute inset-0 h-full w-full object-cover" />
                                                         ) : (
