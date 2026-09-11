@@ -7,6 +7,7 @@ import "@/mobile-app.css";
 import "@/web-premium.css";
 import "@/web-desktop-client.css";
 import "@/web-cinematic-client.css";
+import "@/synplayer3.css";
 import "@/ios-native.css";
 import "@/desktop-app.css";
 import "@/desktop-v2-polish.css";
