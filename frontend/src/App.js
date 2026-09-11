@@ -5,6 +5,7 @@ import "@/light-mode.css";
 import "@/synflix-polish.css";
 import "@/mobile-app.css";
 import "@/web-premium.css";
+import "@/web-desktop-client.css";
 import "@/ios-native.css";
 import "@/desktop-app.css";
 import "@/desktop-v2-polish.css";
