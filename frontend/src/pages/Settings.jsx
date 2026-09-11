@@ -2,106 +2,64 @@ import { useMemo, useState } from "react";
 import {
   Accessibility,
   Check,
-  CircleGauge,
-  Contrast,
-  Eye,
-  Gauge,
-  Layers3,
   LayoutGrid,
-  Laptop,
-  MonitorCog,
-  Moon,
   Palette,
-  PlayCircle,
+  Play,
   RotateCcw,
-  Sparkles,
-  Square,
-  Sun,
-  Text,
-  WandSparkles,
+  SlidersHorizontal,
 } from "lucide-react";
 import { PLAYER_THEMES, SITE_THEMES, getPreferences, resetPreferences, savePreferences } from "@/lib/preferences";
 
-const CATEGORIES = [
-  { id: "all", label: "All settings", icon: LayoutGrid, description: "Everything in one place" },
-  { id: "site", label: "Appearance", icon: Palette, description: "Mode, colors and themes" },
-  { id: "browsing", label: "Browsing", icon: Layers3, description: "Cards, rows and layout" },
-  { id: "player", label: "Player", icon: PlayCircle, description: "SynPlayer look and feel" },
-  { id: "accessibility", label: "Accessibility", icon: Accessibility, description: "Motion, contrast and scale" },
+const NAV = [
+  { id: "playback", label: "Playback", icon: Play },
+  { id: "appearance", label: "Appearance", icon: Palette },
+  { id: "browsing", label: "Browsing", icon: LayoutGrid },
+  { id: "accessibility", label: "Accessibility", icon: Accessibility },
 ];
 
-const SettingSection = ({ eyebrow, title, description, children }) => (
-  <section className="rounded-[28px] border border-white/[0.07] bg-white/[0.025] p-5 sm:p-7">
-    <div className="mb-6 max-w-2xl">
-      <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-[#ffd400]/65">{eyebrow}</div>
-      <h2 className="text-xl font-semibold tracking-[-0.03em] text-white sm:text-2xl">{title}</h2>
-      {description && <p className="mt-2 text-sm leading-6 text-white/38">{description}</p>}
+const Section = ({ title, description, children }) => (
+  <section className="border-b border-white/[0.07] pb-8 last:border-b-0 last:pb-0">
+    <div className="mb-5">
+      <h2 className="text-[20px] font-semibold tracking-[-0.035em] text-white">{title}</h2>
+      {description && <p className="mt-1.5 max-w-2xl text-[13px] leading-5 text-white/38">{description}</p>}
     </div>
     {children}
   </section>
 );
 
-const ThemeGrid = ({ themes, value, onChange }) => (
-  <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
-    {themes.map((theme) => {
-      const active = value === theme.id;
-      return (
-        <button
-          key={theme.id}
-          type="button"
-          onClick={() => onChange(theme.id)}
-          className={`group relative min-h-[118px] overflow-hidden rounded-[20px] border p-4 text-left transition duration-200 ${active ? "border-[#ffd400]/55 bg-[#ffd400]/[0.08]" : "border-white/[0.07] bg-black/20 hover:border-[#ffd400]/25 hover:bg-white/[0.035]"}`}
-        >
-          <div className="mb-4 flex items-center justify-between">
-            <span className="h-7 w-7 rounded-full border border-white/15 shadow-[0_4px_14px_rgba(0,0,0,.25)]" style={{ background: theme.accent }} />
-            {active && <span className="grid h-6 w-6 place-items-center rounded-full bg-[#ffd400] text-black"><Check className="h-3.5 w-3.5" /></span>}
-          </div>
-          <div className="text-[13px] font-semibold text-white/88">{theme.name}</div>
-          <div className="mt-1 line-clamp-2 text-[10px] leading-4 text-white/30">{theme.description}</div>
-        </button>
-      );
-    })}
+const Row = ({ title, description, children }) => (
+  <div className="grid min-h-[64px] gap-4 border-t border-white/[0.055] py-4 first:border-t-0 first:pt-0 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+    <div className="min-w-0">
+      <div className="text-[13px] font-medium text-white/88">{title}</div>
+      {description && <div className="mt-1 max-w-xl text-[11px] leading-[17px] text-white/32">{description}</div>}
+    </div>
+    <div className="sm:justify-self-end">{children}</div>
   </div>
 );
 
-const AppearanceModes = ({ value, onChange }) => {
-  const options = [
-    { value: "dark", label: "Dark", description: "Cinema-black surfaces", icon: Moon },
-    { value: "light", label: "Light", description: "Bright paper-like surfaces", icon: Sun },
-    { value: "system", label: "System", description: "Follow this device", icon: Laptop },
-  ];
-  return (
-    <div className="grid gap-2.5 sm:grid-cols-3">
-      {options.map((option) => {
-        const Icon = option.icon;
-        const active = value === option.value;
-        return (
-          <button
-            key={option.value}
-            type="button"
-            onClick={() => onChange(option.value)}
-            className={`flex min-h-[92px] items-center gap-3 rounded-[20px] border p-4 text-left transition ${active ? "border-[#ffd400]/55 bg-[#ffd400]/[0.08]" : "border-white/[0.07] bg-black/20 hover:border-[#ffd400]/25 hover:bg-white/[0.035]"}`}
-          >
-            <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-full ${active ? "bg-[#ffd400] text-black" : "bg-white/[0.05] text-white/55"}`}><Icon className="h-4.5 w-4.5" /></span>
-            <span className="min-w-0">
-              <span className="block text-sm font-semibold text-white/86">{option.label}</span>
-              <span className="mt-1 block text-[11px] leading-4 text-white/30">{option.description}</span>
-            </span>
-          </button>
-        );
-      })}
-    </div>
-  );
-};
+const Toggle = ({ value, onChange, label }) => (
+  <button
+    type="button"
+    role="switch"
+    aria-checked={value}
+    aria-label={label}
+    onClick={() => onChange(!value)}
+    className={`relative h-7 w-12 rounded-full border transition ${value ? "border-[#ffd400]/45 bg-[#ffd400]" : "border-white/12 bg-white/[0.06]"}`}
+  >
+    <span className={`absolute top-[3px] h-5 w-5 rounded-full shadow-sm transition ${value ? "left-[25px] bg-black" : "left-[3px] bg-white/75"}`} />
+  </button>
+);
 
-const Segmented = ({ value, options, onChange }) => (
-  <div className="flex flex-wrap gap-2">
+const Segmented = ({ value, options, onChange, label }) => (
+  <div className="inline-flex rounded-[12px] border border-white/[0.08] bg-black/30 p-1" role="radiogroup" aria-label={label}>
     {options.map((option) => (
       <button
         key={option.value}
         type="button"
+        role="radio"
+        aria-checked={value === option.value}
         onClick={() => onChange(option.value)}
-        className={`rounded-full border px-3.5 py-2 text-xs font-medium transition ${value === option.value ? "border-[#ffd400] bg-[#ffd400] text-black" : "border-white/[0.08] bg-white/[0.025] text-white/48 hover:border-[#ffd400]/25 hover:text-[#ffd400]"}`}
+        className={`min-w-[78px] rounded-[9px] px-3 py-2 text-[11px] font-semibold transition ${value === option.value ? "bg-white/[0.10] text-white shadow-sm" : "text-white/38 hover:text-white/68"}`}
       >
         {option.label}
       </button>
@@ -109,30 +67,65 @@ const Segmented = ({ value, options, onChange }) => (
   </div>
 );
 
-const Toggle = ({ value, onChange }) => (
-  <button type="button" onClick={() => onChange(!value)} className={`relative h-7 w-12 rounded-full border transition ${value ? "border-[#ffd400]/50 bg-[#ffd400]" : "border-white/10 bg-white/[0.06]"}`}>
-    <span className={`absolute top-1 h-5 w-5 rounded-full transition ${value ? "left-[25px] bg-black" : "left-1 bg-white/75"}`} />
-  </button>
+const ThemePicker = ({ themes, value, onChange }) => (
+  <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6">
+    {themes.map((theme) => {
+      const active = theme.id === value;
+      return (
+        <button
+          key={theme.id}
+          type="button"
+          onClick={() => onChange(theme.id)}
+          className={`group flex min-h-[66px] items-center gap-2.5 rounded-[14px] border px-3 text-left transition ${active ? "border-white/[0.18] bg-white/[0.07]" : "border-white/[0.06] bg-white/[0.02] hover:border-white/[0.12] hover:bg-white/[0.04]"}`}
+        >
+          <span className="relative h-6 w-6 shrink-0 rounded-full border border-white/[0.16]" style={{ background: theme.accent }}>
+            {active && <span className="absolute inset-0 grid place-items-center"><Check className="h-3.5 w-3.5 text-black drop-shadow" /></span>}
+          </span>
+          <span className="min-w-0 truncate text-[11px] font-semibold text-white/72">{theme.name}</span>
+        </button>
+      );
+    })}
+  </div>
 );
 
-const SettingRow = ({ icon: Icon, title, description, children }) => (
-  <div className="grid gap-4 border-t border-white/[0.055] py-5 first:border-t-0 first:pt-0 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
-    <div className="flex gap-3.5">
-      <div className="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-white/[0.07] bg-white/[0.03] text-[#ffd400]/70"><Icon className="h-4 w-4" /></div>
-      <div>
-        <div className="text-sm font-medium text-white/82">{title}</div>
-        {description && <div className="mt-1 max-w-2xl text-xs leading-5 text-white/30">{description}</div>}
+const EngineChoice = ({ value, onChange }) => (
+  <div className="grid gap-2 md:grid-cols-2">
+    <button
+      type="button"
+      onClick={() => onChange("system")}
+      className={`relative min-h-[116px] rounded-[16px] border p-4 text-left transition ${value === "system" ? "border-[#ffd400]/45 bg-[#ffd400]/[0.055]" : "border-white/[0.07] bg-white/[0.02] hover:border-white/[0.14]"}`}
+    >
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <div className="text-[14px] font-semibold text-white">System Player</div>
+          <p className="mt-1.5 max-w-sm text-[11px] leading-[17px] text-white/38">Uses the browser or device's native media controls, the same playback model as the SynFlix iOS app, with SynFlix source switching on top.</p>
+        </div>
+        {value === "system" && <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-[#ffd400] text-black"><Check className="h-3.5 w-3.5" /></span>}
       </div>
-    </div>
-    <div className="sm:justify-self-end">{children}</div>
+      <div className="mt-4 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#ffd400]/70">Recommended</div>
+    </button>
+
+    <button
+      type="button"
+      onClick={() => onChange("legacy")}
+      className={`relative min-h-[116px] rounded-[16px] border p-4 text-left transition ${value === "legacy" ? "border-white/[0.20] bg-white/[0.06]" : "border-white/[0.07] bg-white/[0.02] hover:border-white/[0.14]"}`}
+    >
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <div className="text-[14px] font-semibold text-white">Legacy SynPlayer</div>
+          <p className="mt-1.5 max-w-sm text-[11px] leading-[17px] text-white/38">Keeps the original fully custom SynPlayer interface, advanced menus and its existing playback behavior.</p>
+        </div>
+        {value === "legacy" && <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-white text-black"><Check className="h-3.5 w-3.5" /></span>}
+      </div>
+      <div className="mt-4 text-[10px] font-semibold uppercase tracking-[0.12em] text-white/28">Compatibility</div>
+    </button>
   </div>
 );
 
 export default function Settings() {
   const [prefs, setPrefs] = useState(() => getPreferences());
+  const [active, setActive] = useState("playback");
   const [resetFlash, setResetFlash] = useState(false);
-  const [activeSection, setActiveSection] = useState("all");
-  const siteTheme = useMemo(() => SITE_THEMES.find((theme) => theme.id === prefs.siteTheme), [prefs.siteTheme]);
   const playerTheme = useMemo(() => PLAYER_THEMES.find((theme) => theme.id === prefs.playerTheme), [prefs.playerTheme]);
 
   const set = (key, value) => {
@@ -147,135 +140,139 @@ export default function Settings() {
     const next = resetPreferences();
     setPrefs(next);
     setResetFlash(true);
-    window.setTimeout(() => setResetFlash(false), 1400);
+    window.setTimeout(() => setResetFlash(false), 1300);
   };
 
-  const show = (section) => activeSection === "all" || activeSection === section;
-  const activeLabel = CATEGORIES.find((item) => item.id === activeSection)?.label || "All settings";
-
   return (
-    <main className="min-h-screen bg-[#070707] px-5 pb-20 pt-[104px] md:px-8" data-testid="settings-page">
-      <div className="mx-auto max-w-[1400px]">
-        <div className="mb-8">
-          <div className="mb-2 inline-flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-[#ffd400]/70"><MonitorCog className="h-3.5 w-3.5" /> Personalize SynFlix</div>
-          <h1 className="text-5xl font-semibold tracking-[-0.06em] text-white md:text-7xl">Settings</h1>
-          <p className="mt-4 max-w-2xl text-sm leading-7 text-white/40 md:text-[15px]">Tune SynFlix and SynPlayer independently. Appearance, themes and playback preferences are saved on this device and apply instantly.</p>
-        </div>
+    <main className="min-h-screen bg-[#070707] px-4 pb-24 pt-[92px] sm:px-6 md:px-8" data-testid="settings-page">
+      <div className="mx-auto max-w-[1180px]">
+        <header className="mb-7 flex flex-col gap-4 border-b border-white/[0.07] pb-7 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h1 className="text-[34px] font-semibold tracking-[-0.055em] text-white md:text-[42px]">Settings</h1>
+            <p className="mt-1.5 text-[13px] text-white/36">SynFlix preferences are stored on this device.</p>
+          </div>
+          <button
+            type="button"
+            onClick={reset}
+            className="inline-flex h-10 items-center justify-center gap-2 self-start rounded-[12px] border border-white/[0.09] bg-white/[0.025] px-4 text-[12px] font-semibold text-white/52 transition hover:border-white/[0.16] hover:text-white/80 sm:self-auto"
+          >
+            {resetFlash ? <Check className="h-4 w-4" /> : <RotateCcw className="h-4 w-4" />}
+            {resetFlash ? "Reset" : "Reset settings"}
+          </button>
+        </header>
 
-        <div className="scrollbar-none mb-5 flex gap-2 overflow-x-auto pb-1 lg:hidden" aria-label="Settings categories">
-          {CATEGORIES.map((item) => {
+        <div className="mb-5 flex gap-1.5 overflow-x-auto pb-1 lg:hidden">
+          {NAV.map((item) => {
             const Icon = item.icon;
-            const active = activeSection === item.id;
+            const selected = active === item.id;
             return (
-              <button key={item.id} type="button" onClick={() => setActiveSection(item.id)} className={`inline-flex h-10 shrink-0 items-center gap-2 rounded-full border px-4 text-xs font-medium transition ${active ? "border-[#ffd400] bg-[#ffd400] text-black" : "border-white/[0.08] bg-white/[0.025] text-white/48 hover:border-[#ffd400]/25 hover:text-[#ffd400]"}`}>
-                <Icon className="h-3.5 w-3.5" />{item.label}
+              <button key={item.id} type="button" onClick={() => setActive(item.id)} className={`inline-flex h-10 shrink-0 items-center gap-2 rounded-[11px] px-3.5 text-[12px] font-semibold transition ${selected ? "bg-white/[0.10] text-white" : "text-white/38 hover:bg-white/[0.04] hover:text-white/70"}`}>
+                <Icon className="h-4 w-4" /> {item.label}
               </button>
             );
           })}
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-[250px_minmax(0,1fr)] lg:items-start">
-          <aside className="sticky top-[88px] hidden overflow-hidden rounded-[26px] border border-white/[0.07] bg-white/[0.025] p-2.5 lg:block">
-            <div className="px-3 pb-3 pt-2">
-              <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/28">Settings</div>
-              <div className="mt-1 text-sm font-semibold text-white/82">{activeLabel}</div>
-            </div>
-
-            <nav className="space-y-1" aria-label="Settings sidebar">
-              {CATEGORIES.map((item) => {
+        <div className="grid gap-8 lg:grid-cols-[190px_minmax(0,1fr)]">
+          <aside className="hidden lg:block">
+            <nav className="sticky top-[94px] space-y-1" aria-label="Settings sections">
+              {NAV.map((item) => {
                 const Icon = item.icon;
-                const active = activeSection === item.id;
+                const selected = active === item.id;
                 return (
-                  <button
-                    key={item.id}
-                    type="button"
-                    data-active={active ? "true" : "false"}
-                    onClick={() => setActiveSection(item.id)}
-                    className={`group flex w-full items-center gap-3 rounded-[16px] px-3 py-3 text-left transition ${active ? "bg-[#ffd400] text-black" : "text-white/52 hover:bg-white/[0.045] hover:text-white/82"}`}
-                  >
-                    <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-xl ${active ? "bg-black/10" : "bg-white/[0.035]"}`}><Icon className="h-4 w-4" /></span>
-                    <span className="min-w-0">
-                      <span className="block text-[13px] font-semibold">{item.label}</span>
-                      <span className={`mt-0.5 block truncate text-[10px] ${active ? "text-black/55" : "text-white/24"}`}>{item.description}</span>
-                    </span>
+                  <button key={item.id} type="button" onClick={() => setActive(item.id)} className={`flex h-11 w-full items-center gap-3 rounded-[12px] px-3 text-left text-[12px] font-semibold transition ${selected ? "bg-white/[0.08] text-white" : "text-white/36 hover:bg-white/[0.035] hover:text-white/70"}`}>
+                    <Icon className={`h-4 w-4 ${selected ? "text-[#ffd400]" : ""}`} />
+                    {item.label}
                   </button>
                 );
               })}
             </nav>
-
-            <div className="mx-2 my-3 h-px bg-white/[0.06]" />
-            <div className="rounded-[18px] border border-white/[0.06] bg-black/15 p-3.5">
-              <div className="text-[9px] font-semibold uppercase tracking-[0.16em] text-white/25">Current look</div>
-              <div className="mt-3 flex items-center gap-3">
-                <div className="flex -space-x-2">
-                  <span className="h-8 w-8 rounded-full border-[3px] border-[#0b0b0b]" style={{ background: siteTheme?.accent }} />
-                  <span className="h-8 w-8 rounded-full border-[3px] border-[#0b0b0b]" style={{ background: playerTheme?.accent }} />
-                </div>
-                <div className="min-w-0">
-                  <div className="truncate text-[11px] font-medium text-white/72">{siteTheme?.name} · {prefs.siteMode}</div>
-                  <div className="mt-0.5 truncate text-[10px] text-white/25">Player · {playerTheme?.name}</div>
-                </div>
-              </div>
-            </div>
           </aside>
 
-          <div className="min-w-0 space-y-5">
-            {show("site") && (
+          <div className="min-w-0 space-y-8">
+            {active === "playback" && (
               <>
-                <SettingSection eyebrow="Appearance" title="Light & dark mode" description="Switch the SynFlix browsing interface between its cinematic dark look and a bright light interface. System follows your device automatically.">
-                  <AppearanceModes value={prefs.siteMode} onChange={(value) => set("siteMode", value)} />
-                </SettingSection>
+                <Section title="Player" description="Choose how SynFlix plays video. System Player is the new default; Legacy SynPlayer stays available whenever you want it.">
+                  <EngineChoice value={prefs.playerEngine} onChange={(value) => set("playerEngine", value)} />
+                </Section>
 
-                <SettingSection eyebrow="Site appearance" title="Site themes" description="Themes change the SynFlix accent, surfaces, controls, cards and brand treatment. They work in both light and dark mode.">
-                  <ThemeGrid themes={SITE_THEMES} value={prefs.siteTheme} onChange={(value) => set("siteTheme", value)} />
-                </SettingSection>
+                <Section title="Playback behavior">
+                  <Row title="Player accent" description="Colors SynFlix source controls. Device-native transport controls keep the operating system's own appearance.">
+                    <div className="flex items-center gap-2 rounded-[10px] border border-white/[0.07] bg-white/[0.025] px-3 py-2 text-[11px] font-semibold text-white/55">
+                      <span className="h-4 w-4 rounded-full border border-white/15" style={{ background: playerTheme?.accent }} />
+                      {playerTheme?.name || "Classic"}
+                    </div>
+                  </Row>
+                  <Row title="Player theme" description="Choose the accent used by the source selector and by Legacy SynPlayer.">
+                    <select value={prefs.playerTheme} onChange={(event) => set("playerTheme", event.target.value)} className="h-10 min-w-[150px] rounded-[10px] border border-white/[0.08] bg-[#101010] px-3 text-[12px] font-semibold text-white/72 outline-none focus:border-[#ffd400]/35">
+                      {PLAYER_THEMES.map((theme) => <option key={theme.id} value={theme.id}>{theme.name}</option>)}
+                    </select>
+                  </Row>
+                  {prefs.playerEngine === "legacy" && (
+                    <>
+                      <Row title="Legacy density" description="Controls spacing inside the original SynPlayer menus.">
+                        <Segmented label="Legacy player density" value={prefs.playerDensity} onChange={(value) => set("playerDensity", value)} options={[{ value: "comfortable", label: "Comfortable" }, { value: "compact", label: "Compact" }]} />
+                      </Row>
+                      <Row title="Legacy material" description="Choose translucent or solid settings panels in the original player.">
+                        <Segmented label="Legacy player material" value={prefs.playerGlass} onChange={(value) => set("playerGlass", value)} options={[{ value: "glass", label: "Glass" }, { value: "solid", label: "Solid" }]} />
+                      </Row>
+                    </>
+                  )}
+                </Section>
               </>
             )}
 
-            {show("browsing") && (
-              <SettingSection eyebrow="Browsing" title="Layout & browsing" description="Change how dense and expressive the movie browsing experience feels without touching playback.">
-                <SettingRow icon={Layers3} title="Content density" description="Compact fits more films on screen; comfortable keeps the larger cinematic spacing."><Segmented value={prefs.siteDensity} onChange={(value) => set("siteDensity", value)} options={[{ value: "comfortable", label: "Comfortable" }, { value: "compact", label: "Compact" }]} /></SettingRow>
-                <SettingRow icon={Square} title="Corner style" description="Adjust card geometry across the SynFlix interface."><Segmented value={prefs.siteCorners} onChange={(value) => set("siteCorners", value)} options={[{ value: "round", label: "Round" }, { value: "soft", label: "Soft" }, { value: "square", label: "Square" }]} /></SettingRow>
-                <SettingRow icon={Sparkles} title="Ambient color" description="Adds a subtle theme-colored wash to page backgrounds."><Toggle value={prefs.siteAmbient} onChange={(value) => set("siteAmbient", value)} /></SettingRow>
-                <SettingRow icon={Text} title="Row descriptions" description="Show the smaller descriptive line under supported content-row headings."><Toggle value={prefs.showRowSubtitles} onChange={(value) => set("showRowSubtitles", value)} /></SettingRow>
-              </SettingSection>
-            )}
-
-            {show("player") && (
+            {active === "appearance" && (
               <>
-                <SettingSection eyebrow="SynPlayer" title="Player themes" description="Player themes stay completely separate from the site. Pick Purple here and SynPlayer controls, sliders, highlights and settings chrome become purple regardless of your SynFlix theme.">
-                  <ThemeGrid themes={PLAYER_THEMES} value={prefs.playerTheme} onChange={(value) => set("playerTheme", value)} />
-                </SettingSection>
-
-                <SettingSection eyebrow="Playback appearance" title="Player interface" description="These settings only affect SynPlayer and do not change discovery pages.">
-                  <SettingRow icon={Square} title="Player corners" description="Choose the outer player and popup geometry."><Segmented value={prefs.playerCorners} onChange={(value) => set("playerCorners", value)} options={[{ value: "round", label: "Round" }, { value: "soft", label: "Soft" }, { value: "square", label: "Square" }]} /></SettingRow>
-                  <SettingRow icon={Layers3} title="Settings material" description="Glass keeps the translucent Peak-style panel; solid removes blur for a flatter look."><Segmented value={prefs.playerGlass} onChange={(value) => set("playerGlass", value)} options={[{ value: "glass", label: "Glass" }, { value: "solid", label: "Solid" }]} /></SettingRow>
-                  <SettingRow icon={Gauge} title="Player density" description="Compact shortens player settings rows and reduces visual padding."><Segmented value={prefs.playerDensity} onChange={(value) => set("playerDensity", value)} options={[{ value: "comfortable", label: "Comfortable" }, { value: "compact", label: "Compact" }]} /></SettingRow>
-                  <SettingRow icon={CircleGauge} title="Accent strength" description="Controls how strongly the selected player color appears on interactive chrome."><Segmented value={prefs.playerAccentStrength} onChange={(value) => set("playerAccentStrength", value)} options={[{ value: "subtle", label: "Subtle" }, { value: "normal", label: "Normal" }, { value: "bold", label: "Bold" }]} /></SettingRow>
-                  <SettingRow icon={Eye} title="SynPlayer label" description="Show or hide the small SynPlayer brand label inside playback controls."><Toggle value={prefs.playerTitle} onChange={(value) => set("playerTitle", value)} /></SettingRow>
-                </SettingSection>
+                <Section title="Color theme" description="Yellow stays the SynFlix default, with the additional themes available across the client.">
+                  <ThemePicker themes={SITE_THEMES} value={prefs.siteTheme} onChange={(value) => set("siteTheme", value)} />
+                </Section>
+                <Section title="Appearance mode">
+                  <Row title="Interface" description="Choose a dark, light, or device-matched appearance.">
+                    <Segmented label="Appearance mode" value={prefs.siteMode} onChange={(value) => set("siteMode", value)} options={[{ value: "dark", label: "Dark" }, { value: "light", label: "Light" }, { value: "system", label: "System" }]} />
+                  </Row>
+                  <Row title="Ambient color" description="Adds a restrained theme tint behind selected browsing surfaces.">
+                    <Toggle label="Ambient color" value={prefs.siteAmbient} onChange={(value) => set("siteAmbient", value)} />
+                  </Row>
+                </Section>
               </>
             )}
 
-            {show("accessibility") && (
-              <SettingSection eyebrow="Accessibility" title="Motion, contrast & scale" description="Keep SynFlix and SynPlayer comfortable to use without changing your chosen colors or layout style.">
-                <SettingRow icon={WandSparkles} title="Site motion" description="Reduced motion disables most card movement, transitions and decorative animation."><Segmented value={prefs.siteMotion} onChange={(value) => set("siteMotion", value)} options={[{ value: "full", label: "Full" }, { value: "reduced", label: "Reduced" }]} /></SettingRow>
-                <SettingRow icon={Contrast} title="Site contrast" description="High contrast strengthens text and surface separation."><Segmented value={prefs.siteContrast} onChange={(value) => set("siteContrast", value)} options={[{ value: "normal", label: "Normal" }, { value: "high", label: "High" }]} /></SettingRow>
-                <SettingRow icon={Eye} title="Interface scale" description="Slightly enlarges navigation and control text while keeping film artwork intact."><Segmented value={prefs.siteScale} onChange={(value) => set("siteScale", value)} options={[{ value: "normal", label: "Normal" }, { value: "large", label: "Large" }]} /></SettingRow>
-                <SettingRow icon={Contrast} title="Player contrast" description="Boosts separation for darker scenes and translucent controls."><Segmented value={prefs.playerContrast} onChange={(value) => set("playerContrast", value)} options={[{ value: "normal", label: "Normal" }, { value: "high", label: "High" }]} /></SettingRow>
-                <SettingRow icon={WandSparkles} title="Player motion" description="Reduced motion removes popup animations and most control transitions."><Segmented value={prefs.playerMotion} onChange={(value) => set("playerMotion", value)} options={[{ value: "full", label: "Full" }, { value: "reduced", label: "Reduced" }]} /></SettingRow>
-              </SettingSection>
+            {active === "browsing" && (
+              <Section title="Browsing experience" description="Keep the catalog dense and readable without changing playback.">
+                <Row title="Content density" description="Compact fits more artwork on screen.">
+                  <Segmented label="Content density" value={prefs.siteDensity} onChange={(value) => set("siteDensity", value)} options={[{ value: "comfortable", label: "Comfortable" }, { value: "compact", label: "Compact" }]} />
+                </Row>
+                <Row title="Card corners" description="Adjust poster and surface geometry.">
+                  <Segmented label="Card corners" value={prefs.siteCorners} onChange={(value) => set("siteCorners", value)} options={[{ value: "round", label: "Round" }, { value: "soft", label: "Soft" }, { value: "square", label: "Square" }]} />
+                </Row>
+                <Row title="Row descriptions" description="Show the secondary line beneath supported shelf headings.">
+                  <Toggle label="Row descriptions" value={prefs.showRowSubtitles} onChange={(value) => set("showRowSubtitles", value)} />
+                </Row>
+              </Section>
             )}
 
-            <section className="flex flex-col gap-4 rounded-[28px] border border-white/[0.07] bg-white/[0.025] p-5 sm:flex-row sm:items-center sm:justify-between sm:p-7">
-              <div>
-                <div className="text-sm font-semibold text-white/82">Reset appearance</div>
-                <div className="mt-1 text-xs leading-5 text-white/30">Return SynFlix to dark mode, the original yellow site theme and Classic SynPlayer defaults.</div>
-              </div>
-              <button onClick={reset} className="inline-flex h-11 items-center justify-center gap-2 rounded-full border border-white/10 bg-white/[0.035] px-5 text-sm font-medium text-white/60 transition hover:border-[#ffd400]/30 hover:text-[#ffd400]">
-                {resetFlash ? <Check className="h-4 w-4" /> : <RotateCcw className="h-4 w-4" />}{resetFlash ? "Reset complete" : "Reset all"}
-              </button>
-            </section>
+            {active === "accessibility" && (
+              <Section title="Accessibility" description="Motion, contrast and scale controls apply across SynFlix without changing your theme.">
+                <Row title="Motion" description="Reduced motion minimizes decorative movement and transitions.">
+                  <Segmented label="Site motion" value={prefs.siteMotion} onChange={(value) => set("siteMotion", value)} options={[{ value: "full", label: "Full" }, { value: "reduced", label: "Reduced" }]} />
+                </Row>
+                <Row title="Contrast" description="Increase separation between text and dark surfaces.">
+                  <Segmented label="Site contrast" value={prefs.siteContrast} onChange={(value) => set("siteContrast", value)} options={[{ value: "normal", label: "Normal" }, { value: "high", label: "High" }]} />
+                </Row>
+                <Row title="Interface scale" description="Increase control and navigation text without enlarging artwork.">
+                  <Segmented label="Interface scale" value={prefs.siteScale} onChange={(value) => set("siteScale", value)} options={[{ value: "normal", label: "Normal" }, { value: "large", label: "Large" }]} />
+                </Row>
+                <Row title="Legacy player contrast" description="Applies only when Legacy SynPlayer is selected.">
+                  <Segmented label="Legacy player contrast" value={prefs.playerContrast} onChange={(value) => set("playerContrast", value)} options={[{ value: "normal", label: "Normal" }, { value: "high", label: "High" }]} />
+                </Row>
+              </Section>
+            )}
+
+            <div className="flex items-center gap-3 border-t border-white/[0.07] pt-6 text-[10px] text-white/25">
+              <SlidersHorizontal className="h-3.5 w-3.5" />
+              <span>Changes apply immediately and stay on this device.</span>
+            </div>
           </div>
         </div>
       </div>

@@ -4,7 +4,9 @@ import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, ChevronDown, ListVideo } from "lucide-react";
 import { getDetails, getSeason, img } from "@/lib/api";
 import { titleOf } from "@/lib/format";
+import { getPreferences } from "@/lib/preferences";
 import { SynapsePlayer } from "@/components/SynapsePlayer";
+import { SystemPlayer } from "@/components/SystemPlayer";
 import { Spinner } from "@/components/Spinner";
 
 export default function Watch({ embed = false }) {
@@ -91,6 +93,10 @@ export default function Watch({ embed = false }) {
         first_air_date: details.first_air_date,
     };
 
+    const preferences = getPreferences();
+    const useLegacyPlayer = embed || preferences.playerEngine === "legacy";
+    const Player = useLegacyPlayer ? SynapsePlayer : SystemPlayer;
+
     return (
         <main data-testid={embed ? "embed-player-page" : "watch-page"} className={embed ? "min-h-screen bg-black p-0" : "min-h-screen bg-black px-3 pb-6 pt-3 md:px-6 md:pt-6"}>
             <div className={embed ? "w-full" : "mx-auto max-w-[1600px]"}>
@@ -108,14 +114,14 @@ export default function Watch({ embed = false }) {
                         </button>
                         <div className="min-w-0 text-right">
                             <p className="truncate text-[13px] font-medium text-white/78 md:text-sm">{titleOf(details)}</p>
-                            <p className="mt-0.5 text-[10px] uppercase tracking-[0.14em] text-white/28">SynPlayer</p>
+                            <p className="mt-0.5 text-[10px] uppercase tracking-[0.14em] text-white/28">{useLegacyPlayer ? "Legacy SynPlayer" : "System Player"}</p>
                         </div>
                     </div>
                 )}
 
                 <div className="relative">
-                    <SynapsePlayer
-                        key={`${mediaType}-${id}-${season}-${episode}`}
+                    <Player
+                        key={`${useLegacyPlayer ? "legacy" : "system"}-${mediaType}-${id}-${season}-${episode}`}
                         mediaType={mediaType}
                         id={id}
                         meta={meta}

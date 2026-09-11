@@ -14,7 +14,7 @@ export const SITE_THEMES = [
 ];
 
 export const PLAYER_THEMES = [
-  { id: "classic", name: "Classic", accent: "#ffffff", description: "Original monochrome SynPlayer chrome." },
+  { id: "classic", name: "Classic", accent: "#ffffff", description: "Clean monochrome playback chrome." },
   ...SITE_THEMES.filter((theme) => theme.id !== "synflix"),
   { id: "synflix", name: "SynFlix", accent: "#ffd400", description: "Match the original SynFlix yellow." },
 ];
@@ -29,6 +29,7 @@ export const DEFAULT_PREFERENCES = {
   siteMotion: "full",
   siteContrast: "normal",
   siteScale: "normal",
+  playerEngine: "system",
   playerTheme: "classic",
   playerCorners: "round",
   playerGlass: "glass",
@@ -83,6 +84,7 @@ export const applyPreferences = (prefs = getPreferences()) => {
   root.dataset.siteMotion = prefs.siteMotion;
   root.dataset.siteContrast = prefs.siteContrast;
   root.dataset.siteScale = prefs.siteScale;
+  root.dataset.playerEngine = prefs.playerEngine;
   root.dataset.playerTheme = prefs.playerTheme;
   root.dataset.playerCorners = prefs.playerCorners;
   root.dataset.playerGlass = prefs.playerGlass;
