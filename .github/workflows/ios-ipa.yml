@@ -63,7 +63,6 @@ jobs:
               json.dumps({"info": {"author": "xcode", "version": 1}}, indent=2)
           )
 
-          # Native SwiftUI branding uses the same real SynFlix logo as the web client.
           native_images = []
           for scale, px in (("1x", 128), ("2x", 256), ("3x", 384)):
               fitted = ImageOps.contain(logo, (px, px), Image.Resampling.LANCZOS)
@@ -90,7 +89,7 @@ jobs:
 
           def branded_icon(canvas_size):
               canvas = Image.new("RGBA", (canvas_size, canvas_size), (7, 7, 6, 255))
-              max_dim = max(1, int(canvas_size * 0.68))
+              max_dim = max(1, int(canvas_size * 0.82))
               fitted = ImageOps.contain(
                   logo,
                   (max_dim, max_dim),
@@ -162,18 +161,23 @@ jobs:
         run: |
           APP='build/Build/Products/Release-iphoneos/SynFlix.app'
           test -d "$APP" || { echo 'SynFlix.app was not produced'; exit 1; }
-          rm -rf Payload SynFlix.ipa
+          rm -rf Payload SynFlix.ipa SynFlix-*.ipa
           mkdir Payload
           cp -R "$APP" Payload/SynFlix.app
           /usr/bin/zip -qry SynFlix.ipa Payload
           unzip -t SynFlix.ipa
-          ls -lh SynFlix.ipa
+          VERSION=$(awk '/MARKETING_VERSION:/ {print $2; exit}' project.yml | tr -d '"')
+          cp SynFlix.ipa "SynFlix-${VERSION}.ipa"
+          echo "SYNFLIX_VERSION=${VERSION}" >> "$GITHUB_ENV"
+          ls -lh SynFlix.ipa "SynFlix-${VERSION}.ipa"
 
       - name: Upload SynFlix IPA
         uses: actions/upload-artifact@v4
         with:
-          name: SynFlix-iOS-IPA
-          path: ios/SynFlix.ipa
+          name: SynFlix-iOS-${{ env.SYNFLIX_VERSION }}
+          path: |
+            ios/SynFlix.ipa
+            ios/SynFlix-${{ env.SYNFLIX_VERSION }}.ipa
           if-no-files-found: error
           retention-days: 14
 
@@ -184,4 +188,6 @@ jobs:
           if ! gh release view ios-latest >/dev/null 2>&1; then
             gh release create ios-latest --title "SynFlix iOS" --notes "Rolling unsigned SynFlix IPA for sideloading with Sideloadly, AltStore, SideStore, or another signer." --target "${{ github.sha }}"
           fi
+          gh release edit ios-latest --target "${{ github.sha }}" --notes "SynFlix iOS ${SYNFLIX_VERSION}. Unsigned IPA for sideloading with Sideloadly, AltStore, SideStore, or another signer."
           gh release upload ios-latest ios/SynFlix.ipa --clobber
+          gh release upload ios-latest "ios/SynFlix-${SYNFLIX_VERSION}.ipa" --clobber
