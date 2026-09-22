@@ -443,6 +443,71 @@
     .catalogHeroRank{font-size:18px}
     @media(max-width:400px){.catalogHero,.catalogHero.result{height:90px}}
 
+  
+    /* Premium compact shell */
+    .homeShell{grid-template-columns:28px minmax(0,1fr);background:#070707}
+    .sideRail{padding:6px 2px;gap:4px;background:#080808;border-right:1px solid rgba(255,255,255,.04)}
+    .sideMark{width:21px;height:21px;margin-bottom:3px;border:0;border-radius:6px;background:#101010}
+    .sideMark:after{width:6px;height:6px}
+    .sideBtn{position:relative;width:23px;height:23px;border-radius:6px}
+    .sideBtn svg{width:12px;height:12px}
+    .sideBtn.is-active{background:rgba(255,255,255,.065);color:#fff}
+    .sideBtn.is-active:before{content:"";position:absolute;left:-2px;width:2px;height:11px;border-radius:0 2px 2px 0;background:rgba(255,255,255,.72)}
+    .homeCanvas{background:#070707}
+    .homeMain,.searchPage{padding:6px 7px 12px}
+    .miniTopline{height:19px;display:flex;align-items:center;justify-content:space-between;margin-bottom:5px}
+    .miniTopline strong{font-size:9px;font-weight:760;letter-spacing:-.015em;color:rgba(255,255,255,.82)}
+    .miniTopline span{font-size:6px;color:rgba(255,255,255,.22)}
+
+    .catalogHero,.catalogHero.result{height:68px;border-radius:8px}
+    .catalogHeroCopy{left:7px;right:7px;bottom:6px}
+    .catalogHeroKicker{font-size:5.5px}
+    .catalogHeroTitle{max-width:255px;margin-top:2px;font-size:10px}
+    .catalogHeroMeta{margin-top:2px;font-size:5.5px}
+    .catalogHeroRank{font-size:15px}
+    .catalogHeroDots{top:6px;right:6px}
+    .catalogHead{margin:7px 1px 5px}
+    .catalogHead strong{font-size:8px}
+    .catalogHead span{font-size:5.5px}
+    .catalogGrid,.searchCatalogGrid{grid-template-columns:repeat(5,minmax(0,1fr));gap:6px 4px}
+    .catalogPoster{border:0;border-radius:6px;box-shadow:0 0 0 1px rgba(255,255,255,.035)}
+    .catalogTitle{margin-top:3px;font-size:6.2px;line-height:1.05}
+    .catalogMeta{margin-top:1.5px;font-size:5.4px}
+    .catalogCard:hover .catalogPoster{box-shadow:0 0 0 1px rgba(255,255,255,.13)}
+    .catalogLoading{height:120px}
+
+    .searchPage{min-height:100vh}
+    .searchHeader{display:flex;align-items:center;gap:6px;height:26px;margin-bottom:6px}
+    .searchHeader strong{flex:0 0 auto;font-size:9px;font-weight:760;letter-spacing:-.015em}
+    .searchFormPage{min-width:0;flex:1;display:flex;align-items:center;height:27px;padding:0 5px 0 8px;border-radius:8px;background:#0c0c0c;box-shadow:inset 0 0 0 1px rgba(255,255,255,.055)}
+    .searchFormPage svg{width:11px;height:11px;flex:0 0 auto;color:rgba(255,255,255,.25)}
+    .searchFormPage input{min-width:0;flex:1;height:25px;border:0;background:transparent;color:#fff;padding:0 6px;outline:none;font-size:7.5px}
+    .searchFormPage input::placeholder{color:rgba(255,255,255,.2)}
+    .searchFormPage button{height:21px;padding:0 7px;border:0;border-radius:6px;background:#ededed;color:#060606;font-size:6px;font-weight:820;cursor:pointer}
+    .searchPageMeta{height:15px;display:flex;align-items:center;justify-content:space-between;margin:0 1px 4px}
+    .searchPageMeta strong{font-size:7px;font-weight:700}
+    .searchPageMeta span{font-size:5.5px;color:rgba(255,255,255,.23)}
+    .searchEmpty{height:185px;display:grid;place-items:center;text-align:center;color:rgba(255,255,255,.23);font-size:7px}
+    .searchEmpty strong{display:block;margin-bottom:3px;color:rgba(255,255,255,.54);font-size:8px}
+    .searchResultsCompact{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px 4px}
+
+    .detailHeroV2{height:138px}
+    .detailHeroInfo{left:9px;right:9px;bottom:8px}
+    .detailHeroInfo h1{font-size:17px}
+    .detailFacts{margin-top:5px;gap:4px}
+    .factPill{height:17px;padding:0 5px;font-size:6px}
+    .detailSheetV2{padding:7px 8px 10px}
+    .genreChip{height:18px;padding:0 6px;font-size:6px}
+    .detailOverviewV2{margin-top:7px;font-size:7.5px;line-height:1.42;-webkit-line-clamp:2}
+    .playPanel{margin-top:7px;padding:6px}
+    .playMain{height:30px;margin-top:5px;font-size:7.5px}
+    .automaticNote{margin-top:4px}
+
+    @media(max-width:390px){
+      .catalogGrid,.searchCatalogGrid,.searchResultsCompact{grid-template-columns:repeat(4,minmax(0,1fr))}
+      .catalogHero,.catalogHero.result{height:64px}
+    }
+
   </style>
 </head>
 <body>
@@ -481,6 +546,9 @@
       var top10Timer = null;
       var homeCatalog = [];
       var homeDataLoaded = false;
+      var currentView = "home";
+      var detailReturnView = "home";
+      var lastSearchResults = [];
 
 
       function esc(value){
@@ -567,87 +635,85 @@
         activeStream=null;
       }
 
+      function sidebarHTML(active){
+        return '<aside class="sideRail">' +
+          '<div class="sideMark"></div>' +
+          '<button class="sideBtn ' + (active==="home" ? 'is-active' : '') + '" id="navHome" aria-label="Home"><svg viewBox="0 0 24 24" fill="none"><path d="M4 10.5L12 4l8 6.5V20h-5v-6H9v6H4v-9.5z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></button>' +
+          '<button class="sideBtn ' + (active==="search" ? 'is-active' : '') + '" id="navSearch" aria-label="Search"><svg viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="6.5" stroke="currentColor" stroke-width="1.7"/><path d="M16 16l4 4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></button>' +
+          '<div class="sideSpacer"></div>' +
+        '</aside>';
+      }
+
+      function wireSidebar(){
+        var home=document.getElementById("navHome");
+        var search=document.getElementById("navSearch");
+        if(home) home.onclick=renderHome;
+        if(search) search.onclick=function(){renderSearchPage(lastSearch);};
+      }
+
       function renderHome(){
         cleanupPlayer();
+        currentView="home";
         if(top10Timer){clearInterval(top10Timer);top10Timer=null;}
         app.innerHTML =
           '<div class="homeShell viewEnter">' +
-            '<aside class="sideRail">' +
-              '<div class="sideMark"></div>' +
-              '<button class="sideBtn is-active" id="navHome" aria-label="Home"><svg viewBox="0 0 24 24" fill="none"><path d="M4 10.5L12 4l8 6.5V20h-5v-6H9v6H4v-9.5z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></button>' +
-              '<button class="sideBtn" id="navSearch" aria-label="Search"><svg viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="6.5" stroke="currentColor" stroke-width="1.7"/><path d="M16 16l4 4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></button>' +
-              '<div class="sideSpacer"></div>' +
-            '</aside>' +
+            sidebarHTML("home") +
             '<div class="homeCanvas">' +
               '<main class="homeMain">' +
+                '<div class="miniTopline"><strong>SynFlix Mini</strong><span>Movies</span></div>' +
                 '<div id="top10Mount"><div class="catalogHero" style="display:grid;place-items:center"><span class="spin"></span></div></div>' +
-                '<div class="catalogHead"><strong>Movies</strong><span id="catalogCount"></span></div>' +
+                '<div class="catalogHead"><strong>For you</strong><span id="catalogCount"></span></div>' +
                 '<div id="homeBody"><div class="catalogLoading"><span class="spin"></span></div></div>' +
               '</main>' +
-              '<div id="searchFlyoutMount"></div>' +
             '</div>' +
           '</div>';
-
-        document.getElementById("navHome").onclick = function(){
-          closeSearchFlyout();
-          renderCatalog();
-          document.getElementById("navHome").classList.add("is-active");
-          document.getElementById("navSearch").classList.remove("is-active");
-        };
-        document.getElementById("navSearch").onclick = toggleSearchFlyout;
+        wireSidebar();
         loadHomeCatalog();
       }
 
-      function toggleSearchFlyout(){
-        var mount = document.getElementById("searchFlyoutMount");
-        if(!mount) return;
-        if(mount.firstChild){closeSearchFlyout();return;}
-        document.getElementById("navSearch").classList.add("is-active");
-        document.getElementById("navHome").classList.remove("is-active");
-        mount.innerHTML =
-          '<div class="searchFlyout">' +
-            '<form id="sidebarSearchForm">' +
-              '<input id="sidebarSearchInput" autocomplete="off" placeholder="Search movies or shows">' +
-              '<button type="submit">Go</button>' +
-            '</form>' +
-            '<div class="searchHint">Search opens here so Home stays clean.</div>' +
+      function renderSearchPage(query){
+        cleanupPlayer();
+        currentView="search";
+        if(top10Timer){clearInterval(top10Timer);top10Timer=null;}
+        app.innerHTML =
+          '<div class="homeShell viewEnter">' +
+            sidebarHTML("search") +
+            '<div class="homeCanvas">' +
+              '<main class="searchPage">' +
+                '<div class="searchHeader">' +
+                  '<strong>Search</strong>' +
+                  '<form class="searchFormPage" id="searchPageForm">' +
+                    '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="11" cy="11" r="6.5" stroke="currentColor" stroke-width="1.8"/><path d="M16 16l4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>' +
+                    '<input id="searchPageInput" autocomplete="off" placeholder="Movie or show" value="' + esc(query || "") + '">' +
+                    '<button type="submit">Go</button>' +
+                  '</form>' +
+                '</div>' +
+                '<div id="searchPageBody">' + renderSearchResults(query || "", lastSearchResults) + '</div>' +
+              '</main>' +
+            '</div>' +
           '</div>';
-        var input=document.getElementById("sidebarSearchInput");
-        document.getElementById("sidebarSearchForm").onsubmit=function(event){
+        wireSidebar();
+        var form=document.getElementById("searchPageForm");
+        var input=document.getElementById("searchPageInput");
+        form.onsubmit=function(event){
           event.preventDefault();
           doSearch(input.value);
-          closeSearchFlyout();
         };
-        setTimeout(function(){input && input.focus();},0);
+        setTimeout(function(){if(input && !query) input.focus();},0);
       }
 
-      function closeSearchFlyout(){
-        var mount=document.getElementById("searchFlyoutMount");
-        if(mount) mount.innerHTML="";
-        var search=document.getElementById("navSearch");
-        var home=document.getElementById("navHome");
-        if(search) search.classList.remove("is-active");
-        if(home) home.classList.add("is-active");
-      }
-
-      function catalogCardHTML(item){
-        return '<button class="catalogCard result" data-id="' + esc(item.id) + '" data-type="movie">' +
-          '<span class="catalogPoster">' + (item.poster_path ? '<img src="' + esc(image(item.poster_path,"w342")) + '" alt="">' : '') + '</span>' +
-          '<span class="catalogTitle">' + esc(titleOf(item)) + '</span>' +
-          '<span class="catalogMeta">' + esc(yearOf(item) || "Movie") + '</span>' +
-        '</button>';
-      }
-
-      function renderCatalog(){
-        var body=document.getElementById("homeBody");
-        var count=document.getElementById("catalogCount");
-        if(!body) return;
-        if(count) count.textContent = homeCatalog.length ? homeCatalog.length + " picks" : "";
-        if(!homeCatalog.length){
-          body.innerHTML='<div class="blankState"><strong>No movies yet</strong><p>Couldn’t load the catalog.</p></div>';
-          return;
-        }
-        body.innerHTML='<div class="catalogGrid">' + homeCatalog.map(catalogCardHTML).join("") + '</div>';
+      function renderSearchResults(query,results){
+        if(!query) return '<div class="searchEmpty"><div><strong>Find something to watch</strong>Movies and series, all in one place.</div></div>';
+        if(!results || !results.length) return '<div class="searchEmpty"><div><strong>No results yet</strong>Try another title.</div></div>';
+        return '<div class="searchPageMeta"><strong>Results</strong><span>' + results.length + '</span></div>' +
+          '<div class="searchResultsCompact">' + results.map(function(item){
+            var type=item.media_type==="tv" ? "tv" : "movie";
+            return '<button class="catalogCard result" data-id="' + esc(item.id) + '" data-type="' + esc(type) + '">' +
+              '<span class="catalogPoster">' + (item.poster_path ? '<img src="' + esc(image(item.poster_path,"w342")) + '" alt="">' : '') + '</span>' +
+              '<span class="catalogTitle">' + esc(titleOf(item)) + '</span>' +
+              '<span class="catalogMeta">' + esc((type==="tv" ? "Series" : "Movie") + (yearOf(item) ? " · " + yearOf(item) : "")) + '</span>' +
+            '</button>';
+          }).join("") + '</div>';
       }
 
       async function loadHomeCatalog(){
@@ -740,47 +806,29 @@
 
       async function doSearch(query){
         query=String(query || "").trim();
-        if(!query) return;
+        if(!query){
+          lastSearch="";
+          lastSearchResults=[];
+          renderSearchPage("");
+          return;
+        }
         lastSearch=query;
-        if(top10Timer){clearInterval(top10Timer);top10Timer=null;}
-        var body=document.getElementById("homeBody");
-        var count=document.getElementById("catalogCount");
-        if(count) count.textContent="";
+        currentView="search";
+        var body=document.getElementById("searchPageBody");
         if(body) body.innerHTML='<div class="catalogLoading"><span class="spin"></span></div>';
         try{
           var data=await getJSON(API + "/search?q=" + encodeURIComponent(query));
-          var results=(data.results || []).filter(function(item){return item && (item.media_type==="movie" || item.media_type==="tv") && item.poster_path;}).slice(0,20);
-          if(!results.length){
-            body.innerHTML='<div class="blankState"><strong>Nothing found</strong><p>Try another title.</p></div>';
-            return;
-          }
-          body.innerHTML =
-            '<div class="searchModeHead"><strong>Search · ' + esc(query) + '</strong><button id="clearSearch">Back to movies</button></div>' +
-            '<div class="searchCatalogGrid">' +
-              results.map(function(item){
-                var type=item.media_type==="tv" ? "tv" : "movie";
-                return '<button class="catalogCard result" data-id="' + esc(item.id) + '" data-type="' + esc(type) + '">' +
-                  '<span class="catalogPoster"><img src="' + esc(image(item.poster_path,"w342")) + '" alt=""></span>' +
-                  '<span class="catalogTitle">' + esc(titleOf(item)) + '</span>' +
-                  '<span class="catalogMeta">' + esc((type==="tv"?"Series":"Movie") + (yearOf(item) ? " · " + yearOf(item) : "")) + '</span>' +
-                '</button>';
-              }).join("") +
-            '</div>';
-          document.getElementById("clearSearch").onclick=function(){
-            renderCatalog();
-            if(top10Items.length>1 && !top10Timer){
-              top10Timer=setInterval(function(){
-                top10Index=(top10Index+1)%top10Items.length;
-                renderTop10();
-              },4300);
-            }
-          };
+          lastSearchResults=(data.results || []).filter(function(item){
+            return item && (item.media_type==="movie" || item.media_type==="tv") && item.poster_path;
+          }).slice(0,25);
+          renderSearchPage(query);
         }catch(error){
-          body.innerHTML='<div class="error">Search failed.<br>' + esc(error.message) + '</div>';
+          if(body) body.innerHTML='<div class="error">Search failed.<br>' + esc(error.message) + '</div>';
         }
       }
 
       async function openDetail(type,id){
+        detailReturnView=currentView;
         cleanupPlayer();
         currentType = type === "tv" ? "tv" : "movie";
         currentId = id;
@@ -827,7 +875,7 @@
             '</section>' +
           '</div>';
 
-        document.getElementById("detailBack").onclick = renderHome;
+        document.getElementById("detailBack").onclick = function(){ detailReturnView==="search" ? renderSearchPage(lastSearch) : renderHome(); };
         document.getElementById("playNow").onclick = playCurrent;
       }
 
