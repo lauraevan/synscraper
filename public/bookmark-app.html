@@ -508,6 +508,25 @@
       .catalogHero,.catalogHero.result{height:64px}
     }
 
+  
+    /* Restore sidebar width + hover-only movie labels */
+    .homeShell{grid-template-columns:32px minmax(0,1fr)}
+    .sideRail{padding:7px 3px;gap:5px}
+    .sideMark{width:23px;height:23px;margin-bottom:4px}
+    .sideBtn{width:25px;height:25px;border-radius:7px}
+    .sideBtn svg{width:13px;height:13px}
+
+    .catalogPoster{overflow:hidden}
+    .catalogPoster:after{content:"";position:absolute;inset:42% 0 0;background:linear-gradient(transparent,rgba(0,0,0,.84));opacity:0;transition:opacity .16s ease;pointer-events:none}
+    .catalogOverlay{position:absolute;z-index:2;left:5px;right:5px;bottom:5px;opacity:0;transform:translateY(3px);transition:opacity .16s ease,transform .16s ease;pointer-events:none}
+    .catalogOverlay strong{display:block;font-size:6.5px;font-weight:760;line-height:1.08;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .catalogOverlay span{display:block;margin-top:2px;font-size:5.4px;color:rgba(255,255,255,.58)}
+    .catalogCard:hover .catalogPoster:after,
+    .catalogCard:focus-visible .catalogPoster:after{opacity:1}
+    .catalogCard:hover .catalogOverlay,
+    .catalogCard:focus-visible .catalogOverlay{opacity:1;transform:none}
+    .catalogTitle,.catalogMeta{display:none}
+
   </style>
 </head>
 <body>
@@ -709,9 +728,10 @@
           '<div class="searchResultsCompact">' + results.map(function(item){
             var type=item.media_type==="tv" ? "tv" : "movie";
             return '<button class="catalogCard result" data-id="' + esc(item.id) + '" data-type="' + esc(type) + '">' +
-              '<span class="catalogPoster">' + (item.poster_path ? '<img src="' + esc(image(item.poster_path,"w342")) + '" alt="">' : '') + '</span>' +
-              '<span class="catalogTitle">' + esc(titleOf(item)) + '</span>' +
-              '<span class="catalogMeta">' + esc((type==="tv" ? "Series" : "Movie") + (yearOf(item) ? " · " + yearOf(item) : "")) + '</span>' +
+              '<span class="catalogPoster">' +
+                (item.poster_path ? '<img src="' + esc(image(item.poster_path,"w342")) + '" alt="">' : '') +
+                '<span class="catalogOverlay"><strong>' + esc(titleOf(item)) + '</strong><span>' + esc((type==="tv" ? "Series" : "Movie") + (yearOf(item) ? " · " + yearOf(item) : "")) + '</span></span>' +
+              '</span>' +
             '</button>';
           }).join("") + '</div>';
       }
