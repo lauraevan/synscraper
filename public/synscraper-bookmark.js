@@ -13,8 +13,8 @@
     "position:fixed",
     "right:18px",
     "top:18px",
-    "width:min(430px,calc(100vw - 24px))",
-    "height:min(720px,calc(100vh - 36px))",
+    "width:min(460px,calc(100vw - 24px),calc(100vh - 24px))",
+    "height:min(460px,calc(100vw - 24px),calc(100vh - 24px))",
     "z-index:2147483647",
     "border:1px solid rgba(255,255,255,.14)",
     "border-radius:22px",
@@ -89,7 +89,7 @@
   const frame = document.createElement("iframe");
   const base = "https://synscraper-tffk.vercel.app";
   const sourceTitle = document.title ? document.title.slice(0, 160) : "";
-  frame.src = base + "/bookmark-app.html?v=1&q=" + encodeURIComponent(sourceTitle);
+  frame.src = base + "/bookmark-app.html?v=2&q=" + encodeURIComponent(sourceTitle);
   frame.title = "Synscraper";
   frame.allow = "autoplay; fullscreen; picture-in-picture";
   frame.referrerPolicy = "no-referrer";
@@ -105,13 +105,13 @@
   document.documentElement.appendChild(root);
 
   let minimized = false;
-  let savedHeight = root.style.height;
+  let savedSize = root.style.width;
 
   minimize.onclick = (event) => {
     event.stopPropagation();
     minimized = !minimized;
     if (minimized) {
-      savedHeight = root.style.height || "min(720px,calc(100vh - 36px))";
+      savedSize = root.style.width || "min(460px,calc(100vw - 24px),calc(100vh - 24px))";
       root.style.height = "38px";
       root.style.width = "168px";
       root.style.borderRadius = "14px";
@@ -119,8 +119,8 @@
       minimize.textContent = "+";
       minimize.setAttribute("aria-label", "Restore Synscraper");
     } else {
-      root.style.height = savedHeight;
-      root.style.width = "min(430px,calc(100vw - 24px))";
+      root.style.width = savedSize;
+      root.style.height = savedSize;
       root.style.borderRadius = "22px";
       frame.style.display = "block";
       minimize.textContent = "–";
@@ -173,9 +173,7 @@
   window.addEventListener("message", (event) => {
     if (event.origin !== base) return;
     if (event.data?.type === "synscraper:close") root.remove();
-    if (event.data?.type === "synscraper:resize" && !minimized) {
-      const next = Math.max(420, Math.min(window.innerHeight - 36, Number(event.data.height) || 720));
-      root.style.height = next + "px";
-    }
+    // Keep the bookmark window square. Content scrolls inside the iframe instead
+    // of stretching the outer shell into a tall panel.
   });
 })();
