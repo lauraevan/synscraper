@@ -234,11 +234,7 @@
       }
 
       function wireResults(){
-        Array.prototype.forEach.call(document.querySelectorAll(".result"),function(button){
-          button.addEventListener("click",function(){
-            openDetail(button.getAttribute("data-type"),button.getAttribute("data-id"));
-          });
-        });
+        // Result navigation is handled by the single delegated click listener below.
       }
 
       async function doSearch(query){
