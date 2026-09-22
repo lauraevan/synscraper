@@ -29,11 +29,11 @@
 
   const bar = document.createElement("div");
   bar.style.cssText = [
-    "height:38px",
+    "height:30px",
     "display:flex",
     "align-items:center",
     "justify-content:space-between",
-    "padding:0 10px 0 14px",
+    "padding:0 7px 0 10px",
     "background:rgba(12,12,12,.96)",
     "border-bottom:1px solid rgba(255,255,255,.08)",
     "cursor:grab",
@@ -45,7 +45,7 @@
   const brand = document.createElement("div");
   brand.textContent = "SynFlix Mini";
   brand.style.cssText = [
-    "font-size:12px",
+    "font-size:10px",
     "font-weight:700",
     "letter-spacing:-.01em",
     "color:rgba(255,255,255,.82)"
@@ -60,10 +60,10 @@
     button.textContent = label;
     button.setAttribute("aria-label", aria);
     button.style.cssText = [
-      "width:26px",
-      "height:26px",
+      "width:22px",
+      "height:22px",
       "border:0",
-      "border-radius:8px",
+      "border-radius:6px",
       "background:transparent",
       "color:rgba(255,255,255,.58)",
       "font:600 15px/1 -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif",
@@ -96,7 +96,7 @@
   frame.style.cssText = [
     "display:block",
     "width:100%",
-    "height:calc(100% - 38px)",
+    "height:calc(100% - 30px)",
     "border:0",
     "background:#070707"
   ].join(";");
@@ -112,9 +112,9 @@
     minimized = !minimized;
     if (minimized) {
       savedSize = root.style.width || "min(460px,calc(100vw - 24px),calc(100vh - 24px))";
-      root.style.height = "38px";
-      root.style.width = "168px";
-      root.style.borderRadius = "14px";
+      root.style.height = "30px";
+      root.style.width = "150px";
+      root.style.borderRadius = "12px";
       frame.style.display = "none";
       minimize.textContent = "+";
       minimize.setAttribute("aria-label", "Restore SynFlix Mini");
