@@ -219,6 +219,100 @@
     .loadingV2 strong{font-size:11px}
     .loadingV2 span:last-child{font-size:8px;color:rgba(255,255,255,.27)}
 
+  
+    /* Cozy compact shell */
+    .app{background:#070707}
+    .viewEnter{animation:viewIn .18s ease-out both}
+    @keyframes viewIn{from{opacity:.6;transform:translateY(3px)}to{opacity:1;transform:none}}
+    .appBar{height:42px;padding:0 11px;background:rgba(7,7,7,.9);border-bottom:1px solid rgba(255,255,255,.045);backdrop-filter:blur(18px)}
+    .appLogo{width:21px;height:21px;border-radius:7px}
+    .appLogo:after{width:7px;height:7px;border-radius:2px}
+    .appBrand{gap:7px}
+    .appBrandCopy strong{font-size:11px}
+    .appBrandCopy span{display:none}
+    .livePill{height:22px;padding:0 7px;border:0;background:transparent;font-size:7px;color:rgba(255,255,255,.3)}
+    .livePill:before{width:5px;height:5px}
+    .homeMain{padding:10px 10px 17px}
+
+    .compactSearch{display:flex;align-items:center;gap:7px;height:36px;padding:0 6px 0 10px;border:1px solid rgba(255,255,255,.07);border-radius:11px;background:#0c0c0c}
+    .compactSearch svg{width:14px;height:14px;color:rgba(255,255,255,.25)}
+    .compactSearch input{min-width:0;flex:1;border:0;background:transparent;color:#fff;outline:none;font-size:10px}
+    .compactSearch input::placeholder{color:rgba(255,255,255,.22)}
+    .compactSearch button{height:26px;padding:0 10px;border:0;border-radius:8px;background:#ededed;color:#070707;font-size:8px;font-weight:820;cursor:pointer}
+
+    .top10Hero{position:relative;height:116px;margin-top:9px;overflow:hidden;border-radius:13px;background:#111;cursor:pointer}
+    .top10Hero img{width:100%;height:100%;object-fit:cover;transition:opacity .22s ease}
+    .top10Hero:after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(5,5,5,.86) 0%,rgba(5,5,5,.52) 45%,rgba(5,5,5,.08) 100%),linear-gradient(0deg,rgba(5,5,5,.55),transparent 58%)}
+    .top10Copy{position:absolute;z-index:2;left:11px;right:11px;bottom:10px;display:flex;align-items:flex-end;justify-content:space-between;gap:10px}
+    .top10Text{min-width:0}
+    .top10Kicker{font-size:7px;font-weight:850;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.45)}
+    .top10Title{margin-top:4px;max-width:255px;font-size:16px;line-height:1;font-weight:760;letter-spacing:-.035em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .top10Meta{margin-top:4px;font-size:8px;color:rgba(255,255,255,.42)}
+    .top10Rank{flex:0 0 auto;font-size:27px;line-height:.8;font-weight:850;letter-spacing:-.08em;color:rgba(255,255,255,.18)}
+    .top10Dots{position:absolute;z-index:3;right:9px;top:8px;display:flex;gap:3px}
+    .top10Dot{width:9px;height:2px;border-radius:99px;background:rgba(255,255,255,.22);transition:.2s}
+    .top10Dot.is-active{background:rgba(255,255,255,.8);width:13px}
+
+    .surfaceSection{margin-top:12px}
+    .surfaceHead{margin-bottom:7px}
+    .surfaceHead div strong{font-size:11px;font-weight:740}
+    .surfaceHead div span{display:none}
+    .surfaceCount{font-size:7px}
+    .recentRail{gap:7px;margin:0 -10px;padding:0 10px 2px}
+    .recentCard,.recentCard.result{width:76px;flex:0 0 76px}
+    .recentPosterWrap{width:76px;height:106px;border-radius:10px}
+    .recentType{display:none}
+    .recentName{margin-top:5px;font-size:9px}
+    .recentYear{margin-top:2px;font-size:7px}
+    .blankState{padding:13px;border-radius:11px}
+    .blankState strong{font-size:10px}
+    .blankState p{margin-top:3px;font-size:8px}
+
+    .searchResultsHead{margin:13px 0 8px}
+    .searchResultsHead strong{font-size:11px}
+    .searchResultsHead span{font-size:7px}
+    .mediaGrid{grid-template-columns:repeat(3,minmax(0,1fr));gap:9px 7px}
+    .mediaPoster{border-radius:9px}
+    .mediaBadge{display:none}
+    .mediaTitle{margin-top:5px;font-size:8px}
+    .mediaMeta{margin-top:2px;font-size:7px}
+
+    .loadingV2{min-height:180px;gap:7px}
+    .loadingV2 strong{font-size:9px}
+    .loadingV2 span:last-child{font-size:7px}
+
+    .detailHeroV2{height:166px}
+    .detailBackV2{left:9px;top:9px;width:31px;height:31px;border-radius:9px}
+    .detailHeroInfo{left:11px;right:11px;bottom:10px}
+    .detailHeroInfo .detailKicker{display:none}
+    .detailHeroInfo h1{margin:0;max-width:330px;font-size:20px;line-height:1;letter-spacing:-.045em}
+    .detailFacts{gap:5px;margin-top:7px}
+    .factPill{height:20px;padding:0 6px;border-radius:6px;font-size:7px;background:rgba(5,5,5,.45)}
+    .detailSheetV2{padding:9px 10px 14px}
+    .genreRow{gap:5px}
+    .genreChip{height:21px;padding:0 7px;border-radius:7px;font-size:7px}
+    .detailOverviewV2{margin-top:9px;font-size:9px;line-height:1.5;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+    .playPanel{margin-top:10px;padding:8px;border-radius:11px}
+    .playPanelTop{margin-bottom:7px}
+    .playPanelTop strong{font-size:9px}
+    .playPanelTop span{font-size:6px}
+    .episodePicker{gap:6px}
+    .episodePicker .miniField input{height:31px;border-radius:8px;font-size:9px}
+    .miniField label{font-size:7px}
+    .playMain{height:34px;margin-top:7px;border-radius:9px;font-size:9px}
+    .automaticNote{margin-top:6px;font-size:6px}
+
+    .stage{min-height:0}
+    .playerSheet{padding:9px 10px 11px;background:#070707}
+    .playingEyebrow{display:none}
+    .playerSheetTop{gap:8px;margin-top:0}
+    .playerMiniPoster{width:36px;height:52px;border-radius:8px}
+    .playerMeta h3{font-size:12px}
+    .playerMetaLine{margin-top:4px;font-size:7px}
+    .playerOverview{display:none}
+    .playerUtility{display:none}
+    @media(max-width:370px){.mediaGrid{grid-template-columns:repeat(3,minmax(0,1fr))}.top10Hero{height:108px}.detailHeroV2{height:154px}}
+
   </style>
 </head>
 <body>
@@ -252,6 +346,9 @@
       };
       var playbackSeason = 1;
       var playbackEpisode = 1;
+      var top10Items = [];
+      var top10Index = 0;
+      var top10Timer = null;
 
 
       function esc(value){
@@ -340,25 +437,21 @@
 
       function renderHome(){
         cleanupPlayer();
+        if(top10Timer){clearInterval(top10Timer);top10Timer=null;}
         var recents = getRecents();
         app.innerHTML =
           '<div class="viewEnter">' +
             '<header class="appBar">' +
-              '<div class="appBrand"><span class="appLogo"></span><div class="appBrandCopy"><strong>Synscraper</strong><span>Instant cinema</span></div></div>' +
+              '<div class="appBrand"><span class="appLogo"></span><div class="appBrandCopy"><strong>Synscraper</strong><span>Mini</span></div></div>' +
               '<div class="livePill">Ready</div>' +
             '</header>' +
             '<main class="homeMain">' +
-              '<section class="discoverHero">' +
-                '<div class="heroKicker">Discover</div>' +
-                '<h1 class="heroTitle">Watch without the friction.</h1>' +
-                '<p class="heroSubtitle">Search a movie or show. Synscraper handles the rest automatically.</p>' +
-                '<form id="searchForm" class="heroSearch">' +
-                  '<svg class="searchGlyph" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="11" cy="11" r="6.5" stroke="currentColor" stroke-width="1.8"/><path d="M16 16l4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>' +
-                  '<input id="searchInput" autocomplete="off" placeholder="Movie, show, title..." value="' + esc(lastSearch) + '">' +
-                  '<button type="submit">Search</button>' +
-                '</form>' +
-                '<div class="quickMeta"><span><i></i>Movies + TV</span><span><i></i>Automatic playback</span></div>' +
-              '</section>' +
+              '<form id="searchForm" class="compactSearch">' +
+                '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="11" cy="11" r="6.5" stroke="currentColor" stroke-width="1.8"/><path d="M16 16l4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>' +
+                '<input id="searchInput" autocomplete="off" placeholder="Search..." value="' + esc(lastSearch) + '">' +
+                '<button type="submit">Go</button>' +
+              '</form>' +
+              '<div id="top10Mount"><div class="top10Hero" style="display:grid;place-items:center"><span class="spin"></span></div></div>' +
               '<div id="homeBody">' + renderRecentSection(recents) + '</div>' +
             '</main>' +
           '</div>';
@@ -367,17 +460,53 @@
           event.preventDefault();
           doSearch(document.getElementById("searchInput").value);
         });
+        loadTop10();
+      }
+
+      async function loadTop10(){
+        var mount = document.getElementById("top10Mount");
+        if(!mount) return;
+        try{
+          var data = await getJSON(API + "/home");
+          top10Items = (data.trending || []).filter(function(item){
+            return item && (item.media_type === "movie" || item.media_type === "tv") && (item.backdrop_path || item.poster_path);
+          }).slice(0,10);
+          if(!top10Items.length){mount.innerHTML="";return;}
+          top10Index = 0;
+          renderTop10();
+          top10Timer = setInterval(function(){
+            if(!document.getElementById("top10Mount")){clearInterval(top10Timer);top10Timer=null;return;}
+            top10Index = (top10Index + 1) % top10Items.length;
+            renderTop10();
+          },4200);
+        }catch(_){
+          mount.innerHTML = "";
+        }
+      }
+
+      function renderTop10(){
+        var mount = document.getElementById("top10Mount");
+        var item = top10Items[top10Index];
+        if(!mount || !item) return;
+        var type = item.media_type === "tv" ? "tv" : "movie";
+        var art = item.backdrop_path || item.poster_path;
+        mount.innerHTML =
+          '<button class="top10Hero result" data-id="' + esc(item.id) + '" data-type="' + esc(type) + '">' +
+            '<img src="' + esc(image(art,"w780")) + '" alt="">' +
+            '<span class="top10Dots">' + top10Items.slice(0,5).map(function(_,i){return '<i class="top10Dot ' + (i === (top10Index%5) ? 'is-active' : '') + '"></i>';}).join("") + '</span>' +
+            '<span class="top10Copy">' +
+              '<span class="top10Text"><span class="top10Kicker">Top 10 · ' + esc(type === "tv" ? "Series" : "Movie") + '</span><span class="top10Title">' + esc(titleOf(item)) + '</span><span class="top10Meta">' + esc(yearOf(item) || "Trending now") + '</span></span>' +
+              '<span class="top10Rank">' + (top10Index + 1) + '</span>' +
+            '</span>' +
+          '</button>';
       }
 
       function renderRecentSection(recents){
         if(!recents.length){
-          return '<section class="surfaceSection">' +
-            '<div class="surfaceHead"><div><strong>Your space</strong><span>Recently opened titles live here</span></div></div>' +
-            '<div class="blankState"><strong>Nothing here yet.</strong><p>Search for something above and your recent titles will appear here automatically.</p></div>' +
-          '</section>';
+          return '<section class="surfaceSection"><div class="surfaceHead"><div><strong>Recent</strong></div></div><div class="blankState"><strong>Nothing yet</strong><p>Your recently opened titles will show up here.</p></div></section>';
         }
         return '<section class="surfaceSection">' +
-          '<div class="surfaceHead"><div><strong>Continue exploring</strong><span>Recent titles</span></div><div class="surfaceCount">' + recents.length + '</div></div>' +
+          '<div class="surfaceHead"><div><strong>Recent</strong></div><div class="surfaceCount">' + recents.length + '</div></div>' +
           '<div class="recentRail">' + recents.map(function(item){return recentCardHTML(item,item.media_type);}).join("") + '</div>' +
         '</section>';
       }
@@ -416,17 +545,20 @@
         query = String(query || "").trim();
         if(!query) return;
         lastSearch = query;
+        if(top10Timer){clearInterval(top10Timer);top10Timer=null;}
+        var top = document.getElementById("top10Mount");
+        if(top) top.style.display = "none";
         var body = document.getElementById("homeBody");
-        if(body) body.innerHTML = '<div class="loadingV2"><span class="spin"></span><strong>Searching</strong><span>Finding the closest matches</span></div>';
+        if(body) body.innerHTML = '<div class="loadingV2"><span class="spin"></span><strong>Searching</strong><span>One sec</span></div>';
         try{
           var data = await getJSON(API + "/search?q=" + encodeURIComponent(query));
-          var results = (data.results || []).slice(0,12);
+          var results = (data.results || []).slice(0,15);
           if(!results.length){
-            body.innerHTML = '<section class="surfaceSection"><div class="surfaceHead"><div><strong>No matches</strong><span>Try another title</span></div></div><div class="blankState"><strong>Nothing showed up.</strong><p>Try a shorter title or check the spelling.</p></div></section>';
+            body.innerHTML = '<div class="searchResultsHead"><strong>No matches</strong><span>Try again</span></div><div class="blankState"><strong>Nothing found</strong><p>Try a shorter title.</p></div>';
             return;
           }
           body.innerHTML =
-            '<div class="searchResultsHead"><strong>Search results</strong><span>' + results.length + ' matches</span></div>' +
+            '<div class="searchResultsHead"><strong>Results</strong><span>' + results.length + '</span></div>' +
             '<div class="mediaGrid">' + results.map(function(item){return resultHTML(item,item.media_type);}).join("") + '</div>';
         }catch(error){
           body.innerHTML = '<div class="error">Search failed.<br>' + esc(error.message) + '</div>';
@@ -450,19 +582,14 @@
       }
 
       function renderDetail(){
+        if(top10Timer){clearInterval(top10Timer);top10Timer=null;}
         var d = currentDetail;
         var backdrop = d.backdrop_path || d.poster_path;
-        var genres = (d.genres || []).slice(0,4);
+        var genres = (d.genres || []).slice(0,3);
         var year = yearOf(d);
-        var runtime = currentType === "movie" && d.runtime ? d.runtime + " min" : "";
+        var runtime = currentType === "movie" && d.runtime ? d.runtime + "m" : "";
         var rating = Number(d.vote_average) > 0 ? Number(d.vote_average).toFixed(1) : "";
-        var facts = [
-          currentType === "tv" ? "Series" : "Movie",
-          year,
-          runtime,
-          rating ? "★ " + rating : ""
-        ].filter(Boolean);
-
+        var facts = [year,runtime,rating ? "★ " + rating : ""].filter(Boolean);
         var tvPicker = currentType === "tv"
           ? '<div class="episodePicker"><div class="miniField"><label>Season</label><input id="seasonField" type="number" min="1" value="1"></div><div class="miniField"><label>Episode</label><input id="episodeField" type="number" min="1" value="1"></div></div>'
           : '';
@@ -472,20 +599,15 @@
             '<section class="detailHeroV2">' +
               (backdrop ? '<img src="' + esc(image(backdrop,"w780")) + '" alt="">' : '') +
               '<button class="detailBackV2" id="detailBack" aria-label="Back">' + ICON.back + '</button>' +
-              '<div class="detailHeroInfo">' +
-                '<div class="detailKicker">' + esc(currentType === "tv" ? "Synscraper series" : "Synscraper feature") + '</div>' +
-                '<h1>' + esc(titleOf(d)) + '</h1>' +
-                '<div class="detailFacts">' + facts.map(function(f){return '<span class="factPill">' + esc(f) + '</span>';}).join("") + '</div>' +
-              '</div>' +
+              '<div class="detailHeroInfo"><h1>' + esc(titleOf(d)) + '</h1><div class="detailFacts">' + facts.map(function(f){return '<span class="factPill">' + esc(f) + '</span>';}).join("") + '</div></div>' +
             '</section>' +
             '<section class="detailSheetV2">' +
               (genres.length ? '<div class="genreRow">' + genres.map(function(g){return '<span class="genreChip">' + esc(g.name) + '</span>';}).join("") + '</div>' : '') +
-              '<p class="detailOverviewV2">' + esc(d.overview || "No overview available for this title.") + '</p>' +
+              '<p class="detailOverviewV2">' + esc(d.overview || "No overview available.") + '</p>' +
               '<div class="playPanel">' +
-                '<div class="playPanelTop"><strong>Ready to watch</strong><span>Automatic</span></div>' +
                 tvPicker +
-                '<button class="playMain" id="playNow">' + ICON.play + '<span>Play now</span></button>' +
-                '<div class="automaticNote">Best available playback is selected for you</div>' +
+                '<button class="playMain" id="playNow">' + ICON.play + '<span>Play</span></button>' +
+                '<div class="automaticNote">Automatic playback</div>' +
               '</div>' +
             '</section>' +
           '</div>';
