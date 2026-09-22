@@ -839,7 +839,31 @@
       background:#fff;
     }
 
-  </style>
+  
+    /* Discovery + Roulette */
+    .discoveryPage,.roulettePage{padding:7px 8px 14px;min-height:100vh}
+    .pageMiniHead{height:26px;display:flex;align-items:center;justify-content:space-between;margin-bottom:7px}
+    .pageMiniHead strong{font-size:10px;font-weight:800;letter-spacing:-.025em}
+    .pageMiniHead span{font-size:5.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.22)}
+    .genreStrip{display:flex;gap:4px;overflow-x:auto;padding:0 0 7px;scrollbar-width:none}
+    .genreStrip::-webkit-scrollbar{display:none}
+    .genreFilter{flex:0 0 auto;height:22px;padding:0 8px;border:1px solid rgba(255,255,255,.06);border-radius:7px;background:#0d0d0d;color:rgba(255,255,255,.42);font-size:5.8px;font-weight:720;cursor:pointer}
+    .genreFilter.is-active{background:#eee;color:#070707;border-color:#eee}
+    .rouletteStage{position:relative;overflow:hidden;min-height:230px;border:1px solid rgba(255,255,255,.055);border-radius:14px;background:#0a0a0a}
+    .rouletteStage>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:saturate(.88)}
+    .rouletteStage:after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(5,5,5,.12),rgba(5,5,5,.3) 38%,rgba(5,5,5,.96) 100%)}
+    .rouletteCopy{position:absolute;z-index:2;left:12px;right:12px;bottom:12px}
+    .rouletteEyebrow{font-size:5.5px;font-weight:850;letter-spacing:.13em;text-transform:uppercase;color:rgba(255,255,255,.4)}
+    .rouletteTitle{margin-top:4px;font-size:20px;font-weight:820;line-height:1;letter-spacing:-.045em}
+    .rouletteMeta{margin-top:5px;font-size:6px;color:rgba(255,255,255,.4)}
+    .rouletteOverview{margin-top:6px;max-width:320px;font-size:7px;line-height:1.4;color:rgba(255,255,255,.5);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+    .rouletteActions{display:flex;gap:5px;margin-top:9px}
+    .rouletteActions button{height:27px;border-radius:8px;padding:0 10px;border:1px solid rgba(255,255,255,.08);font-size:6px;font-weight:800;cursor:pointer}
+    .rouletteOpen{background:#eee;color:#050505}
+    .rouletteAgain{background:rgba(10,10,10,.48);color:#fff;backdrop-filter:blur(12px)}
+    .rouletteHint{margin-top:7px;text-align:center;font-size:5.5px;color:rgba(255,255,255,.18)}
+
+</style>
 </head>
 <body>
   <div id="app" class="app"></div>
@@ -971,6 +995,8 @@
           '<div class="sideMark"></div>' +
           '<button class="sideBtn ' + (active==="home" ? 'is-active' : '') + '" id="navHome" data-tip="Home" aria-label="Home"><svg viewBox="0 0 24 24" fill="none"><path d="M4 10.5L12 4l8 6.5V20h-5v-6H9v6H4v-9.5z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></button>' +
           '<button class="sideBtn ' + (active==="search" ? 'is-active' : '') + '" id="navSearch" data-tip="Search" aria-label="Search"><svg viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="6.5" stroke="currentColor" stroke-width="1.7"/><path d="M16 16l4 4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></button>' +
+          '<button class="sideBtn ' + (active==="discover" ? 'is-active' : '') + '" id="navDiscover" data-tip="Discover" aria-label="Discover"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8" stroke="currentColor" stroke-width="1.6"/><path d="M15.5 8.5l-2.1 4.9-4.9 2.1 2.1-4.9 4.9-2.1z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg></button>' +
+          '<button class="sideBtn ' + (active==="roulette" ? 'is-active' : '') + '" id="navRoulette" data-tip="Roulette" aria-label="Roulette"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="12" r="2" stroke="currentColor" stroke-width="1.5"/><path d="M12 4v3M18.9 8l-2.6 1.5M18.9 16l-2.6-1.5M12 20v-3M5.1 16l2.6-1.5M5.1 8l2.6 1.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg></button>' +
           '<div class="sideSpacer"></div>' +
         '</aside>';
       }
@@ -978,8 +1004,12 @@
       function wireSidebar(){
         var home=document.getElementById("navHome");
         var search=document.getElementById("navSearch");
+        var discover=document.getElementById("navDiscover");
+        var roulette=document.getElementById("navRoulette");
         if(home) home.onclick=renderHome;
         if(search) search.onclick=function(){renderSearchPage(lastSearch);};
+        if(discover) discover.onclick=function(){renderDiscovery();};
+        if(roulette) roulette.onclick=function(){renderRoulette();};
       }
 
       function renderHome(){
@@ -1000,6 +1030,99 @@
           '</div>';
         wireSidebar();
         loadHomeCatalog();
+      }
+
+      var discoveryGenres=[
+        {id:"",name:"Popular"},{id:"28",name:"Action"},{id:"35",name:"Comedy"},
+        {id:"878",name:"Sci-Fi"},{id:"27",name:"Horror"},{id:"53",name:"Thriller"},
+        {id:"16",name:"Animation"},{id:"10749",name:"Romance"}
+      ];
+      var roulettePool=[];
+
+      function renderDiscovery(genre){
+        cleanupPlayer();
+        currentView="discover";
+        if(top10Timer){clearInterval(top10Timer);top10Timer=null;}
+        var active=String(genre || "");
+        app.innerHTML='<div class="homeShell viewEnter">' +
+          sidebarHTML("discover") +
+          '<div class="homeCanvas"><main class="discoveryPage">' +
+            '<div class="pageMiniHead"><strong>Discover</strong><span>Explore</span></div>' +
+            '<div class="genreStrip">' + discoveryGenres.map(function(g){
+              return '<button class="genreFilter ' + (String(g.id)===active ? 'is-active' : '') + '" data-genre="' + g.id + '">' + esc(g.name) + '</button>';
+            }).join("") + '</div>' +
+            '<div id="discoveryBody"><div class="catalogSkeleton">' + new Array(11).join('<i></i>') + '</div></div>' +
+          '</main></div></div>';
+        wireSidebar();
+        Array.prototype.forEach.call(document.querySelectorAll(".genreFilter"),function(btn){
+          btn.onclick=function(){renderDiscovery(btn.getAttribute("data-genre") || "");};
+        });
+        loadDiscovery(active);
+      }
+
+      async function loadDiscovery(genre){
+        var body=document.getElementById("discoveryBody");
+        try{
+          var url=API + "/discover/movie?sort_by=popularity.desc&include_adult=false";
+          if(genre) url += "&with_genres=" + encodeURIComponent(genre);
+          var data=await getJSON(url);
+          var items=(data.results || []).filter(function(item){return item && item.id && item.poster_path;}).slice(0,30);
+          if(!body) return;
+          body.innerHTML=items.length ? '<div class="catalogGrid">' + items.map(catalogCardHTML).join("") + '</div>' :
+            '<div class="searchEmpty"><div><strong>Nothing here yet</strong>Try another category.</div></div>';
+        }catch(error){
+          if(body) body.innerHTML='<div class="error">Discovery could not load.<br>' + esc(error.message) + '</div>';
+        }
+      }
+
+      function renderRoulette(){
+        cleanupPlayer();
+        currentView="roulette";
+        if(top10Timer){clearInterval(top10Timer);top10Timer=null;}
+        app.innerHTML='<div class="homeShell viewEnter">' +
+          sidebarHTML("roulette") +
+          '<div class="homeCanvas"><main class="roulettePage">' +
+            '<div class="pageMiniHead"><strong>Roulette</strong><span>Surprise me</span></div>' +
+            '<div id="rouletteBody"><div class="catalogSkeleton"><i></i><i></i><i></i><i></i><i></i></div></div>' +
+          '</main></div></div>';
+        wireSidebar();
+        loadRoulette();
+      }
+
+      async function loadRoulette(){
+        var body=document.getElementById("rouletteBody");
+        try{
+          if(!roulettePool.length){
+            var page=1+Math.floor(Math.random()*5);
+            var data=await getJSON(API + "/discover/movie?sort_by=popularity.desc&include_adult=false&vote_count.gte=250&page=" + page);
+            roulettePool=(data.results || []).filter(function(item){return item && item.id && item.poster_path && (item.backdrop_path || item.poster_path);});
+          }
+          spinRoulette();
+        }catch(error){
+          if(body) body.innerHTML='<div class="error">Roulette could not load.<br>' + esc(error.message) + '</div>';
+        }
+      }
+
+      function spinRoulette(){
+        var body=document.getElementById("rouletteBody");
+        if(!body || !roulettePool.length) return;
+        var item=roulettePool[Math.floor(Math.random()*roulettePool.length)];
+        var art=item.backdrop_path || item.poster_path;
+        body.innerHTML='<div class="rouletteStage">' +
+          '<img src="' + esc(image(art,"w780")) + '" alt="">' +
+          '<div class="rouletteCopy">' +
+            '<div class="rouletteEyebrow">Tonight’s pick</div>' +
+            '<div class="rouletteTitle">' + esc(titleOf(item)) + '</div>' +
+            '<div class="rouletteMeta">' + esc(yearOf(item) || "Movie") + (item.vote_average ? " · " + Number(item.vote_average).toFixed(1) : "") + '</div>' +
+            (item.overview ? '<div class="rouletteOverview">' + esc(item.overview) + '</div>' : '') +
+            '<div class="rouletteActions">' +
+              '<button class="rouletteOpen" id="rouletteOpen">Open</button>' +
+              '<button class="rouletteAgain" id="rouletteAgain">Spin again</button>' +
+            '</div>' +
+          '</div></div>' +
+          '<div class="rouletteHint">One random film from the current discovery pool.</div>';
+        document.getElementById("rouletteOpen").onclick=function(){openDetail("movie",item.id);};
+        document.getElementById("rouletteAgain").onclick=spinRoulette;
       }
 
       function renderSearchPage(query){
