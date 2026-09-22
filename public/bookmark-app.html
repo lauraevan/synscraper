@@ -781,6 +781,64 @@
       color:rgba(255,255,255,.68)
     }
 
+  
+    /* Smaller controls + subtle scrubber */
+    .simplePlayerActions{gap:10px}
+    .simplePlayerBtn{
+      width:36px;
+      height:36px;
+      background:rgba(8,8,8,.38);
+      border-color:rgba(255,255,255,.12);
+    }
+    .simplePlayerBtn svg{width:18px;height:18px}
+    .simplePlayerBtn.seekBtn svg{width:20px;height:20px}
+    .simplePlayerBtn.mainPlay{
+      width:42px;
+      height:42px;
+      background:rgba(8,8,8,.38);
+      color:#fff;
+      border-color:rgba(255,255,255,.14);
+    }
+    .simplePlayerBtn.mainPlay:hover{background:rgba(22,22,22,.66)}
+    .simplePlayerBtn.mainPlay svg{width:20px;height:20px}
+    .seekGlyph text{font-size:6px}
+    .minimalScrubberWrap{
+      position:absolute;
+      z-index:6;
+      left:14px;
+      right:14px;
+      bottom:11px;
+      height:12px;
+      display:flex;
+      align-items:center;
+    }
+    .minimalScrubber{
+      width:100%;
+      height:2px;
+      appearance:none;
+      -webkit-appearance:none;
+      border:0;
+      border-radius:999px;
+      outline:none;
+      cursor:pointer;
+      background:linear-gradient(90deg,#fff var(--progress,0%),rgba(255,255,255,.22) var(--progress,0%));
+    }
+    .minimalScrubber::-webkit-slider-thumb{
+      -webkit-appearance:none;
+      width:8px;
+      height:8px;
+      border-radius:50%;
+      background:#fff;
+      box-shadow:0 0 0 2px rgba(255,255,255,.08);
+    }
+    .minimalScrubber::-moz-range-thumb{
+      width:8px;
+      height:8px;
+      border:0;
+      border-radius:50%;
+      background:#fff;
+    }
+
   </style>
 </head>
 <body>
@@ -1234,6 +1292,7 @@
                   '<button id="playPause" class="simplePlayerBtn mainPlay" aria-label="Play">' + ICON.play + '</button>' +
                   '<button id="forward10" class="simplePlayerBtn seekBtn" aria-label="Forward 10 seconds">' + forwardIcon + '</button>' +
                 '</div>' +
+                '<div class="minimalScrubberWrap"><input id="minimalScrubber" class="minimalScrubber" type="range" min="0" max="1000" value="0" aria-label="Seek"></div>' +
               '</div>' +
               '<div class="playerOverlay" id="overlay"><div class="status" id="status"><span class="spin"></span>' + esc(statusText || "Starting playback") + '</div></div>' +
             '</div>' +
@@ -1296,6 +1355,7 @@
         var play = document.getElementById("playPause");
         var rewind = document.getElementById("rewind10");
         var forward = document.getElementById("forward10");
+        var scrubber = document.getElementById("minimalScrubber");
         var hideTimer = null;
 
         function reveal(){
@@ -1313,6 +1373,13 @@
           if(!video || !play) return;
           play.innerHTML = video.paused ? ICON.play : ICON.pause;
           play.setAttribute("aria-label",video.paused ? "Play" : "Pause");
+          var duration=isFinite(video.duration) ? video.duration : 0;
+          var current=isFinite(video.currentTime) ? video.currentTime : 0;
+          var pct=duration>0 ? Math.max(0,Math.min(100,current/duration*100)) : 0;
+          if(scrubber){
+            scrubber.value=duration>0 ? String(Math.max(0,Math.min(1000,current/duration*1000))) : "0";
+            scrubber.style.setProperty("--progress",pct+"%");
+          }
         }
 
         function togglePlayback(){
@@ -1330,6 +1397,13 @@
         play.onclick=togglePlayback;
         rewind.onclick=function(){seek(-10);};
         forward.onclick=function(){seek(10);};
+        scrubber.oninput=function(){
+          reveal();
+          if(isFinite(video.duration) && video.duration>0){
+            video.currentTime=Number(scrubber.value)/1000*video.duration;
+            sync();
+          }
+        };
 
         video.onclick=function(){reveal();};
         stage.addEventListener("pointermove",reveal,{passive:true});
@@ -1341,8 +1415,10 @@
         video.addEventListener("play",function(){sync();reveal();});
         video.addEventListener("pause",function(){sync();reveal();});
         video.addEventListener("timeupdate",function(){
+          sync();
           saveProgress(currentType,currentId,season,episode,video);
         });
+        video.addEventListener("durationchange",sync);
         video.addEventListener("waiting",function(){
           reveal();
           var overlay=document.getElementById("overlay");
