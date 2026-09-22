@@ -43,7 +43,7 @@
   ].join(";");
 
   const brand = document.createElement("div");
-  brand.textContent = "SynFlix Mini";
+  brand.textContent = "Evanflix Mini";
   brand.style.cssText = [
     "font-size:10px",
     "font-weight:700",
@@ -81,8 +81,8 @@
     return button;
   };
 
-  const minimize = makeButton("–", "Minimize SynFlix Mini");
-  const close = makeButton("×", "Close SynFlix Mini");
+  const minimize = makeButton("–", "Minimize Evanflix Mini");
+  const close = makeButton("×", "Close Evanflix Mini");
   actions.append(minimize, close);
   bar.append(brand, actions);
 
@@ -90,7 +90,7 @@
   const base = "https://synscraper-tffk.vercel.app";
   const sourceTitle = document.title ? document.title.slice(0, 160) : "";
   frame.src = base + "/bookmark-app.html?v=2&q=" + encodeURIComponent(sourceTitle);
-  frame.title = "SynFlix Mini";
+  frame.title = "Evanflix Mini";
   frame.allow = "autoplay; fullscreen; picture-in-picture";
   frame.referrerPolicy = "no-referrer";
   frame.style.cssText = [
@@ -117,14 +117,14 @@
       root.style.borderRadius = "12px";
       frame.style.display = "none";
       minimize.textContent = "+";
-      minimize.setAttribute("aria-label", "Restore SynFlix Mini");
+      minimize.setAttribute("aria-label", "Restore Evanflix Mini");
     } else {
       root.style.width = savedSize;
       root.style.height = savedSize;
       root.style.borderRadius = "22px";
       frame.style.display = "block";
       minimize.textContent = "–";
-      minimize.setAttribute("aria-label", "Minimize SynFlix Mini");
+      minimize.setAttribute("aria-label", "Minimize Evanflix Mini");
     }
   };
 
