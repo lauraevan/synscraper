@@ -209,6 +209,12 @@
     .automaticNote{display:flex;align-items:center;justify-content:center;gap:5px;margin-top:8px;font-size:7px;color:rgba(255,255,255,.22)}
     .automaticNote:before{content:"";width:5px;height:5px;border-radius:50%;background:var(--accent)}
 
+
+    .recentCard.result,.mediaCard.result{display:block;min-height:0;border:0;border-radius:0;gap:0;background:transparent;box-shadow:none}
+    .recentCard.result:hover,.mediaCard.result:hover{background:transparent;border-color:transparent;transform:none}
+    .recentCard.result{width:102px;flex:0 0 102px}
+    .mediaCard.result{width:100%}
+
     .loadingV2{min-height:310px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px}
     .loadingV2 strong{font-size:11px}
     .loadingV2 span:last-child{font-size:8px;color:rgba(255,255,255,.27)}
