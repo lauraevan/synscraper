@@ -317,6 +317,62 @@
     .playerUtility{display:none}
     @media(max-width:370px){.mediaGrid{grid-template-columns:repeat(3,minmax(0,1fr))}.top10Hero{height:108px}.detailHeroV2{height:154px}}
 
+  
+    /* compact sidebar + square feature */
+    .homeShell{min-height:100vh;display:grid;grid-template-columns:34px minmax(0,1fr);background:#070707}
+    .sideRail{position:sticky;top:0;height:100vh;z-index:35;display:flex;flex-direction:column;align-items:center;gap:7px;padding:8px 4px;border-right:1px solid rgba(255,255,255,.05);background:#080808}
+    .sideMark{width:24px;height:24px;margin-bottom:5px;display:grid;place-items:center;border-radius:7px;background:#111;border:1px solid rgba(255,255,255,.08)}
+    .sideMark:after{content:"";width:7px;height:7px;border-radius:2px;background:var(--accent)}
+    .sideBtn{width:26px;height:26px;display:grid;place-items:center;border:0;border-radius:8px;background:transparent;color:rgba(255,255,255,.33);cursor:pointer;transition:.15s}
+    .sideBtn:hover,.sideBtn.is-active{background:rgba(255,255,255,.065);color:#fff}
+    .sideBtn svg{width:13px;height:13px}
+    .sideSpacer{flex:1}
+    .homeCanvas{min-width:0}
+    .homeCanvas .appBar{height:39px;padding:0 9px}
+    .homeCanvas .appLogo{display:none}
+    .homeCanvas .appBrand{gap:0}
+    .homeCanvas .livePill{padding-right:1px}
+
+    .featureRow{display:grid;grid-template-columns:118px minmax(0,1fr);gap:9px;margin-top:9px;align-items:start}
+    #top10Mount{width:118px}
+    .top10Hero,.top10Hero.result{width:118px;height:118px;aspect-ratio:1/1;margin:0;border-radius:12px;overflow:hidden}
+    .top10Hero img{width:100%;height:100%;object-fit:cover}
+    .top10Hero:after{background:linear-gradient(0deg,rgba(5,5,5,.88) 0%,rgba(5,5,5,.36) 52%,rgba(5,5,5,.04) 100%)}
+    .top10Copy{left:8px;right:8px;bottom:8px;align-items:flex-end}
+    .top10Kicker{font-size:6px;letter-spacing:.1em}
+    .top10Title{max-width:86px;margin-top:3px;font-size:11px;line-height:1.05}
+    .top10Meta{display:none}
+    .top10Rank{font-size:22px}
+    .top10Dots{right:7px;top:7px}
+    .top10Dot{width:6px}
+    .top10Dot.is-active{width:9px}
+
+    .quickRecent{min-width:0}
+    .quickRecentHead{display:flex;align-items:center;justify-content:space-between;height:18px;margin-bottom:5px}
+    .quickRecentHead strong{font-size:9px;font-weight:740}
+    .quickRecentHead span{font-size:6px;color:rgba(255,255,255,.24)}
+    .quickRecentList{display:grid;gap:5px}
+    .quickRecentItem{display:grid;grid-template-columns:29px minmax(0,1fr);gap:7px;align-items:center;width:100%;min-height:44px;padding:4px;border:0;border-radius:9px;background:#0b0b0b;text-align:left;cursor:pointer}
+    .quickRecentItem:hover{background:#101010}
+    .quickRecentItem img,.quickRecentPoster{width:29px;height:38px;border-radius:6px;object-fit:cover;background:#151515}
+    .quickRecentCopy{min-width:0}
+    .quickRecentCopy strong{display:block;font-size:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .quickRecentCopy span{display:block;margin-top:3px;font-size:6px;color:rgba(255,255,255,.28)}
+    .quickRecentEmpty{height:93px;display:grid;place-items:center;padding:8px;border:1px solid rgba(255,255,255,.05);border-radius:9px;background:#090909;text-align:center;font-size:7px;line-height:1.4;color:rgba(255,255,255,.25)}
+
+    .homeCanvas .surfaceSection{margin-top:11px}
+    .homeCanvas .recentRail{display:none}
+    .homeCanvas .blankState{display:none}
+
+    @media(max-width:390px){
+      .homeShell{grid-template-columns:31px minmax(0,1fr)}
+      .sideRail{padding-left:3px;padding-right:3px}
+      .featureRow{grid-template-columns:108px minmax(0,1fr);gap:7px}
+      #top10Mount,.top10Hero,.top10Hero.result{width:108px;height:108px}
+      .quickRecentItem{grid-template-columns:26px minmax(0,1fr);gap:6px;min-height:41px}
+      .quickRecentItem img,.quickRecentPoster{width:26px;height:35px}
+    }
+
   </style>
 </head>
 <body>
@@ -444,27 +500,62 @@
         if(top10Timer){clearInterval(top10Timer);top10Timer=null;}
         var recents = getRecents();
         app.innerHTML =
-          '<div class="viewEnter">' +
-            '<header class="appBar">' +
-              '<div class="appBrand"><span class="appLogo"></span><div class="appBrandCopy"><strong>Synscraper</strong><span>Mini</span></div></div>' +
-              '<div class="livePill">Ready</div>' +
-            '</header>' +
-            '<main class="homeMain">' +
-              '<form id="searchForm" class="compactSearch">' +
-                '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="11" cy="11" r="6.5" stroke="currentColor" stroke-width="1.8"/><path d="M16 16l4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>' +
-                '<input id="searchInput" autocomplete="off" placeholder="Search..." value="' + esc(lastSearch) + '">' +
-                '<button type="submit">Go</button>' +
-              '</form>' +
-              '<div id="top10Mount"><div class="top10Hero" style="display:grid;place-items:center"><span class="spin"></span></div></div>' +
-              '<div id="homeBody">' + renderRecentSection(recents) + '</div>' +
-            '</main>' +
+          '<div class="homeShell viewEnter">' +
+            '<aside class="sideRail">' +
+              '<div class="sideMark"></div>' +
+              '<button class="sideBtn is-active" id="navHome" aria-label="Home"><svg viewBox="0 0 24 24" fill="none"><path d="M4 10.5L12 4l8 6.5V20h-5v-6H9v6H4v-9.5z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></button>' +
+              '<button class="sideBtn" id="navSearch" aria-label="Search"><svg viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="6.5" stroke="currentColor" stroke-width="1.7"/><path d="M16 16l4 4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></button>' +
+              '<button class="sideBtn" id="navRecent" aria-label="Recent"><svg viewBox="0 0 24 24" fill="none"><path d="M4.5 12a7.5 7.5 0 107.5-7.5A7.4 7.4 0 006.7 6.7L4.5 9" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><path d="M4.5 5.5V9h3.5M12 8v4l2.8 1.8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></button>' +
+              '<div class="sideSpacer"></div>' +
+            '</aside>' +
+            '<div class="homeCanvas">' +
+              '<header class="appBar">' +
+                '<div class="appBrand"><div class="appBrandCopy"><strong>Synscraper</strong><span>Mini</span></div></div>' +
+                '<div class="livePill">Ready</div>' +
+              '</header>' +
+              '<main class="homeMain">' +
+                '<form id="searchForm" class="compactSearch">' +
+                  '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="11" cy="11" r="6.5" stroke="currentColor" stroke-width="1.8"/><path d="M16 16l4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>' +
+                  '<input id="searchInput" autocomplete="off" placeholder="Search..." value="' + esc(lastSearch) + '">' +
+                  '<button type="submit">Go</button>' +
+                '</form>' +
+                '<div class="featureRow">' +
+                  '<div id="top10Mount"><div class="top10Hero" style="display:grid;place-items:center"><span class="spin"></span></div></div>' +
+                  '<section class="quickRecent" id="recentSection">' +
+                    '<div class="quickRecentHead"><strong>Recent</strong><span>' + recents.length + '</span></div>' +
+                    renderQuickRecent(recents) +
+                  '</section>' +
+                '</div>' +
+                '<div id="homeBody"></div>' +
+              '</main>' +
+            '</div>' +
           '</div>';
 
         document.getElementById("searchForm").addEventListener("submit",function(event){
           event.preventDefault();
           doSearch(document.getElementById("searchInput").value);
         });
+        document.getElementById("navHome").onclick = renderHome;
+        document.getElementById("navSearch").onclick = function(){
+          var input=document.getElementById("searchInput");
+          if(input){input.focus();input.select();}
+        };
+        document.getElementById("navRecent").onclick = function(){
+          var section=document.getElementById("recentSection");
+          if(section) section.scrollIntoView({behavior:"smooth",block:"center"});
+        };
         loadTop10();
+      }
+
+      function renderQuickRecent(recents){
+        if(!recents.length) return '<div class="quickRecentEmpty">Open something and it’ll show up here.</div>';
+        return '<div class="quickRecentList">' + recents.slice(0,2).map(function(item){
+          var type=item.media_type || "movie";
+          return '<button class="quickRecentItem result" data-id="' + esc(item.id) + '" data-type="' + esc(type) + '">' +
+            (item.poster_path ? '<img src="' + esc(image(item.poster_path,"w185")) + '" alt="">' : '<span class="quickRecentPoster"></span>') +
+            '<span class="quickRecentCopy"><strong>' + esc(titleOf(item)) + '</strong><span>' + esc((type==="tv"?"Series":"Movie") + (yearOf(item) ? " · " + yearOf(item) : "")) + '</span></span>' +
+          '</button>';
+        }).join("") + '</div>';
       }
 
       async function loadTop10(){
@@ -493,13 +584,13 @@
         var item = top10Items[top10Index];
         if(!mount || !item) return;
         var type = item.media_type === "tv" ? "tv" : "movie";
-        var art = item.backdrop_path || item.poster_path;
+        var art = item.poster_path || item.backdrop_path;
         mount.innerHTML =
           '<button class="top10Hero result" data-id="' + esc(item.id) + '" data-type="' + esc(type) + '">' +
-            '<img src="' + esc(image(art,"w780")) + '" alt="">' +
+            '<img src="' + esc(image(art,"w342")) + '" alt="">' +
             '<span class="top10Dots">' + top10Items.slice(0,5).map(function(_,i){return '<i class="top10Dot ' + (i === (top10Index%5) ? 'is-active' : '') + '"></i>';}).join("") + '</span>' +
             '<span class="top10Copy">' +
-              '<span class="top10Text"><span class="top10Kicker">Top 10 · ' + esc(type === "tv" ? "Series" : "Movie") + '</span><span class="top10Title">' + esc(titleOf(item)) + '</span><span class="top10Meta">' + esc(yearOf(item) || "Trending now") + '</span></span>' +
+              '<span class="top10Text"><span class="top10Kicker">Top 10</span><span class="top10Title">' + esc(titleOf(item)) + '</span></span>' +
               '<span class="top10Rank">' + (top10Index + 1) + '</span>' +
             '</span>' +
           '</button>';
