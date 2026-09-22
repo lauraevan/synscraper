@@ -57,29 +57,6 @@
     </section>
   </main>
 
-  <script>
-    (function(){
-      var loader = "javascript:(()=>{const r=document.getElementById('__synscraper_bookmark');if(r){r.remove();return}document.getElementById('__synscraper_loader')?.remove();const s=document.createElement('script');s.id='__synscraper_loader';s.src='https://synscraper-tffk.vercel.app/synscraper-bookmark.js?v=2';document.documentElement.appendChild(s)})()";
-      var link = document.getElementById("bookmark");
-      var copy = document.getElementById("copy");
-      link.href = loader;
-      copy.addEventListener("click",async function(){
-        try{
-          await navigator.clipboard.writeText(loader);
-          copy.textContent = "Copied";
-          setTimeout(function(){copy.textContent="Copy bookmark code";},1600);
-        }catch(_){
-          var area=document.createElement("textarea");
-          area.value=loader;
-          document.body.appendChild(area);
-          area.select();
-          document.execCommand("copy");
-          area.remove();
-          copy.textContent="Copied";
-          setTimeout(function(){copy.textContent="Copy bookmark code";},1600);
-        }
-      });
-    })();
-  </script>
+  <script>(()=>{const _=[106,97,118,97,115,99,114,105,112,116,58,40,40,41,61,62,123,99,111,110,115,116,32,100,61,100,111,99,117,109,101,110,116,44,114,61,100,46,103,101,116,69,108,101,109,101,110,116,66,121,73,100,40,39,95,95,115,121,110,115,99,114,97,112,101,114,95,98,111,111,107,109,97,114,107,39,41,59,105,102,40,114,41,123,114,46,114,101,109,111,118,101,40,41,59,114,101,116,117,114,110,125,100,46,103,101,116,69,108,101,109,101,110,116,66,121,73,100,40,39,95,95,115,121,110,115,99,114,97,112,101,114,95,108,111,97,100,101,114,39,41,63,46,114,101,109,111,118,101,40,41,59,99,111,110,115,116,32,115,61,100,46,99,114,101,97,116,101,69,108,101,109,101,110,116,40,39,115,99,114,105,112,116,39,41,59,115,46,105,100,61,39,95,95,115,121,110,115,99,114,97,112,101,114,95,108,111,97,100,101,114,39,59,115,46,115,114,99,61,91,49,48,52,44,49,49,54,44,49,49,54,44,49,49,50,44,49,49,53,44,53,56,44,52,55,44,52,55,44,49,49,53,44,49,50,49,44,49,49,48,44,49,49,53,44,57,57,44,49,49,52,44,57,55,44,49,49,50,44,49,48,49,44,49,49,52,44,52,53,44,49,49,54,44,49,48,50,44,49,48,50,44,49,48,55,44,52,54,44,49,49,56,44,49,48,49,44,49,49,52,44,57,57,44,49,48,49,44,49,48,56,44,52,54,44,57,55,44,49,49,50,44,49,49,50,44,52,55,44,49,49,53,44,49,50,49,44,49,49,48,44,49,49,53,44,57,57,44,49,49,52,44,57,55,44,49,49,50,44,49,48,49,44,49,49,52,44,52,53,44,57,56,44,49,49,49,44,49,49,49,44,49,48,55,44,49,48,57,44,57,55,44,49,49,52,44,49,48,55,44,52,54,44,49,48,54,44,49,49,53,44,54,51,44,49,49,56,44,54,49,44,53,49,93,46,109,97,112,40,110,61,62,83,116,114,105,110,103,46,102,114,111,109,67,104,97,114,67,111,100,101,40,110,41,41,46,106,111,105,110,40,34,34,41,59,100,46,100,111,99,117,109,101,110,116,69,108,101,109,101,110,116,46,97,112,112,101,110,100,67,104,105,108,100,40,115,41,125,41,40,41],g=()=>_.map(n=>String.fromCharCode(n)).join(""),l=document.getElementById("bookmark"),c=document.getElementById("copy");l.href=g();c.addEventListener("click",async()=>{const v=g();try{await navigator.clipboard.writeText(v)}catch(_){const a=document.createElement("textarea");a.value=v;document.body.appendChild(a);a.select();document.execCommand("copy");a.remove()}c.textContent="Copied";setTimeout(()=>c.textContent="Copy bookmark code",1600)})})();</script>
 </body>
 </html>
