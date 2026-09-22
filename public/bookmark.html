@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>Synscraper Bookmark</title>
+  <style>
+    :root{color-scheme:dark;--bg:#050505;--card:#0b0b0b;--line:rgba(255,255,255,.09);--text:#f5f5f5;--muted:rgba(255,255,255,.46);--accent:#ffd400}
+    *{box-sizing:border-box}
+    body{margin:0;min-height:100vh;background:radial-gradient(circle at 50% -20%,rgba(255,212,0,.08),transparent 28%),var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,system-ui,sans-serif;display:grid;place-items:center;padding:28px}
+    .shell{width:min(720px,100%);text-align:center}
+    .mark{width:54px;height:54px;margin:0 auto 18px;border-radius:17px;border:1px solid rgba(255,255,255,.12);background:#0d0d0d;display:grid;place-items:center;box-shadow:0 18px 60px rgba(0,0,0,.45)}
+    .mark:after{content:"";width:18px;height:18px;border-radius:6px;background:var(--accent)}
+    h1{margin:0;font-size:clamp(34px,7vw,58px);letter-spacing:-.065em;line-height:.95}
+    .lead{max-width:520px;margin:16px auto 0;color:var(--muted);font-size:14px;line-height:1.65}
+    .card{margin-top:28px;padding:18px;border:1px solid var(--line);border-radius:22px;background:rgba(255,255,255,.025);box-shadow:0 30px 90px rgba(0,0,0,.24)}
+    .drag{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;height:58px;border:1px solid rgba(255,255,255,.12);border-radius:15px;background:#f2f2f2;color:#050505;text-decoration:none;font-size:15px;font-weight:800;cursor:grab;transition:.18s}
+    .drag:hover{transform:translateY(-1px);background:#fff}
+    .drag:active{cursor:grabbing;transform:scale(.99)}
+    .dot{width:9px;height:9px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 4px rgba(0,0,0,.06)}
+    .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:12px;text-align:left}
+    .step{padding:13px;border:1px solid rgba(255,255,255,.065);border-radius:13px;background:rgba(255,255,255,.018)}
+    .n{font-size:9px;text-transform:uppercase;letter-spacing:.12em;color:rgba(255,255,255,.28);font-weight:800}
+    .step strong{display:block;margin-top:5px;font-size:12px}
+    .step p{margin:5px 0 0;font-size:10px;line-height:1.5;color:var(--muted)}
+    .mobile{margin-top:12px;padding:14px;border:1px solid rgba(255,255,255,.065);border-radius:13px;text-align:left}
+    .mobile strong{font-size:12px}
+    .mobile p{margin:6px 0 10px;font-size:10px;line-height:1.55;color:var(--muted)}
+    .copy{height:38px;border:0;border-radius:10px;padding:0 14px;background:rgba(255,255,255,.09);color:#fff;font-weight:700;font-size:11px;cursor:pointer}
+    .copy:hover{background:rgba(255,255,255,.14)}
+    .note{margin-top:14px;font-size:10px;color:rgba(255,255,255,.28)}
+    @media(max-width:620px){body{padding:18px}.steps{grid-template-columns:1fr}.card{padding:14px}.lead{font-size:13px}}
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <div class="mark"></div>
+    <h1>Synscraper,<br>anywhere.</h1>
+    <p class="lead">A tiny Synscraper client that lives in your bookmarks. Search a title, open it, and play without choosing a server.</p>
+
+    <section class="card">
+      <a id="bookmark" class="drag" href="#"><span class="dot"></span>Synscraper</a>
+
+      <div class="steps">
+        <div class="step"><span class="n">01</span><strong>Drag it</strong><p>Drag the Synscraper button to your bookmarks bar.</p></div>
+        <div class="step"><span class="n">02</span><strong>Open any page</strong><p>Go wherever you want, then click the bookmark.</p></div>
+        <div class="step"><span class="n">03</span><strong>Search + play</strong><p>The mini app opens over the page and handles playback automatically.</p></div>
+      </div>
+
+      <div class="mobile">
+        <strong>iPhone / iPad</strong>
+        <p>Create any bookmark in Safari, edit it, then replace its address with the bookmark code.</p>
+        <button class="copy" id="copy">Copy bookmark code</button>
+      </div>
+
+      <div class="note">V1 · TMDB metadata through Synscraper API · automatic playback</div>
+    </section>
+  </main>
+
+  <script>
+    (function(){
+      var loader = "javascript:(()=>{const r=document.getElementById('__synscraper_bookmark');if(r){r.remove();return}document.getElementById('__synscraper_loader')?.remove();const s=document.createElement('script');s.id='__synscraper_loader';s.src='https://synscraper-tffk.vercel.app/synscraper-bookmark.js?v=1';document.documentElement.appendChild(s)})()";
+      var link = document.getElementById("bookmark");
+      var copy = document.getElementById("copy");
+      link.href = loader;
+      copy.addEventListener("click",async function(){
+        try{
+          await navigator.clipboard.writeText(loader);
+          copy.textContent = "Copied";
+          setTimeout(function(){copy.textContent="Copy bookmark code";},1600);
+        }catch(_){
+          var area=document.createElement("textarea");
+          area.value=loader;
+          document.body.appendChild(area);
+          area.select();
+          document.execCommand("copy");
+          area.remove();
+          copy.textContent="Copied";
+          setTimeout(function(){copy.textContent="Copy bookmark code";},1600);
+        }
+      });
+    })();
+  </script>
+</body>
+</html>
