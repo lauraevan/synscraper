@@ -863,6 +863,31 @@
     .rouletteAgain{background:rgba(10,10,10,.48);color:#fff;backdrop-filter:blur(12px)}
     .rouletteHint{margin-top:7px;text-align:center;font-size:5.5px;color:rgba(255,255,255,.18)}
 
+
+    /* Roulette spin animation + large discovery catalog */
+    .rouletteStage.is-spinning{animation:roulettePulse .52s cubic-bezier(.2,.75,.2,1)}
+    .rouletteStage.is-spinning>img{animation:rouletteArt .52s cubic-bezier(.2,.75,.2,1)}
+    .rouletteStage.is-spinning .rouletteCopy{animation:rouletteCopy .52s cubic-bezier(.2,.75,.2,1)}
+    @keyframes roulettePulse{
+      0%{transform:scale(1);filter:brightness(1)}
+      35%{transform:scale(.985);filter:brightness(.72)}
+      70%{transform:scale(1.008);filter:brightness(1.08)}
+      100%{transform:scale(1);filter:brightness(1)}
+    }
+    @keyframes rouletteArt{
+      0%{transform:scale(1);filter:blur(0) saturate(.88)}
+      35%{transform:scale(1.09);filter:blur(7px) saturate(.55)}
+      70%{transform:scale(1.035);filter:blur(1px) saturate(.95)}
+      100%{transform:scale(1);filter:blur(0) saturate(.88)}
+    }
+    @keyframes rouletteCopy{
+      0%{opacity:1;transform:none}
+      30%{opacity:0;transform:translateY(5px)}
+      62%{opacity:0;transform:translateY(4px)}
+      100%{opacity:1;transform:none}
+    }
+    .discoveryProgress{padding:8px 1px 2px;font-size:5.5px;color:rgba(255,255,255,.22);text-align:center}
+
 </style>
 </head>
 <body>
@@ -1062,16 +1087,39 @@
 
       async function loadDiscovery(genre){
         var body=document.getElementById("discoveryBody");
+        var target=568;
         try{
-          var url=API + "/discover/movie?sort_by=popularity.desc&include_adult=false";
-          if(genre) url += "&with_genres=" + encodeURIComponent(genre);
-          var data=await getJSON(url);
-          var items=(data.results || []).filter(function(item){return item && item.id && item.poster_path;}).slice(0,30);
+          var seen={};
+          var items=[];
+          var page=1;
+          while(items.length<target && page<=40){
+            var batch=[];
+            for(var n=0;n<4 && page<=40;n++,page++){
+              var url=API + "/discover/movie?sort_by=popularity.desc&include_adult=false&page=" + page;
+              if(genre) url += "&with_genres=" + encodeURIComponent(genre);
+              batch.push(getJSON(url));
+            }
+            var pages=await Promise.all(batch);
+            pages.forEach(function(data){
+              (data.results || []).forEach(function(item){
+                if(items.length>=target) return;
+                if(item && item.id && item.poster_path && !seen[String(item.id)]){
+                  seen[String(item.id)]=true;
+                  items.push(item);
+                }
+              });
+            });
+            if(body){
+              body.innerHTML='<div class="catalogGrid">' + items.map(catalogCardHTML).join("") + '</div>' +
+                (items.length<target ? '<div class="discoveryProgress">Loading ' + items.length + ' / ' + target + '</div>' : '');
+            }
+            if(pages.every(function(data){return !(data.results || []).length;})) break;
+          }
           if(!body) return;
-          body.innerHTML=items.length ? '<div class="catalogGrid">' + items.map(catalogCardHTML).join("") + '</div>' :
+          body.innerHTML=items.length ? '<div class="catalogGrid">' + items.slice(0,target).map(catalogCardHTML).join("") + '</div>' :
             '<div class="searchEmpty"><div><strong>Nothing here yet</strong>Try another category.</div></div>';
         }catch(error){
-          if(body) body.innerHTML='<div class="error">Discovery could not load.<br>' + esc(error.message) + '</div>';
+          if(body && !body.querySelector(".catalogCard")) body.innerHTML='<div class="error">Discovery could not load.<br>' + esc(error.message) + '</div>';
         }
       }
 
@@ -1122,7 +1170,13 @@
           '</div></div>' +
           '<div class="rouletteHint">One random film from the current discovery pool.</div>';
         document.getElementById("rouletteOpen").onclick=function(){openDetail("movie",item.id);};
-        document.getElementById("rouletteAgain").onclick=spinRoulette;
+        document.getElementById("rouletteAgain").onclick=function(){
+          var stage=body.querySelector(".rouletteStage");
+          var button=document.getElementById("rouletteAgain");
+          if(button) button.disabled=true;
+          if(stage) stage.classList.add("is-spinning");
+          setTimeout(function(){spinRoulette();},500);
+        };
       }
 
       function renderSearchPage(query){
