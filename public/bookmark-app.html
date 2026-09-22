@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-  <title>Synscraper Mini</title>
+  <title>SynFlix Mini</title>
   <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.17/dist/hls.min.js"></script>
   <style>
     :root{color-scheme:dark;--bg:#060606;--panel:#0b0b0b;--panel2:#101010;--line:rgba(255,255,255,.085);--line2:rgba(255,255,255,.14);--soft:rgba(255,255,255,.055);--muted:rgba(255,255,255,.46);--text:#f7f7f7;--accent:#ffd400}
@@ -433,6 +433,15 @@
       .catalogGrid,.searchCatalogGrid{grid-template-columns:repeat(3,minmax(0,1fr))}
       .catalogHero{height:78px}
     }
+
+  
+    /* SynFlix Mini naming + compact rectangular hero */
+    .synflixMiniLabel{height:28px;display:flex;align-items:center;padding:0 1px 6px;font-size:11px;font-weight:780;letter-spacing:-.02em;color:rgba(255,255,255,.9)}
+    .catalogHero{height:96px;border-radius:10px}
+    .catalogHero.result{height:96px}
+    .catalogHeroTitle{font-size:12px;max-width:270px}
+    .catalogHeroRank{font-size:18px}
+    @media(max-width:400px){.catalogHero,.catalogHero.result{height:90px}}
 
   </style>
 </head>
