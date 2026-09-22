@@ -736,6 +736,27 @@
           }).join("") + '</div>';
       }
 
+      function catalogCardHTML(item){
+        return '<button class="catalogCard result" data-id="' + esc(item.id) + '" data-type="movie">' +
+          '<span class="catalogPoster">' +
+            (item.poster_path ? '<img src="' + esc(image(item.poster_path,"w342")) + '" alt="">' : '') +
+            '<span class="catalogOverlay"><strong>' + esc(titleOf(item)) + '</strong><span>' + esc(yearOf(item) || "Movie") + '</span></span>' +
+          '</span>' +
+        '</button>';
+      }
+
+      function renderCatalog(){
+        var body=document.getElementById("homeBody");
+        var count=document.getElementById("catalogCount");
+        if(!body) return;
+        if(count) count.textContent=homeCatalog.length ? homeCatalog.length + " picks" : "";
+        if(!homeCatalog.length){
+          body.innerHTML='<div class="blankState"><strong>No movies yet</strong><p>Couldn’t load the catalog.</p></div>';
+          return;
+        }
+        body.innerHTML='<div class="catalogGrid">' + homeCatalog.map(catalogCardHTML).join("") + '</div>';
+      }
+
       async function loadHomeCatalog(){
         var mount=document.getElementById("top10Mount");
         try{
