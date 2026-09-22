@@ -111,6 +111,108 @@
     .error{margin:14px;padding:12px;border:1px solid rgba(255,100,100,.16);border-radius:13px;background:rgba(255,70,70,.05);font-size:10px;line-height:1.5;color:rgba(255,255,255,.7)}
     .retry{margin-top:9px;border:0;border-radius:9px;padding:8px 10px;background:#fff;color:#000;font-weight:780;cursor:pointer}
     @media(max-width:370px){.volume{display:none}.detailTitle{font-size:19px}.stage{min-height:208px}.playerSheet{padding-left:12px;padding-right:12px}}
+  
+    /* V2 shell rework */
+    .app{position:relative;min-height:100vh;background:
+      radial-gradient(circle at 92% -8%,rgba(255,212,0,.055),transparent 25%),
+      linear-gradient(180deg,#080808 0%,#050505 55%,#040404 100%)}
+    .viewEnter{animation:viewIn .32s cubic-bezier(.2,.75,.2,1) both}
+    @keyframes viewIn{from{opacity:0;transform:translateY(7px) scale(.995)}to{opacity:1;transform:none}}
+
+    .appBar{position:sticky;top:0;z-index:30;height:52px;display:flex;align-items:center;justify-content:space-between;padding:0 14px;background:rgba(6,6,6,.78);border-bottom:1px solid rgba(255,255,255,.05);backdrop-filter:blur(24px) saturate(1.2)}
+    .appBrand{display:flex;align-items:center;gap:9px;min-width:0}
+    .appLogo{width:25px;height:25px;display:grid;place-items:center;border:1px solid rgba(255,255,255,.12);border-radius:8px;background:linear-gradient(180deg,#141414,#0b0b0b);box-shadow:inset 0 1px rgba(255,255,255,.035)}
+    .appLogo:after{content:"";width:8px;height:8px;border-radius:3px;background:var(--accent)}
+    .appBrandCopy{min-width:0}
+    .appBrandCopy strong{display:block;font-size:12px;line-height:1;font-weight:790;letter-spacing:-.025em}
+    .appBrandCopy span{display:block;margin-top:4px;font-size:7px;font-weight:750;letter-spacing:.11em;text-transform:uppercase;color:rgba(255,255,255,.25)}
+    .livePill{height:27px;display:flex;align-items:center;gap:6px;padding:0 9px;border:1px solid rgba(255,255,255,.075);border-radius:9px;background:rgba(255,255,255,.035);font-size:8px;font-weight:750;color:rgba(255,255,255,.47)}
+    .livePill:before{content:"";width:6px;height:6px;border-radius:50%;background:var(--accent)}
+
+    .homeMain{padding:14px 14px 23px}
+    .discoverHero{position:relative;overflow:hidden;padding:18px 16px 15px;border:1px solid rgba(255,255,255,.075);border-radius:19px;background:
+      radial-gradient(circle at 88% 10%,rgba(255,212,0,.105),transparent 30%),
+      linear-gradient(135deg,#101010,#090909 68%);box-shadow:0 20px 50px rgba(0,0,0,.18)}
+    .discoverHero:after{content:"";position:absolute;width:150px;height:150px;right:-72px;top:-75px;border:1px solid rgba(255,255,255,.05);border-radius:50%}
+    .heroKicker{position:relative;z-index:1;font-size:8px;font-weight:850;letter-spacing:.15em;text-transform:uppercase;color:rgba(255,255,255,.29)}
+    .heroTitle{position:relative;z-index:1;margin:7px 0 0;max-width:285px;font-size:26px;line-height:.98;font-weight:790;letter-spacing:-.055em}
+    .heroSubtitle{position:relative;z-index:1;margin:9px 0 0;max-width:310px;font-size:10px;line-height:1.5;color:rgba(255,255,255,.39)}
+    .heroSearch{position:relative;z-index:2;display:flex;align-items:center;gap:8px;margin-top:15px;padding:5px 5px 5px 12px;border:1px solid rgba(255,255,255,.1);border-radius:14px;background:rgba(0,0,0,.32)}
+    .searchGlyph{width:15px;height:15px;flex:0 0 auto;color:rgba(255,255,255,.32)}
+    .heroSearch input{min-width:0;flex:1;height:34px;border:0;background:transparent;color:#fff;outline:none;font-size:11px}
+    .heroSearch input::placeholder{color:rgba(255,255,255,.25)}
+    .heroSearch button{height:34px;padding:0 13px;border:0;border-radius:10px;background:#f3f3f3;color:#050505;font-size:9px;font-weight:850;cursor:pointer}
+    .quickMeta{position:relative;z-index:1;display:flex;align-items:center;gap:12px;margin-top:13px;font-size:8px;color:rgba(255,255,255,.25)}
+    .quickMeta span{display:flex;align-items:center;gap:5px}
+    .quickMeta i{display:block;width:4px;height:4px;border-radius:50%;background:rgba(255,255,255,.27)}
+
+    .surfaceSection{margin-top:18px}
+    .surfaceHead{display:flex;align-items:end;justify-content:space-between;margin-bottom:9px}
+    .surfaceHead div strong{display:block;font-size:13px;letter-spacing:-.025em}
+    .surfaceHead div span{display:block;margin-top:3px;font-size:8px;color:rgba(255,255,255,.28)}
+    .surfaceCount{font-size:8px;font-weight:750;color:rgba(255,255,255,.26)}
+
+    .recentRail{display:flex;gap:9px;overflow-x:auto;margin:0 -14px;padding:0 14px 5px;scrollbar-width:none;scroll-snap-type:x proximity}
+    .recentRail::-webkit-scrollbar{display:none}
+    .recentCard{width:102px;flex:0 0 102px;padding:0;border:0;background:transparent;text-align:left;cursor:pointer;scroll-snap-align:start}
+    .recentPosterWrap{position:relative;width:102px;height:143px;overflow:hidden;border:1px solid rgba(255,255,255,.07);border-radius:13px;background:#111;transition:.2s ease}
+    .recentCard:hover .recentPosterWrap{transform:translateY(-2px);border-color:rgba(255,255,255,.16)}
+    .recentPosterWrap img{width:100%;height:100%;object-fit:cover}
+    .recentType{position:absolute;left:7px;bottom:7px;height:20px;display:flex;align-items:center;padding:0 7px;border:1px solid rgba(255,255,255,.1);border-radius:7px;background:rgba(5,5,5,.68);backdrop-filter:blur(12px);font-size:7px;font-weight:850;letter-spacing:.07em;text-transform:uppercase}
+    .recentName{display:block;margin-top:7px;font-size:10px;font-weight:730;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .recentYear{display:block;margin-top:3px;font-size:8px;color:rgba(255,255,255,.27)}
+
+    .blankState{padding:20px 16px;border:1px solid rgba(255,255,255,.06);border-radius:15px;background:#090909}
+    .blankState strong{font-size:12px}
+    .blankState p{margin:5px 0 0;font-size:9px;line-height:1.55;color:rgba(255,255,255,.32)}
+
+    .searchResultsHead{display:flex;align-items:center;justify-content:space-between;margin:19px 0 10px}
+    .searchResultsHead strong{font-size:13px;letter-spacing:-.02em}
+    .searchResultsHead span{font-size:8px;color:rgba(255,255,255,.28)}
+    .mediaGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px 9px}
+    .mediaCard{min-width:0;padding:0;border:0;background:transparent;text-align:left;cursor:pointer}
+    .mediaPoster{position:relative;aspect-ratio:2/3;overflow:hidden;border:1px solid rgba(255,255,255,.065);border-radius:13px;background:#111;transition:.2s ease}
+    .mediaCard:hover .mediaPoster{transform:translateY(-2px);border-color:rgba(255,255,255,.16)}
+    .mediaPoster img{width:100%;height:100%;object-fit:cover}
+    .mediaPosterShade{position:absolute;inset:0;background:linear-gradient(transparent 62%,rgba(0,0,0,.62));pointer-events:none}
+    .mediaBadge{position:absolute;left:7px;bottom:7px;height:19px;display:flex;align-items:center;padding:0 7px;border:1px solid rgba(255,255,255,.1);border-radius:7px;background:rgba(5,5,5,.68);backdrop-filter:blur(12px);font-size:7px;font-weight:850;letter-spacing:.06em;text-transform:uppercase}
+    .mediaTitle{display:block;margin-top:7px;font-size:10px;font-weight:740;letter-spacing:-.012em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .mediaMeta{display:block;margin-top:3px;font-size:8px;color:rgba(255,255,255,.27)}
+
+    .detailV2{min-height:100vh;background:#050505}
+    .detailHeroV2{position:relative;height:272px;overflow:hidden;background:#111}
+    .detailHeroV2>img{width:100%;height:100%;object-fit:cover;transform:scale(1.012)}
+    .detailHeroV2:after{content:"";position:absolute;inset:0;background:
+      linear-gradient(180deg,rgba(5,5,5,.12) 0%,rgba(5,5,5,.08) 35%,rgba(5,5,5,.56) 72%,#050505 100%),
+      linear-gradient(90deg,rgba(5,5,5,.4),transparent 65%)}
+    .detailBackV2{position:absolute;z-index:4;left:12px;top:12px;width:36px;height:36px;display:grid;place-items:center;border:1px solid rgba(255,255,255,.12);border-radius:11px;background:rgba(5,5,5,.58);backdrop-filter:blur(16px);cursor:pointer}
+    .detailBackV2 svg{width:17px;height:17px}
+    .detailHeroInfo{position:absolute;z-index:3;left:14px;right:14px;bottom:18px}
+    .detailHeroInfo .detailKicker{font-size:8px;font-weight:850;letter-spacing:.13em;text-transform:uppercase;color:rgba(255,255,255,.42)}
+    .detailHeroInfo h1{margin:7px 0 0;max-width:340px;font-size:29px;line-height:.94;font-weight:790;letter-spacing:-.06em;text-wrap:balance}
+    .detailFacts{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px}
+    .factPill{height:24px;display:flex;align-items:center;padding:0 8px;border:1px solid rgba(255,255,255,.1);border-radius:8px;background:rgba(8,8,8,.46);backdrop-filter:blur(12px);font-size:8px;font-weight:720;color:rgba(255,255,255,.67)}
+    .detailSheetV2{position:relative;margin-top:-1px;padding:14px 14px 22px}
+    .genreRow{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none}
+    .genreRow::-webkit-scrollbar{display:none}
+    .genreChip{height:25px;display:flex;align-items:center;flex:0 0 auto;padding:0 9px;border:1px solid rgba(255,255,255,.07);border-radius:8px;background:#0b0b0b;font-size:8px;color:rgba(255,255,255,.4)}
+    .detailOverviewV2{margin:13px 0 0;font-size:10px;line-height:1.62;color:rgba(255,255,255,.43)}
+    .playPanel{margin-top:15px;padding:11px;border:1px solid rgba(255,255,255,.075);border-radius:15px;background:linear-gradient(180deg,#0d0d0d,#090909)}
+    .playPanelTop{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+    .playPanelTop strong{font-size:10px}
+    .playPanelTop span{font-size:7px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.24)}
+    .episodePicker{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+    .episodePicker .miniField label{margin-bottom:5px}
+    .episodePicker .miniField input{height:36px;background:#070707}
+    .playMain{height:42px;margin-top:9px;border:0;border-radius:11px;background:#f3f3f3;color:#050505;font-size:10px;font-weight:860;cursor:pointer;width:100%;display:flex;align-items:center;justify-content:center;gap:7px}
+    .playMain svg{width:14px;height:14px}
+    .automaticNote{display:flex;align-items:center;justify-content:center;gap:5px;margin-top:8px;font-size:7px;color:rgba(255,255,255,.22)}
+    .automaticNote:before{content:"";width:5px;height:5px;border-radius:50%;background:var(--accent)}
+
+    .loadingV2{min-height:310px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px}
+    .loadingV2 strong{font-size:11px}
+    .loadingV2 span:last-child{font-size:8px;color:rgba(255,255,255,.27)}
+
   </style>
 </head>
 <body>
@@ -234,12 +336,25 @@
         cleanupPlayer();
         var recents = getRecents();
         app.innerHTML =
-          '<div class="top">' +
-            '<div class="eyebrow"><div class="brand"><span class="mark"></span>Synscraper</div><div class="badge">Mini · V1</div></div>' +
-            '<form id="searchForm" class="searchWrap"><input id="searchInput" class="search" autocomplete="off" placeholder="Search movies or shows" value="' + esc(lastSearch) + '"><button class="go" type="submit">Go</button></form>' +
-          '</div>' +
-          '<div class="content">' +
-            '<div id="homeBody">' + renderRecentSection(recents) + '</div>' +
+          '<div class="viewEnter">' +
+            '<header class="appBar">' +
+              '<div class="appBrand"><span class="appLogo"></span><div class="appBrandCopy"><strong>Synscraper</strong><span>Instant cinema</span></div></div>' +
+              '<div class="livePill">Ready</div>' +
+            '</header>' +
+            '<main class="homeMain">' +
+              '<section class="discoverHero">' +
+                '<div class="heroKicker">Discover</div>' +
+                '<h1 class="heroTitle">Watch without the friction.</h1>' +
+                '<p class="heroSubtitle">Search a movie or show. Synscraper handles the rest automatically.</p>' +
+                '<form id="searchForm" class="heroSearch">' +
+                  '<svg class="searchGlyph" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="11" cy="11" r="6.5" stroke="currentColor" stroke-width="1.8"/><path d="M16 16l4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>' +
+                  '<input id="searchInput" autocomplete="off" placeholder="Movie, show, title..." value="' + esc(lastSearch) + '">' +
+                  '<button type="submit">Search</button>' +
+                '</form>' +
+                '<div class="quickMeta"><span><i></i>Movies + TV</span><span><i></i>Automatic playback</span></div>' +
+              '</section>' +
+              '<div id="homeBody">' + renderRecentSection(recents) + '</div>' +
+            '</main>' +
           '</div>';
 
         document.getElementById("searchForm").addEventListener("submit",function(event){
@@ -250,20 +365,41 @@
 
       function renderRecentSection(recents){
         if(!recents.length){
-          return '<div class="sectionHead"><h2>Ready when you are</h2><span>Movies + TV</span></div>' +
-            '<div class="empty"><strong>Search, tap, play.</strong><p>Synscraper handles metadata and playback automatically. No server picker in the way.</p></div>';
+          return '<section class="surfaceSection">' +
+            '<div class="surfaceHead"><div><strong>Your space</strong><span>Recently opened titles live here</span></div></div>' +
+            '<div class="blankState"><strong>Nothing here yet.</strong><p>Search for something above and your recent titles will appear here automatically.</p></div>' +
+          '</section>';
         }
-        return '<div class="sectionHead"><h2>Recent</h2><span>' + recents.length + ' titles</span></div>' +
-          '<div class="list">' + recents.map(function(item){return resultHTML(item,item.media_type);}).join("") + '</div>';
+        return '<section class="surfaceSection">' +
+          '<div class="surfaceHead"><div><strong>Continue exploring</strong><span>Recent titles</span></div><div class="surfaceCount">' + recents.length + '</div></div>' +
+          '<div class="recentRail">' + recents.map(function(item){return recentCardHTML(item,item.media_type);}).join("") + '</div>' +
+        '</section>';
+      }
+
+      function recentCardHTML(item,type){
+        var kind = (type || item.media_type || "movie") === "tv" ? "Series" : "Movie";
+        return '<button class="recentCard result" data-id="' + esc(item.id) + '" data-type="' + esc(type || item.media_type || "movie") + '">' +
+          '<span class="recentPosterWrap">' +
+            (item.poster_path ? '<img src="' + esc(image(item.poster_path,"w342")) + '" alt="">' : '') +
+            '<span class="recentType">' + esc(kind) + '</span>' +
+          '</span>' +
+          '<span class="recentName">' + esc(titleOf(item)) + '</span>' +
+          '<span class="recentYear">' + esc(yearOf(item) || "Open title") + '</span>' +
+        '</button>';
       }
 
       function resultHTML(item,type){
-        var poster = item.poster_path ? '<img class="poster" src="' + esc(image(item.poster_path,"w185")) + '" alt="">' : '<div class="poster"></div>';
-        return '<button class="result" data-id="' + esc(item.id) + '" data-type="' + esc(type || item.media_type || "movie") + '">' +
-          poster +
-          '<span class="resultCopy"><span class="resultTitle">' + esc(titleOf(item)) + '</span>' +
-          '<span class="resultMeta">' + esc((type || item.media_type || "movie")==="tv" ? "Series" : "Movie") + (yearOf(item) ? " · " + esc(yearOf(item)) : "") + '</span>' +
-          '<span class="resultOverview">' + esc(item.overview || "Open for details and instant playback.") + '</span></span></button>';
+        var mediaType = type || item.media_type || "movie";
+        var kind = mediaType === "tv" ? "Series" : "Movie";
+        return '<button class="mediaCard result" data-id="' + esc(item.id) + '" data-type="' + esc(mediaType) + '">' +
+          '<span class="mediaPoster">' +
+            (item.poster_path ? '<img src="' + esc(image(item.poster_path,"w342")) + '" alt="">' : '') +
+            '<span class="mediaPosterShade"></span>' +
+            '<span class="mediaBadge">' + esc(kind) + '</span>' +
+          '</span>' +
+          '<span class="mediaTitle">' + esc(titleOf(item)) + '</span>' +
+          '<span class="mediaMeta">' + esc(yearOf(item) || "View details") + '</span>' +
+        '</button>';
       }
 
       function wireResults(){
@@ -275,17 +411,17 @@
         if(!query) return;
         lastSearch = query;
         var body = document.getElementById("homeBody");
-        if(body) body.innerHTML = '<div class="loading"><span class="spin"></span>Searching</div>';
+        if(body) body.innerHTML = '<div class="loadingV2"><span class="spin"></span><strong>Searching</strong><span>Finding the closest matches</span></div>';
         try{
           var data = await getJSON(API + "/search?q=" + encodeURIComponent(query));
           var results = (data.results || []).slice(0,12);
           if(!results.length){
-            body.innerHTML = '<div class="sectionHead"><h2>No matches</h2></div><div class="empty"><strong>Nothing found</strong><p>Try another title or a shorter search.</p></div>';
+            body.innerHTML = '<section class="surfaceSection"><div class="surfaceHead"><div><strong>No matches</strong><span>Try another title</span></div></div><div class="blankState"><strong>Nothing showed up.</strong><p>Try a shorter title or check the spelling.</p></div></section>';
             return;
           }
-          body.innerHTML = '<div class="sectionHead"><h2>Results</h2><span>' + results.length + '</span></div><div class="list">' +
-            results.map(function(item){return resultHTML(item,item.media_type);}).join("") + '</div>';
-          wireResults();
+          body.innerHTML =
+            '<div class="searchResultsHead"><strong>Search results</strong><span>' + results.length + ' matches</span></div>' +
+            '<div class="mediaGrid">' + results.map(function(item){return resultHTML(item,item.media_type);}).join("") + '</div>';
         }catch(error){
           body.innerHTML = '<div class="error">Search failed.<br>' + esc(error.message) + '</div>';
         }
@@ -310,33 +446,42 @@
       function renderDetail(){
         var d = currentDetail;
         var backdrop = d.backdrop_path || d.poster_path;
-        var poster = d.poster_path || d.backdrop_path;
-        var genres = (d.genres || []).slice(0,3).map(function(g){return g.name;}).join(" · ");
-        var runtime = currentType === "movie" && d.runtime ? " · " + d.runtime + "m" : "";
-        var tvFields = currentType === "tv"
-          ? '<div class="episodeRow"><div class="miniField"><label>Season</label><input id="seasonField" type="number" min="1" value="1"></div><div class="miniField"><label>Episode</label><input id="episodeField" type="number" min="1" value="1"></div></div>'
+        var genres = (d.genres || []).slice(0,4);
+        var year = yearOf(d);
+        var runtime = currentType === "movie" && d.runtime ? d.runtime + " min" : "";
+        var rating = Number(d.vote_average) > 0 ? Number(d.vote_average).toFixed(1) : "";
+        var facts = [
+          currentType === "tv" ? "Series" : "Movie",
+          year,
+          runtime,
+          rating ? "★ " + rating : ""
+        ].filter(Boolean);
+
+        var tvPicker = currentType === "tv"
+          ? '<div class="episodePicker"><div class="miniField"><label>Season</label><input id="seasonField" type="number" min="1" value="1"></div><div class="miniField"><label>Episode</label><input id="episodeField" type="number" min="1" value="1"></div></div>'
           : '';
 
         app.innerHTML =
-          '<div class="detail">' +
-            '<div class="hero">' +
+          '<div class="detailV2 viewEnter">' +
+            '<section class="detailHeroV2">' +
               (backdrop ? '<img src="' + esc(image(backdrop,"w780")) + '" alt="">' : '') +
-              '<button class="back" id="detailBack" aria-label="Back">‹</button>' +
-            '</div>' +
-            '<div class="detailBody">' +
-              '<div class="detailTop">' +
-                (poster ? '<img class="detailPoster" src="' + esc(image(poster,"w342")) + '" alt="">' : '<div class="detailPoster"></div>') +
-                '<div class="detailCopy"><h1 class="detailTitle">' + esc(titleOf(d)) + '</h1><div class="detailMeta">' +
-                  esc(currentType==="tv" ? "Series" : "Movie") +
-                  (yearOf(d) ? " · " + esc(yearOf(d)) : "") + esc(runtime) +
-                '</div></div>' +
+              '<button class="detailBackV2" id="detailBack" aria-label="Back">' + ICON.back + '</button>' +
+              '<div class="detailHeroInfo">' +
+                '<div class="detailKicker">' + esc(currentType === "tv" ? "Synscraper series" : "Synscraper feature") + '</div>' +
+                '<h1>' + esc(titleOf(d)) + '</h1>' +
+                '<div class="detailFacts">' + facts.map(function(f){return '<span class="factPill">' + esc(f) + '</span>';}).join("") + '</div>' +
               '</div>' +
-              (genres ? '<div class="detailMeta" style="margin-top:10px">' + esc(genres) + '</div>' : '') +
-              '<p class="overview">' + esc(d.overview || "No overview available.") + '</p>' +
-              tvFields +
-              '<button class="primary" id="playNow"><span class="dot"></span>Play instantly</button>' +
-              '<div class="subtle">Automatic playback · best available quality</div>' +
-            '</div>' +
+            '</section>' +
+            '<section class="detailSheetV2">' +
+              (genres.length ? '<div class="genreRow">' + genres.map(function(g){return '<span class="genreChip">' + esc(g.name) + '</span>';}).join("") + '</div>' : '') +
+              '<p class="detailOverviewV2">' + esc(d.overview || "No overview available for this title.") + '</p>' +
+              '<div class="playPanel">' +
+                '<div class="playPanelTop"><strong>Ready to watch</strong><span>Automatic</span></div>' +
+                tvPicker +
+                '<button class="playMain" id="playNow">' + ICON.play + '<span>Play now</span></button>' +
+                '<div class="automaticNote">Best available playback is selected for you</div>' +
+              '</div>' +
+            '</section>' +
           '</div>';
 
         document.getElementById("detailBack").onclick = renderHome;
