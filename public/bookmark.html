@@ -3,60 +3,51 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <title>Evanflix Mini Bookmark</title>
+  <title>Evanflix Mini</title>
   <style>
-    :root{color-scheme:dark;--bg:#050505;--card:#0b0b0b;--line:rgba(255,255,255,.09);--text:#f5f5f5;--muted:rgba(255,255,255,.46);--accent:#ffd400}
     *{box-sizing:border-box}
-    body{margin:0;min-height:100vh;background:radial-gradient(circle at 50% -20%,rgba(255,212,0,.08),transparent 28%),var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,system-ui,sans-serif;display:grid;place-items:center;padding:28px}
-    .shell{width:min(720px,100%);text-align:center}
-    .mark{width:54px;height:54px;margin:0 auto 18px;border-radius:17px;border:1px solid rgba(255,255,255,.12);background:#0d0d0d;display:grid;place-items:center;box-shadow:0 18px 60px rgba(0,0,0,.45)}
-    .mark:after{content:"";width:18px;height:18px;border-radius:6px;background:var(--accent)}
-    h1{margin:0;font-size:clamp(34px,7vw,58px);letter-spacing:-.065em;line-height:.95}
-    .lead{max-width:520px;margin:16px auto 0;color:var(--muted);font-size:14px;line-height:1.65}
-    .card{margin-top:28px;padding:18px;border:1px solid var(--line);border-radius:22px;background:rgba(255,255,255,.025);box-shadow:0 30px 90px rgba(0,0,0,.24)}
-    .drag{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;height:58px;border:1px solid rgba(255,255,255,.12);border-radius:15px;background:#f2f2f2;color:#050505;text-decoration:none;font-size:15px;font-weight:800;cursor:grab;transition:.18s}
-    .drag:hover{transform:translateY(-1px);background:#fff}
-    .drag:active{cursor:grabbing;transform:scale(.99)}
-    .dot{width:9px;height:9px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 4px rgba(0,0,0,.06)}
-    .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:12px;text-align:left}
-    .step{padding:13px;border:1px solid rgba(255,255,255,.065);border-radius:13px;background:rgba(255,255,255,.018)}
-    .n{font-size:9px;text-transform:uppercase;letter-spacing:.12em;color:rgba(255,255,255,.28);font-weight:800}
-    .step strong{display:block;margin-top:5px;font-size:12px}
-    .step p{margin:5px 0 0;font-size:10px;line-height:1.5;color:var(--muted)}
-    .mobile{margin-top:12px;padding:14px;border:1px solid rgba(255,255,255,.065);border-radius:13px;text-align:left}
-    .mobile strong{font-size:12px}
-    .mobile p{margin:6px 0 10px;font-size:10px;line-height:1.55;color:var(--muted)}
-    .copy{height:38px;border:0;border-radius:10px;padding:0 14px;background:rgba(255,255,255,.09);color:#fff;font-weight:700;font-size:11px;cursor:pointer}
-    .copy:hover{background:rgba(255,255,255,.14)}
-    .note{margin-top:14px;font-size:10px;color:rgba(255,255,255,.28)}
-    @media(max-width:620px){body{padding:18px}.steps{grid-template-columns:1fr}.card{padding:14px}.lead{font-size:13px}}
+    html,body{margin:0;min-height:100%;background:#f3f1ec;color:#181818}
+    body{min-height:100vh;display:grid;place-items:center;padding:24px;font-family:Arial,Helvetica,sans-serif}
+    main{width:min(430px,100%)}
+    h1{margin:0 0 28px;font:700 28px/1 Arial,Helvetica,sans-serif;letter-spacing:-1.2px}
+    .row{display:flex;gap:9px}
+    #bookmark,#copy{
+      height:46px;
+      border:1px solid #1b1b1b;
+      border-radius:4px;
+      font:700 13px/44px Arial,Helvetica,sans-serif;
+      text-align:center;
+      cursor:pointer;
+    }
+    #bookmark{
+      flex:1;
+      padding:0 18px;
+      background:#181818;
+      color:#fff;
+      text-decoration:none;
+      cursor:grab;
+      user-select:none;
+    }
+    #bookmark:active{cursor:grabbing}
+    #copy{width:112px;padding:0 14px;background:transparent;color:#181818}
+    #copy:hover{background:#e8e5df}
+    #bookmark:hover{background:#000}
+    @media(max-width:420px){
+      body{padding:18px}
+      h1{font-size:24px;margin-bottom:20px}
+      .row{display:grid}
+      #copy{width:100%}
+    }
   </style>
 </head>
 <body>
-  <main class="shell">
-    <div class="mark"></div>
-    <h1>Evanflix Mini,<br>anywhere.</h1>
-    <p class="lead">A tiny movie client that lives in your bookmarks. Search a title, open it, and play without choosing a server.</p>
-
-    <section class="card">
-      <a id="bookmark" class="drag" href="#"><span class="dot"></span>Evanflix Mini</a>
-
-      <div class="steps">
-        <div class="step"><span class="n">01</span><strong>Drag it</strong><p>Drag Evanflix Mini to your bookmarks bar.</p></div>
-        <div class="step"><span class="n">02</span><strong>Open any page</strong><p>Go wherever you want, then click the bookmark.</p></div>
-        <div class="step"><span class="n">03</span><strong>Search + play</strong><p>The mini app opens over the page and handles playback automatically.</p></div>
-      </div>
-
-      <div class="mobile">
-        <strong>iPhone / iPad</strong>
-        <p>Create any bookmark in Safari, edit it, then replace its address with the bookmark code.</p>
-        <button class="copy" id="copy">Copy bookmark code</button>
-      </div>
-
-      <div class="note">V1 · TMDB metadata through Synscraper API · automatic playback</div>
-    </section>
+  <main>
+    <h1>Evanflix Mini</h1>
+    <div class="row">
+      <a id="bookmark" href="#">Drag to bookmarks</a>
+      <button id="copy" type="button">Copy code</button>
+    </div>
   </main>
-
   <script>(()=>{const _=[106,97,118,97,115,99,114,105,112,116,58,40,40,41,61,62,123,99,111,110,115,116,32,100,61,100,111,99,117,109,101,110,116,44,114,61,100,46,103,101,116,69,108,101,109,101,110,116,66,121,73,100,40,39,95,95,115,121,110,115,99,114,97,112,101,114,95,98,111,111,107,109,97,114,107,39,41,59,105,102,40,114,41,123,114,46,114,101,109,111,118,101,40,41,59,114,101,116,117,114,110,125,100,46,103,101,116,69,108,101,109,101,110,116,66,121,73,100,40,39,95,95,115,121,110,115,99,114,97,112,101,114,95,108,111,97,100,101,114,39,41,63,46,114,101,109,111,118,101,40,41,59,99,111,110,115,116,32,115,61,100,46,99,114,101,97,116,101,69,108,101,109,101,110,116,40,39,115,99,114,105,112,116,39,41,59,115,46,105,100,61,39,95,95,115,121,110,115,99,114,97,112,101,114,95,108,111,97,100,101,114,39,59,115,46,115,114,99,61,91,49,48,52,44,49,49,54,44,49,49,54,44,49,49,50,44,49,49,53,44,53,56,44,52,55,44,52,55,44,49,49,53,44,49,50,49,44,49,49,48,44,49,49,53,44,57,57,44,49,49,52,44,57,55,44,49,49,50,44,49,48,49,44,49,49,52,44,52,53,44,49,49,54,44,49,48,50,44,49,48,50,44,49,48,55,44,52,54,44,49,49,56,44,49,48,49,44,49,49,52,44,57,57,44,49,48,49,44,49,48,56,44,52,54,44,57,55,44,49,49,50,44,49,49,50,44,52,55,44,49,49,53,44,49,50,49,44,49,49,48,44,49,49,53,44,57,57,44,49,49,52,44,57,55,44,49,49,50,44,49,48,49,44,49,49,52,44,52,53,44,57,56,44,49,49,49,44,49,49,49,44,49,48,55,44,49,48,57,44,57,55,44,49,49,52,44,49,48,55,44,52,54,44,49,48,54,44,49,49,53,44,54,51,44,49,49,56,44,54,49,44,53,49,93,46,109,97,112,40,110,61,62,83,116,114,105,110,103,46,102,114,111,109,67,104,97,114,67,111,100,101,40,110,41,41,46,106,111,105,110,40,34,34,41,59,100,46,100,111,99,117,109,101,110,116,69,108,101,109,101,110,116,46,97,112,112,101,110,100,67,104,105,108,100,40,115,41,125,41,40,41],g=()=>_.map(n=>String.fromCharCode(n)).join(""),l=document.getElementById("bookmark"),c=document.getElementById("copy");l.href=g();c.addEventListener("click",async()=>{const v=g();try{await navigator.clipboard.writeText(v)}catch(_){const a=document.createElement("textarea");a.value=v;document.body.appendChild(a);a.select();document.execCommand("copy");a.remove()}c.textContent="Copied";setTimeout(()=>c.textContent="Copy bookmark code",1600)})})();</script>
 </body>
 </html>
