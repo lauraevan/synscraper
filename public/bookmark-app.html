@@ -377,6 +377,63 @@
       .quickRecentItem img,.quickRecentPoster{width:26px;height:35px}
     }
 
+  
+    /* Cozy catalog home */
+    .homeShell{grid-template-columns:32px minmax(0,1fr)}
+    .sideRail{padding:7px 3px;gap:5px;background:#080808}
+    .sideMark{width:23px;height:23px;margin-bottom:4px;border-radius:7px}
+    .sideBtn{width:25px;height:25px;border-radius:7px}
+    .homeCanvas{position:relative;min-width:0;min-height:100vh;background:#070707}
+    .homeCanvas .appBar{display:none}
+    .homeMain{padding:8px 8px 14px}
+
+    .catalogHero{position:relative;height:82px;overflow:hidden;border-radius:11px;background:#101010;cursor:pointer}
+    .catalogHero.result{display:block;width:100%;min-height:0;padding:0;border:0;background:#101010;text-align:left;transform:none}
+    .catalogHero.result:hover{background:#101010;transform:none}
+    .catalogHero img{width:100%;height:100%;object-fit:cover}
+    .catalogHero:after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(5,5,5,.82),rgba(5,5,5,.25) 58%,rgba(5,5,5,.08)),linear-gradient(0deg,rgba(5,5,5,.52),transparent 62%)}
+    .catalogHeroCopy{position:absolute;z-index:2;left:9px;right:9px;bottom:8px;display:flex;align-items:end;justify-content:space-between;gap:8px}
+    .catalogHeroText{min-width:0}
+    .catalogHeroKicker{display:block;font-size:6px;font-weight:850;letter-spacing:.11em;text-transform:uppercase;color:rgba(255,255,255,.42)}
+    .catalogHeroTitle{display:block;margin-top:3px;max-width:250px;font-size:12px;font-weight:760;line-height:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .catalogHeroMeta{display:block;margin-top:3px;font-size:6px;color:rgba(255,255,255,.34)}
+    .catalogHeroRank{font-size:19px;line-height:.8;font-weight:850;letter-spacing:-.08em;color:rgba(255,255,255,.18)}
+    .catalogHeroDots{position:absolute;z-index:3;right:7px;top:7px;display:flex;gap:3px}
+    .catalogHeroDot{width:5px;height:2px;border-radius:99px;background:rgba(255,255,255,.22)}
+    .catalogHeroDot.is-active{width:8px;background:rgba(255,255,255,.72)}
+
+    .catalogHead{display:flex;align-items:center;justify-content:space-between;margin:10px 1px 7px}
+    .catalogHead strong{font-size:10px;font-weight:760;letter-spacing:-.01em}
+    .catalogHead span{font-size:6px;color:rgba(255,255,255,.25)}
+    .catalogGrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px 6px}
+    .catalogCard{min-width:0;padding:0;border:0;background:transparent;text-align:left;cursor:pointer}
+    .catalogCard.result{display:block;width:100%;min-height:0;padding:0;border:0;background:transparent;transform:none}
+    .catalogCard.result:hover{background:transparent;transform:none}
+    .catalogPoster{position:relative;aspect-ratio:2/3;overflow:hidden;border-radius:8px;background:#111;border:1px solid rgba(255,255,255,.055)}
+    .catalogPoster img{width:100%;height:100%;object-fit:cover;transition:transform .18s ease}
+    .catalogCard:hover .catalogPoster img{transform:scale(1.025)}
+    .catalogTitle{display:block;margin-top:4px;font-size:7px;font-weight:720;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .catalogMeta{display:block;margin-top:2px;font-size:6px;color:rgba(255,255,255,.24)}
+    .catalogLoading{height:180px;display:grid;place-items:center}
+
+    .searchFlyout{position:absolute;z-index:50;left:6px;top:43px;width:min(250px,calc(100% - 12px));padding:7px;border:1px solid rgba(255,255,255,.08);border-radius:11px;background:rgba(12,12,12,.96);box-shadow:0 16px 45px rgba(0,0,0,.42);backdrop-filter:blur(18px);transform-origin:top left;animation:flyIn .14s ease-out both}
+    @keyframes flyIn{from{opacity:0;transform:translateY(-3px) scale(.985)}to{opacity:1;transform:none}}
+    .searchFlyout form{display:flex;align-items:center;gap:6px}
+    .searchFlyout input{min-width:0;flex:1;height:30px;border:0;border-radius:8px;background:#080808;color:#fff;padding:0 9px;outline:none;font-size:9px}
+    .searchFlyout input::placeholder{color:rgba(255,255,255,.22)}
+    .searchFlyout button{height:30px;padding:0 9px;border:0;border-radius:8px;background:#ededed;color:#070707;font-size:7px;font-weight:820;cursor:pointer}
+    .searchHint{margin:6px 2px 0;font-size:6px;color:rgba(255,255,255,.22)}
+
+    .searchModeHead{display:flex;align-items:center;justify-content:space-between;margin:9px 1px 7px}
+    .searchModeHead strong{font-size:9px}
+    .searchModeHead button{border:0;background:transparent;color:rgba(255,255,255,.34);font-size:7px;cursor:pointer}
+    .searchCatalogGrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px 6px}
+
+    @media(max-width:400px){
+      .catalogGrid,.searchCatalogGrid{grid-template-columns:repeat(3,minmax(0,1fr))}
+      .catalogHero{height:78px}
+    }
+
   </style>
 </head>
 <body>
@@ -413,6 +470,8 @@
       var top10Items = [];
       var top10Index = 0;
       var top10Timer = null;
+      var homeCatalog = [];
+      var homeDataLoaded = false;
 
 
       function esc(value){
@@ -502,100 +561,130 @@
       function renderHome(){
         cleanupPlayer();
         if(top10Timer){clearInterval(top10Timer);top10Timer=null;}
-        var recents = getRecents();
         app.innerHTML =
           '<div class="homeShell viewEnter">' +
             '<aside class="sideRail">' +
               '<div class="sideMark"></div>' +
               '<button class="sideBtn is-active" id="navHome" aria-label="Home"><svg viewBox="0 0 24 24" fill="none"><path d="M4 10.5L12 4l8 6.5V20h-5v-6H9v6H4v-9.5z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></button>' +
               '<button class="sideBtn" id="navSearch" aria-label="Search"><svg viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="6.5" stroke="currentColor" stroke-width="1.7"/><path d="M16 16l4 4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></button>' +
-              '<button class="sideBtn" id="navRecent" aria-label="Recent"><svg viewBox="0 0 24 24" fill="none"><path d="M4.5 12a7.5 7.5 0 107.5-7.5A7.4 7.4 0 006.7 6.7L4.5 9" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><path d="M4.5 5.5V9h3.5M12 8v4l2.8 1.8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></button>' +
               '<div class="sideSpacer"></div>' +
             '</aside>' +
             '<div class="homeCanvas">' +
-              '<header class="appBar">' +
-                '<div class="appBrand"><div class="appBrandCopy"><strong>Synscraper</strong><span>Mini</span></div></div>' +
-                '<div class="livePill">Ready</div>' +
-              '</header>' +
               '<main class="homeMain">' +
-                '<form id="searchForm" class="compactSearch">' +
-                  '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="11" cy="11" r="6.5" stroke="currentColor" stroke-width="1.8"/><path d="M16 16l4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>' +
-                  '<input id="searchInput" autocomplete="off" placeholder="Search..." value="' + esc(lastSearch) + '">' +
-                  '<button type="submit">Go</button>' +
-                '</form>' +
-                '<div class="featureRow">' +
-                  '<div id="top10Mount"><div class="top10Hero" style="display:grid;place-items:center"><span class="spin"></span></div></div>' +
-                  '<section class="quickRecent" id="recentSection">' +
-                    '<div class="quickRecentHead"><strong>Recent</strong><span>' + recents.length + '</span></div>' +
-                    renderQuickRecent(recents) +
-                  '</section>' +
-                '</div>' +
-                '<div id="homeBody"></div>' +
+                '<div id="top10Mount"><div class="catalogHero" style="display:grid;place-items:center"><span class="spin"></span></div></div>' +
+                '<div class="catalogHead"><strong>Movies</strong><span id="catalogCount"></span></div>' +
+                '<div id="homeBody"><div class="catalogLoading"><span class="spin"></span></div></div>' +
               '</main>' +
+              '<div id="searchFlyoutMount"></div>' +
             '</div>' +
           '</div>';
 
-        document.getElementById("searchForm").addEventListener("submit",function(event){
-          event.preventDefault();
-          doSearch(document.getElementById("searchInput").value);
-        });
-        document.getElementById("navHome").onclick = renderHome;
-        document.getElementById("navSearch").onclick = function(){
-          var input=document.getElementById("searchInput");
-          if(input){input.focus();input.select();}
+        document.getElementById("navHome").onclick = function(){
+          closeSearchFlyout();
+          renderCatalog();
+          document.getElementById("navHome").classList.add("is-active");
+          document.getElementById("navSearch").classList.remove("is-active");
         };
-        document.getElementById("navRecent").onclick = function(){
-          var section=document.getElementById("recentSection");
-          if(section) section.scrollIntoView({behavior:"smooth",block:"center"});
-        };
-        loadTop10();
+        document.getElementById("navSearch").onclick = toggleSearchFlyout;
+        loadHomeCatalog();
       }
 
-      function renderQuickRecent(recents){
-        if(!recents.length) return '<div class="quickRecentEmpty">Open something and it’ll show up here.</div>';
-        return '<div class="quickRecentList">' + recents.slice(0,2).map(function(item){
-          var type=item.media_type || "movie";
-          return '<button class="quickRecentItem result" data-id="' + esc(item.id) + '" data-type="' + esc(type) + '">' +
-            (item.poster_path ? '<img src="' + esc(image(item.poster_path,"w185")) + '" alt="">' : '<span class="quickRecentPoster"></span>') +
-            '<span class="quickRecentCopy"><strong>' + esc(titleOf(item)) + '</strong><span>' + esc((type==="tv"?"Series":"Movie") + (yearOf(item) ? " · " + yearOf(item) : "")) + '</span></span>' +
-          '</button>';
-        }).join("") + '</div>';
-      }
-
-      async function loadTop10(){
-        var mount = document.getElementById("top10Mount");
+      function toggleSearchFlyout(){
+        var mount = document.getElementById("searchFlyoutMount");
         if(!mount) return;
+        if(mount.firstChild){closeSearchFlyout();return;}
+        document.getElementById("navSearch").classList.add("is-active");
+        document.getElementById("navHome").classList.remove("is-active");
+        mount.innerHTML =
+          '<div class="searchFlyout">' +
+            '<form id="sidebarSearchForm">' +
+              '<input id="sidebarSearchInput" autocomplete="off" placeholder="Search movies or shows">' +
+              '<button type="submit">Go</button>' +
+            '</form>' +
+            '<div class="searchHint">Search opens here so Home stays clean.</div>' +
+          '</div>';
+        var input=document.getElementById("sidebarSearchInput");
+        document.getElementById("sidebarSearchForm").onsubmit=function(event){
+          event.preventDefault();
+          doSearch(input.value);
+          closeSearchFlyout();
+        };
+        setTimeout(function(){input && input.focus();},0);
+      }
+
+      function closeSearchFlyout(){
+        var mount=document.getElementById("searchFlyoutMount");
+        if(mount) mount.innerHTML="";
+        var search=document.getElementById("navSearch");
+        var home=document.getElementById("navHome");
+        if(search) search.classList.remove("is-active");
+        if(home) home.classList.add("is-active");
+      }
+
+      function catalogCardHTML(item){
+        return '<button class="catalogCard result" data-id="' + esc(item.id) + '" data-type="movie">' +
+          '<span class="catalogPoster">' + (item.poster_path ? '<img src="' + esc(image(item.poster_path,"w342")) + '" alt="">' : '') + '</span>' +
+          '<span class="catalogTitle">' + esc(titleOf(item)) + '</span>' +
+          '<span class="catalogMeta">' + esc(yearOf(item) || "Movie") + '</span>' +
+        '</button>';
+      }
+
+      function renderCatalog(){
+        var body=document.getElementById("homeBody");
+        var count=document.getElementById("catalogCount");
+        if(!body) return;
+        if(count) count.textContent = homeCatalog.length ? homeCatalog.length + " picks" : "";
+        if(!homeCatalog.length){
+          body.innerHTML='<div class="blankState"><strong>No movies yet</strong><p>Couldn’t load the catalog.</p></div>';
+          return;
+        }
+        body.innerHTML='<div class="catalogGrid">' + homeCatalog.map(catalogCardHTML).join("") + '</div>';
+      }
+
+      async function loadHomeCatalog(){
+        var mount=document.getElementById("top10Mount");
         try{
-          var data = await getJSON(API + "/home");
-          top10Items = (data.trending || []).filter(function(item){
-            return item && (item.media_type === "movie" || item.media_type === "tv") && (item.backdrop_path || item.poster_path);
+          var data=await getJSON(API + "/home");
+          var trending=(data.trending || []).filter(function(item){return item && (item.media_type==="movie" || !item.media_type);});
+          var popular=(data.popular_movies || []).map(function(item){return Object.assign({},item,{media_type:"movie"});});
+          var nowPlaying=(data.now_playing || []).map(function(item){return Object.assign({},item,{media_type:"movie"});});
+          top10Items=[].concat(trending,popular).filter(function(item,index,array){
+            return item && item.id && (item.backdrop_path || item.poster_path) && array.findIndex(function(other){return String(other.id)===String(item.id);})===index;
           }).slice(0,10);
-          if(!top10Items.length){mount.innerHTML="";return;}
-          top10Index = 0;
+          homeCatalog=[].concat(popular,nowPlaying,trending).filter(function(item,index,array){
+            return item && item.id && item.poster_path && array.findIndex(function(other){return String(other.id)===String(item.id);})===index;
+          }).slice(0,24);
+          homeDataLoaded=true;
+          top10Index=0;
           renderTop10();
-          top10Timer = setInterval(function(){
-            if(!document.getElementById("top10Mount")){clearInterval(top10Timer);top10Timer=null;return;}
-            top10Index = (top10Index + 1) % top10Items.length;
-            renderTop10();
-          },4200);
+          renderCatalog();
+          if(top10Items.length>1){
+            top10Timer=setInterval(function(){
+              if(!document.getElementById("top10Mount")){clearInterval(top10Timer);top10Timer=null;return;}
+              top10Index=(top10Index+1)%top10Items.length;
+              renderTop10();
+            },4300);
+          }
         }catch(_){
-          mount.innerHTML = "";
+          if(mount) mount.innerHTML="";
+          homeCatalog=[];
+          renderCatalog();
         }
       }
 
       function renderTop10(){
-        var mount = document.getElementById("top10Mount");
-        var item = top10Items[top10Index];
+        var mount=document.getElementById("top10Mount");
+        var item=top10Items[top10Index];
         if(!mount || !item) return;
-        var type = item.media_type === "tv" ? "tv" : "movie";
-        var art = item.poster_path || item.backdrop_path;
+        var type=item.media_type==="tv" ? "tv" : "movie";
+        var art=item.backdrop_path || item.poster_path;
         mount.innerHTML =
-          '<button class="top10Hero result" data-id="' + esc(item.id) + '" data-type="' + esc(type) + '">' +
-            '<img src="' + esc(image(art,"w342")) + '" alt="">' +
-            '<span class="top10Dots">' + top10Items.slice(0,5).map(function(_,i){return '<i class="top10Dot ' + (i === (top10Index%5) ? 'is-active' : '') + '"></i>';}).join("") + '</span>' +
-            '<span class="top10Copy">' +
-              '<span class="top10Text"><span class="top10Kicker">Top 10</span><span class="top10Title">' + esc(titleOf(item)) + '</span></span>' +
-              '<span class="top10Rank">' + (top10Index + 1) + '</span>' +
+          '<button class="catalogHero result" data-id="' + esc(item.id) + '" data-type="' + esc(type) + '">' +
+            '<img src="' + esc(image(art,"w780")) + '" alt="">' +
+            '<span class="catalogHeroDots">' + top10Items.slice(0,5).map(function(_,i){return '<i class="catalogHeroDot ' + (i===(top10Index%5) ? 'is-active' : '') + '"></i>';}).join("") + '</span>' +
+            '<span class="catalogHeroCopy">' +
+              '<span class="catalogHeroText"><span class="catalogHeroKicker">Top 10</span><span class="catalogHeroTitle">' + esc(titleOf(item)) + '</span><span class="catalogHeroMeta">' + esc(yearOf(item) || "Trending") + '</span></span>' +
+              '<span class="catalogHeroRank">' + (top10Index+1) + '</span>' +
             '</span>' +
           '</button>';
       }
@@ -641,26 +730,44 @@
       }
 
       async function doSearch(query){
-        query = String(query || "").trim();
+        query=String(query || "").trim();
         if(!query) return;
-        lastSearch = query;
+        lastSearch=query;
         if(top10Timer){clearInterval(top10Timer);top10Timer=null;}
-        var top = document.getElementById("top10Mount");
-        if(top) top.style.display = "none";
-        var body = document.getElementById("homeBody");
-        if(body) body.innerHTML = '<div class="loadingV2"><span class="spin"></span><strong>Searching</strong><span>One sec</span></div>';
+        var body=document.getElementById("homeBody");
+        var count=document.getElementById("catalogCount");
+        if(count) count.textContent="";
+        if(body) body.innerHTML='<div class="catalogLoading"><span class="spin"></span></div>';
         try{
-          var data = await getJSON(API + "/search?q=" + encodeURIComponent(query));
-          var results = (data.results || []).slice(0,15);
+          var data=await getJSON(API + "/search?q=" + encodeURIComponent(query));
+          var results=(data.results || []).filter(function(item){return item && (item.media_type==="movie" || item.media_type==="tv") && item.poster_path;}).slice(0,20);
           if(!results.length){
-            body.innerHTML = '<div class="searchResultsHead"><strong>No matches</strong><span>Try again</span></div><div class="blankState"><strong>Nothing found</strong><p>Try a shorter title.</p></div>';
+            body.innerHTML='<div class="blankState"><strong>Nothing found</strong><p>Try another title.</p></div>';
             return;
           }
           body.innerHTML =
-            '<div class="searchResultsHead"><strong>Results</strong><span>' + results.length + '</span></div>' +
-            '<div class="mediaGrid">' + results.map(function(item){return resultHTML(item,item.media_type);}).join("") + '</div>';
+            '<div class="searchModeHead"><strong>Search · ' + esc(query) + '</strong><button id="clearSearch">Back to movies</button></div>' +
+            '<div class="searchCatalogGrid">' +
+              results.map(function(item){
+                var type=item.media_type==="tv" ? "tv" : "movie";
+                return '<button class="catalogCard result" data-id="' + esc(item.id) + '" data-type="' + esc(type) + '">' +
+                  '<span class="catalogPoster"><img src="' + esc(image(item.poster_path,"w342")) + '" alt=""></span>' +
+                  '<span class="catalogTitle">' + esc(titleOf(item)) + '</span>' +
+                  '<span class="catalogMeta">' + esc((type==="tv"?"Series":"Movie") + (yearOf(item) ? " · " + yearOf(item) : "")) + '</span>' +
+                '</button>';
+              }).join("") +
+            '</div>';
+          document.getElementById("clearSearch").onclick=function(){
+            renderCatalog();
+            if(top10Items.length>1 && !top10Timer){
+              top10Timer=setInterval(function(){
+                top10Index=(top10Index+1)%top10Items.length;
+                renderTop10();
+              },4300);
+            }
+          };
         }catch(error){
-          body.innerHTML = '<div class="error">Search failed.<br>' + esc(error.message) + '</div>';
+          body.innerHTML='<div class="error">Search failed.<br>' + esc(error.message) + '</div>';
         }
       }
 
