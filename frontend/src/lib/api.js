@@ -73,10 +73,11 @@ export const getStreams = (type, id, season, episode, options = {}) => {
         imdb_id: options.imdbId,
     };
     const key = `streams:${JSON.stringify(params)}`;
-    return cached(key, 45_000, () => http.get("/streams", {
-        params,
+    const loader = () => http.get("/streams", {
+        params: options.fresh ? { ...params, _fresh: Date.now() } : params,
         timeout: options.timeout || 90000,
-    }).then((r) => r.data));
+    }).then((r) => r.data);
+    return options.fresh ? loader() : cached(key, 45_000, loader);
 };
 
 const downloadParams = (params = {}) => {
