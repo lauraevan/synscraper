@@ -154,7 +154,11 @@ export const SystemPlayer = ({
       revealControls();
       window.setTimeout(() => {
         if (selectedIDRef.current === server.id) {
-          attachServerRef.current?.(next, { preserve: true });
+          const currentTime = videoRef.current?.currentTime;
+          attachServerRef.current?.(next, {
+            preserve: Number.isFinite(currentTime) && currentTime > 1,
+            resume: true,
+          });
         }
       }, 120);
       return;
@@ -165,13 +169,13 @@ export const SystemPlayer = ({
     setControlsVisible(true);
   }, [revealControls]);
 
-  const attachServer = useCallback(async (server, { preserve = false } = {}) => {
+  const attachServer = useCallback(async (server, { preserve = false, resume = false } = {}) => {
     const video = videoRef.current;
     if (!video || !server) return;
 
     if (preserve) {
       preservedTimeRef.current = Number.isFinite(video.currentTime) ? video.currentTime : null;
-      preservedPausedRef.current = video.paused;
+      preservedPausedRef.current = resume ? false : video.paused;
     } else {
       preservedTimeRef.current = null;
       preservedPausedRef.current = false;
