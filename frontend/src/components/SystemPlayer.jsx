@@ -64,6 +64,11 @@ export const SystemPlayer = ({
   const preservedTimeRef = useRef(null);
   const preservedPausedRef = useRef(false);
   const fatalRecoveryRef = useRef(0);
+  const serversRef = useRef([]);
+  const selectedIDRef = useRef(null);
+  const attachServerRef = useRef(null);
+  const sourceStartupTimerRef = useRef(null);
+  const failedSourceIDsRef = useRef(new Set());
 
   const [servers, setServers] = useState([]);
   const [selectedID, setSelectedID] = useState(null);
@@ -79,6 +84,7 @@ export const SystemPlayer = ({
   const [muted, setMuted] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [captionsEnabled, setCaptionsEnabled] = useState(false);
+  const [failedSourceIDs, setFailedSourceIDs] = useState([]);
 
   const selectedServer = useMemo(
     () => servers.find((server) => server.id === selectedID) || servers[0] || null,
@@ -107,6 +113,10 @@ export const SystemPlayer = ({
 
   const cleanupPlayback = useCallback(() => {
     stopHideTimer();
+    if (sourceStartupTimerRef.current) {
+      window.clearTimeout(sourceStartupTimerRef.current);
+      sourceStartupTimerRef.current = null;
+    }
     if (hlsRef.current) {
       hlsRef.current.destroy();
       hlsRef.current = null;
@@ -118,6 +128,42 @@ export const SystemPlayer = ({
       video.load();
     }
   }, [stopHideTimer]);
+
+  const failCurrentSource = useCallback((server, reason = "This source stopped responding.") => {
+    if (!server?.id || selectedIDRef.current !== server.id) return;
+    if (failedSourceIDsRef.current.has(server.id)) return;
+
+    failedSourceIDsRef.current.add(server.id);
+    setFailedSourceIDs(Array.from(failedSourceIDsRef.current));
+
+    if (sourceStartupTimerRef.current) {
+      window.clearTimeout(sourceStartupTimerRef.current);
+      sourceStartupTimerRef.current = null;
+    }
+
+    const list = serversRef.current;
+    const currentIndex = list.findIndex((item) => item.id === server.id);
+    const ordered = currentIndex >= 0
+      ? [...list.slice(currentIndex + 1), ...list.slice(0, currentIndex)]
+      : list;
+    const next = ordered.find((item) => item?.id && !failedSourceIDsRef.current.has(item.id));
+
+    if (next && attachServerRef.current) {
+      setPhase("loading");
+      setMessage(`${server.name || "Source"} failed. Switching to ${next.name || "another source"}…`);
+      revealControls();
+      window.setTimeout(() => {
+        if (selectedIDRef.current === server.id) {
+          attachServerRef.current?.(next, { preserve: true });
+        }
+      }, 120);
+      return;
+    }
+
+    setPhase("failed");
+    setMessage(`${reason} No working fallback source is available.`);
+    setControlsVisible(true);
+  }, [revealControls]);
 
   const attachServer = useCallback(async (server, { preserve = false } = {}) => {
     const video = videoRef.current;
@@ -137,16 +183,23 @@ export const SystemPlayer = ({
     }
 
     fatalRecoveryRef.current = 0;
+    selectedIDRef.current = server.id;
     setSelectedID(server.id);
     setSourceOpen(false);
     setPhase("loading");
     setMessage("");
     revealControls();
 
+    if (sourceStartupTimerRef.current) window.clearTimeout(sourceStartupTimerRef.current);
+    sourceStartupTimerRef.current = window.setTimeout(() => {
+      if (selectedIDRef.current === server.id && video.readyState < 2) {
+        failCurrentSource(server, "This source timed out before playback started.");
+      }
+    }, 12000);
+
     const playURL = hlsProxyUrl(server.play_url);
     if (!playURL) {
-      setPhase("failed");
-      setMessage("This source did not return a playable stream.");
+      failCurrentSource(server, "This source did not return a playable stream.");
       return;
     }
 
@@ -180,9 +233,7 @@ export const SystemPlayer = ({
               hls.recoverMediaError();
               return;
             }
-            setPhase("failed");
-            setMessage("This source became unstable. Switch sources or retry.");
-            revealControls();
+            failCurrentSource(server, "This source became unstable during playback.");
           });
         } else {
           video.src = playURL;
@@ -192,23 +243,30 @@ export const SystemPlayer = ({
       }
       video.load();
     } catch (error) {
-      setPhase("failed");
-      setMessage(error?.message || "This source could not be opened.");
+      failCurrentSource(server, error?.message || "This source could not be opened.");
     }
-  }, [revealControls]);
+  }, [failCurrentSource, revealControls]);
 
-  const loadSources = useCallback(async () => {
+  attachServerRef.current = attachServer;
+
+  const loadSources = useCallback(async ({ fresh = false } = {}) => {
     setPhase("loading");
     setMessage("");
     setServers([]);
+    serversRef.current = [];
+    selectedIDRef.current = null;
+    failedSourceIDsRef.current.clear();
+    setFailedSourceIDs([]);
     revealControls();
     try {
       const response = await getStreams(mediaType, id, season, episode, {
         title: meta?.title,
         year: Number((meta?.release_date || meta?.first_air_date || "").slice(0, 4)) || undefined,
+        fresh,
       });
       const loaded = Array.isArray(response?.servers) ? response.servers : [];
       if (!loaded.length) throw new Error("No playable sources were returned for this title.");
+      serversRef.current = loaded;
       setServers(loaded);
       const first = loaded.find((server) => server.primary) || loaded[0];
       await attachServer(first);
@@ -251,8 +309,13 @@ export const SystemPlayer = ({
     };
 
     const onLoaded = () => {
+      if (sourceStartupTimerRef.current) {
+        window.clearTimeout(sourceStartupTimerRef.current);
+        sourceStartupTimerRef.current = null;
+      }
       setDuration(Number.isFinite(video.duration) ? video.duration : 0);
       setPhase("ready");
+      setMessage("");
       restorePosition();
       video.play().catch(() => setPlaying(false));
     };
@@ -295,12 +358,34 @@ export const SystemPlayer = ({
       stopHideTimer();
       persist(true);
     };
-    const onWaiting = () => setPhase((value) => value === "failed" ? value : "buffering");
-    const onPlaying = () => setPhase("ready");
+    const onWaiting = () => {
+      setPhase((value) => value === "failed" ? value : "buffering");
+      const current = serversRef.current.find((item) => item.id === selectedIDRef.current);
+      if (!current) return;
+      if (sourceStartupTimerRef.current) window.clearTimeout(sourceStartupTimerRef.current);
+      sourceStartupTimerRef.current = window.setTimeout(() => {
+        if (selectedIDRef.current === current.id && video.readyState < 3) {
+          failCurrentSource(current, "This source stalled while buffering.");
+        }
+      }, 15000);
+    };
+    const onPlaying = () => {
+      if (sourceStartupTimerRef.current) {
+        window.clearTimeout(sourceStartupTimerRef.current);
+        sourceStartupTimerRef.current = null;
+      }
+      setPhase("ready");
+      setMessage("");
+    };
     const onError = () => {
-      setPhase("failed");
-      setMessage("Playback stopped. Try another source or retry this one.");
-      setControlsVisible(true);
+      const current = serversRef.current.find((item) => item.id === selectedIDRef.current);
+      if (current) {
+        failCurrentSource(current, "Playback stopped on this source.");
+      } else {
+        setPhase("failed");
+        setMessage("Playback stopped and no fallback source is available.");
+        setControlsVisible(true);
+      }
     };
     const onEnded = () => {
       persist(true);
@@ -341,7 +426,7 @@ export const SystemPlayer = ({
       video.removeEventListener("error", onError);
       video.removeEventListener("ended", onEnded);
     };
-  }, [episode, hasNext, id, mediaType, meta, onNextEpisode, scheduleHide, season, stopHideTimer]);
+  }, [episode, failCurrentSource, hasNext, id, mediaType, meta, onNextEpisode, scheduleHide, season, stopHideTimer]);
 
   useEffect(() => {
     const onFullscreen = () => setIsFullscreen(document.fullscreenElement === shellRef.current);
@@ -534,17 +619,19 @@ export const SystemPlayer = ({
                 <div className="synplayer3-source-list">
                   {servers.map((server) => {
                     const active = server.id === selectedID;
+                    const unavailable = failedSourceIDs.includes(server.id);
                     return (
                       <button
                         key={server.id}
                         type="button"
+                        disabled={unavailable}
                         onClick={() => attachServer(server, { preserve: true })}
-                        className={active ? "is-active" : ""}
+                        className={`${active ? "is-active" : ""} ${unavailable ? "opacity-45 cursor-not-allowed" : ""}`}
                       >
                         <span className="synplayer3-source-check">{active ? <Check /> : null}</span>
                         <span className="synplayer3-source-copy">
                           <strong>{server.name || "Source"}</strong>
-                          <small>{server.quality || server.provider || "Automatic"}</small>
+                          <small>{unavailable ? "Unavailable" : (server.quality || server.provider || "Automatic")}</small>
                         </span>
                       </button>
                     );
@@ -576,7 +663,7 @@ export const SystemPlayer = ({
           <p>{message}</p>
           <div>
             <button type="button" onClick={onBack} className="secondary"><X /> Exit</button>
-            <button type="button" onClick={loadSources} className="primary"><RefreshCw /> Retry</button>
+            <button type="button" onClick={() => loadSources({ fresh: true })} className="primary"><RefreshCw /> Retry</button>
           </div>
         </div>
       )}
