@@ -23,7 +23,7 @@ from wasmtime import Engine, Instance, Module, Store
 
 __version__ = "0.2.0"
 
-BASE_URL = "https://cinejoy.to"
+BASE_URL = "https://cinejoy.pk"
 API_BASE = "https://api.shegu.st"
 WASM_URL = f"{API_BASE}/crush.wasm"
 AAD_NAME = b"lumen-gate-v2"
