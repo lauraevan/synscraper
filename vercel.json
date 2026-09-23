@@ -13,62 +13,40 @@
       "maxDuration": 300
     }
   },
-  "rewrites": [
+  "headers": [
     {
-      "source": "/demo",
-      "destination": "/index.html"
+      "source": "/service-worker.js",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }
+      ]
     },
     {
-      "source": "/docs",
-      "destination": "/index.html"
+      "source": "/index.html",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }
+      ]
     },
     {
-      "source": "/synplayer-api",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/privacy",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/terms",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/settings",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/roulette",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/my-list",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/search",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/browse/:path*",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/title/:path*",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/person/:path*",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/watch/:path*",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/embed/:path*",
-      "destination": "/index.html"
+      "source": "/",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }
+      ]
     }
+  ],
+  "rewrites": [
+    { "source": "/demo", "destination": "/index.html" },
+    { "source": "/docs", "destination": "/index.html" },
+    { "source": "/synplayer-api", "destination": "/index.html" },
+    { "source": "/privacy", "destination": "/index.html" },
+    { "source": "/terms", "destination": "/index.html" },
+    { "source": "/settings", "destination": "/index.html" },
+    { "source": "/roulette", "destination": "/index.html" },
+    { "source": "/my-list", "destination": "/index.html" },
+    { "source": "/search", "destination": "/index.html" },
+    { "source": "/browse/:path*", "destination": "/index.html" },
+    { "source": "/title/:path*", "destination": "/index.html" },
+    { "source": "/person/:path*", "destination": "/index.html" },
+    { "source": "/watch/:path*", "destination": "/index.html" },
+    { "source": "/embed/:path*", "destination": "/index.html" }
   ]
 }
