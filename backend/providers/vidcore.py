@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Current VidCore.org resolver for SynScraper.
+"""Current VidCore.io resolver for SynScraper.
 
 Uses VidCore's public primary source API exposed by the current embed player and
 returns its relay-backed HLS renditions in SynScraper's normal resolver shape.
@@ -17,7 +17,7 @@ import requests
 
 __version__ = "0.3.0"
 
-BASE_URL = os.environ.get("VIDCORE_ORIGIN", "https://vidcore.org").rstrip("/")
+BASE_URL = os.environ.get("VIDCORE_ORIGIN", "https://vidcore.io").rstrip("/")
 PRIMARY_API = os.environ.get(
     "VIDCORE_PRIMARY_API",
     "https://vidrack.created.app/api/sources/cineplay",
