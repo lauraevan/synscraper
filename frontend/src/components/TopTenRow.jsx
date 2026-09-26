@@ -12,10 +12,9 @@ export const TopTenRow = ({ items = [] }) => {
     <section className="mx-auto max-w-[1500px] px-5 pb-10 pt-8 md:px-8" data-testid="top-ten-row">
       <div className="mb-5 flex items-end justify-between gap-4">
         <div>
-          <div className="mb-1 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--site-accent,#ffd400)]"><span className="h-px w-5 bg-[var(--site-accent,#ffd400)]" /> Today</div>
           <h2 className="text-[19px] font-semibold tracking-[-0.03em] text-white md:text-[22px]">Top 10 Movies</h2>
         </div>
-        <span className="text-[10px] font-semibold uppercase tracking-[0.15em] text-white/28">Most watched</span>
+        <span className="text-xs font-medium text-white/32">Most watched today</span>
       </div>
 
       <div className="scrollbar-none flex snap-x snap-mandatory gap-4 overflow-x-auto pb-4 pr-6 sm:gap-7">
