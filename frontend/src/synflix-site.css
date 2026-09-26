@@ -194,3 +194,15 @@
     transition-duration: 0.001ms !important;
   }
 }
+
+
+/* Synscraper: rows must never use entrance/slide-in motion. Child hover effects stay intact. */
+.synflix-site [data-testid="home-page"] section[data-testid^="row-"],
+.synflix-site [data-testid="home-page"] [data-testid="top-ten-row"],
+.synflix-web-client section[data-testid^="row-"],
+.synflix-web-client [data-testid="top-ten-row"] {
+  animation: none !important;
+  transform: none !important;
+  opacity: 1 !important;
+  transition: none !important;
+}
