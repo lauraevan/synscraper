@@ -1,7 +1,7 @@
-const SHELL_CACHE = "synflix-shell-v4-rollback-fix";
-const DATA_CACHE = "synflix-data-v4-rollback-fix";
-const ASSET_CACHE = "synflix-assets-v4-rollback-fix";
-const IMAGE_CACHE = "synflix-images-v4-rollback-fix";
+const SHELL_CACHE = "synflix-shell-v3";
+const DATA_CACHE = "synflix-data-v3";
+const ASSET_CACHE = "synflix-assets-v3";
+const IMAGE_CACHE = "synflix-images-v3";
 
 const APP_SHELL = [
   "/?iosApp=1",
@@ -26,14 +26,16 @@ const safePut = async (cacheName, request, response, maxEntries) => {
     const cache = await caches.open(cacheName);
     await cache.put(request, response.clone());
     if (maxEntries) await trimCache(cacheName, maxEntries);
-  } catch {}
+  } catch {
+    // Storage pressure should never break normal playback or browsing.
+  }
 };
 
-const fetchWithTimeout = async (request, timeoutMs, init = {}) => {
+const fetchWithTimeout = async (request, timeoutMs) => {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    return await fetch(request, { ...init, signal: controller.signal });
+    return await fetch(request, { signal: controller.signal });
   } finally {
     clearTimeout(timer);
   }
@@ -47,26 +49,31 @@ const isStreamLike = (request, url) => {
 
 const navigationStrategy = async (request) => {
   try {
-    const response = await fetchWithTimeout(request, 10000, { cache: "no-store" });
-    if (response && response.ok) safePut(SHELL_CACHE, request, response, 18);
+    const response = await fetchWithTimeout(request, 2200);
+    if (response && response.ok) {
+      safePut(SHELL_CACHE, request, response, 18);
+    }
     return response;
   } catch {
     const exact = await caches.match(request);
     if (exact) return exact;
+
     for (const fallback of OFFLINE_FALLBACKS) {
       const cached = await caches.match(fallback);
       if (cached) return cached;
     }
+
     throw new Error("No cached SynFlix shell is available yet.");
   }
 };
 
 const jsonStrategy = async (request) => {
   try {
-    const response = await fetchWithTimeout(request, 4000);
+    const response = await fetchWithTimeout(request, 2600);
     const contentType = response.headers.get("content-type") || "";
     const length = Number(response.headers.get("content-length") || 0);
-    const smallEnough = !length || length < 2500000;
+    const smallEnough = !length || length < 2_500_000;
+
     if (response.ok && contentType.includes("application/json") && smallEnough) {
       safePut(DATA_CACHE, request, response, 90);
     }
@@ -79,28 +86,40 @@ const jsonStrategy = async (request) => {
 };
 
 const assetStrategy = async (request) => {
-  try {
-    const response = await fetch(request, { cache: "no-cache" });
-    if (response.ok || response.type === "opaque") {
-      safePut(ASSET_CACHE, request, response, 120);
-      return response;
-    }
-  } catch {}
   const cached = await caches.match(request);
-  if (cached) return cached;
-  return fetch(request);
+  if (cached) {
+    fetch(request)
+      .then((response) => {
+        if (response.ok || response.type === "opaque") {
+          safePut(ASSET_CACHE, request, response, 90);
+        }
+      })
+      .catch(() => {});
+    return cached;
+  }
+
+  const response = await fetch(request);
+  if (response.ok || response.type === "opaque") {
+    safePut(ASSET_CACHE, request, response, 90);
+  }
+  return response;
 };
 
 const imageStrategy = async (request) => {
   const cached = await caches.match(request);
-  const update = fetch(request).then((response) => {
-    if (response.ok || response.type === "opaque") safePut(IMAGE_CACHE, request, response, 220);
-    return response;
-  });
+  const update = fetch(request)
+    .then((response) => {
+      if (response.ok || response.type === "opaque") {
+        safePut(IMAGE_CACHE, request, response, 220);
+      }
+      return response;
+    });
+
   if (cached) {
     update.catch(() => {});
     return cached;
   }
+
   return update;
 };
 
@@ -129,11 +148,12 @@ self.addEventListener("activate", (event) => {
 
 self.addEventListener("message", (event) => {
   if (event.data?.type !== "WARM_CACHE" || !Array.isArray(event.data.urls)) return;
+
   event.waitUntil(
     Promise.allSettled(
       event.data.urls.slice(0, 12).map(async (url) => {
         const request = new Request(url, { credentials: "same-origin" });
-        const response = await fetch(request, { cache: "no-store" });
+        const response = await fetch(request);
         if (response.ok) await safePut(SHELL_CACHE, request, response, 18);
       })
     )
@@ -143,6 +163,7 @@ self.addEventListener("message", (event) => {
 self.addEventListener("fetch", (event) => {
   const request = event.request;
   if (request.method !== "GET") return;
+
   const url = new URL(request.url);
   if (isStreamLike(request, url)) return;
 
@@ -164,5 +185,7 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  if (request.destination === "image") event.respondWith(imageStrategy(request));
+  if (request.destination === "image") {
+    event.respondWith(imageStrategy(request));
+  }
 });

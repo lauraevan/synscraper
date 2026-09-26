@@ -115,11 +115,6 @@ export const Hero = ({ items = [] }) => {
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.48, ease: [0.22, 1, 0.36, 1] }}
           >
-            <div className="mb-4 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.18em] text-white/48">
-              <span className="h-[2px] w-5 rounded-full bg-[var(--site-accent,#ffd400)]" />
-              Featured on SynFlix
-            </div>
-
             <div className="flex min-h-[92px] items-end md:min-h-[126px]">
               {heroLogo ? (
                 <img

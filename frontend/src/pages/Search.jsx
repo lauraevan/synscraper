@@ -31,7 +31,6 @@ export default function Search() {
     <main className="min-h-screen bg-[#070707] px-5 pb-20 pt-28 md:px-8 md:pt-32" data-testid="search-page">
       <div className="mx-auto max-w-[1500px]">
         <div className="max-w-3xl">
-          <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-white/32">Search</div>
           <h1 className="text-4xl font-semibold tracking-[-0.045em] text-white md:text-5xl">Find your next watch.</h1>
           <form onSubmit={submit} className="mt-7 flex h-14 items-center gap-3 rounded-2xl border border-white/[0.1] bg-white/[0.035] px-4 transition focus-within:border-white/22 focus-within:bg-white/[0.045]">
             <SearchIcon className="h-5 w-5 shrink-0 text-white/35" />
