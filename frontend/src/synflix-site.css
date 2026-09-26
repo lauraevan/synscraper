@@ -96,43 +96,19 @@
 }
 
 .synflix-site .synflix-hero-image {
-  animation: synflix-hero-enter 1100ms cubic-bezier(.16, 1, .3, 1) both,
-             synflix-hero-drift 9s ease-out both;
+  animation: synflix-hero-drift 9s ease-out both;
   transform-origin: 62% 42%;
   backface-visibility: hidden;
 }
 
-.synflix-site .synflix-hero-copy {
-  animation: synflix-copy-rise 760ms cubic-bezier(.16, 1, .3, 1) both;
-}
-
+.synflix-site .synflix-hero-copy,
 .synflix-site .synflix-hero-copy > * {
-  animation: synflix-copy-child 650ms cubic-bezier(.16, 1, .3, 1) both;
-}
-
-.synflix-site .synflix-hero-copy > *:nth-child(2) { animation-delay: 70ms; }
-.synflix-site .synflix-hero-copy > *:nth-child(3) { animation-delay: 120ms; }
-.synflix-site .synflix-hero-copy > *:nth-child(4) { animation-delay: 170ms; }
-.synflix-site .synflix-hero-copy > *:nth-child(5) { animation-delay: 220ms; }
-
-@keyframes synflix-hero-enter {
-  from { opacity: 0; transform: scale(1.055) translate3d(0, 10px, 0); }
-  to { opacity: 1; transform: scale(1.025) translate3d(0, 0, 0); }
+  animation: none;
 }
 
 @keyframes synflix-hero-drift {
   from { transform: scale(1.025) translate3d(0, 0, 0); }
   to { transform: scale(1.075) translate3d(-0.7%, -0.35%, 0); }
-}
-
-@keyframes synflix-copy-rise {
-  from { opacity: 0; transform: translate3d(0, 26px, 0) scale(.985); }
-  to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
-}
-
-@keyframes synflix-copy-child {
-  from { opacity: 0; transform: translate3d(0, 13px, 0); }
-  to { opacity: 1; transform: translate3d(0, 0, 0); }
 }
 
 /* Skip layout/paint work for rows that are well below the viewport. */
@@ -192,79 +168,14 @@
   }
 }
 
-/* Heavy alternating slide-ins for homepage rails. Still transform + opacity only. */
-@supports (animation-timeline: view()) {
-  .synflix-site [data-testid="home-page"] > div > section {
-    animation-duration: 1ms;
-    animation-fill-mode: both;
-    animation-timing-function: linear;
-    animation-timeline: view();
-    animation-range: entry 2% cover 27%;
-  }
-
-  .synflix-site [data-testid="home-page"] > div > section:nth-child(odd) {
-    animation-name: synflix-section-left;
-  }
-
-  .synflix-site [data-testid="home-page"] > div > section:nth-child(even) {
-    animation-name: synflix-section-right;
-  }
-
-  @keyframes synflix-section-left {
-    from { opacity: .05; transform: translate3d(-92px, 22px, 0) scale(.965); }
-    to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
-  }
-
-  @keyframes synflix-section-right {
-    from { opacity: .05; transform: translate3d(92px, 22px, 0) scale(.965); }
-    to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
-  }
-}
-
-/* Route-level and Live TV panel slides. */
-.synflix-site > main:not([data-testid="home-page"]) {
-  animation: synflix-page-slide 640ms cubic-bezier(.16, 1, .3, 1) both;
-  backface-visibility: hidden;
-}
-
-.synflix-live-slide-left {
-  animation: synflix-heavy-left 760ms cubic-bezier(.16, 1, .3, 1) both;
-  backface-visibility: hidden;
-}
-
-.synflix-live-slide-right {
-  animation: synflix-heavy-right 820ms cubic-bezier(.16, 1, .3, 1) both;
-  backface-visibility: hidden;
-}
-
-.synflix-live-slide-left:nth-of-type(3),
-.synflix-live-slide-right:nth-of-type(3) {
-  animation-delay: 90ms;
-}
-
+/* Entrance slide animations intentionally disabled. Keep content immediately in place. */
+.synflix-site [data-testid="home-page"] > div > section,
+.synflix-site > main:not([data-testid="home-page"]),
+.synflix-live-slide-left,
+.synflix-live-slide-right,
 .synflix-modal-slide {
-  animation: synflix-modal-in 430ms cubic-bezier(.16, 1, .3, 1) both;
-  backface-visibility: hidden;
-}
-
-@keyframes synflix-page-slide {
-  from { opacity: 0; transform: translate3d(54px, 0, 0) scale(.985); }
-  to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
-}
-
-@keyframes synflix-heavy-left {
-  from { opacity: 0; transform: translate3d(-110px, 18px, 0) scale(.965); }
-  to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
-}
-
-@keyframes synflix-heavy-right {
-  from { opacity: 0; transform: translate3d(110px, 18px, 0) scale(.965); }
-  to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
-}
-
-@keyframes synflix-modal-in {
-  from { opacity: 0; transform: translate3d(0, 38px, 0) scale(.94); }
-  to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+  animation: none !important;
+  opacity: 1;
 }
 
 /* Live TV keeps its long lists cheap when they sit below the fold. */
