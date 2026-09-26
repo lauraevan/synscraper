@@ -126,12 +126,8 @@
 
 .syn-radar-ring { animation: syn-radar 1.7s ease-out infinite; }
 
-@keyframes syn-fade-up {
-    from { opacity: 0; transform: translateY(12px); }
-    to { opacity: 1; transform: translateY(0); }
-}
 
-.syn-fade-up { animation: syn-fade-up 0.5s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.syn-fade-up { animation: none; }
 
 @keyframes syn-resolve-sweep {
     0% { transform: translateX(-100%); }
@@ -164,18 +160,6 @@
     accent-color: #fff !important;
 }
 
-@keyframes peak-settings-in {
-    from {
-        opacity: 0;
-        transform: translateX(-50%) translateY(10px) scale(0.975);
-        filter: blur(2px);
-    }
-    to {
-        opacity: 1;
-        transform: translateX(-50%) translateY(0) scale(1);
-        filter: blur(0);
-    }
-}
 
 [data-testid="synapse-settings-overlay"] {
     background: transparent !important;
@@ -201,7 +185,7 @@
     -webkit-backdrop-filter: blur(38px) saturate(145%) brightness(0.82) !important;
     backdrop-filter: blur(38px) saturate(145%) brightness(0.82) !important;
     transform: translateX(-50%);
-    animation: peak-settings-in 210ms cubic-bezier(0.16,1,0.3,1) both;
+    animation: none;
     isolation: isolate;
 }
 
