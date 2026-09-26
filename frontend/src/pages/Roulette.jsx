@@ -48,7 +48,7 @@ export default function Roulette() {
         <div className="relative mx-auto grid min-h-[calc(100vh-68px)] max-w-[1500px] items-center gap-12 px-5 py-12 md:px-8 lg:grid-cols-[460px_minmax(0,1fr)]">
           <div className="mx-auto w-full max-w-[420px]">
             <div className="mb-6 text-center lg:text-left">
-              <div className="mb-2 inline-flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-[#ffd400]/70"><Dices className="h-3.5 w-3.5" /> Surprise me</div>
+              <div className="mb-2 inline-flex items-center gap-2 text-xs font-medium text-[#ffd400]/70"><Dices className="h-3.5 w-3.5" /> Surprise me</div>
               <h1 className="text-5xl font-semibold tracking-[-0.055em] text-white md:text-6xl">Film Roulette</h1>
               <p className="mt-3 text-sm leading-6 text-white/38">Can’t choose? Spin and let SynFlix pick a movie for you.</p>
             </div>
@@ -83,7 +83,7 @@ export default function Roulette() {
                   <img src={img(movie.poster_path, "w500")} alt={titleOf(movie)} className="h-full w-full object-cover" />
                 </div>
                 <div className="self-end pb-2">
-                  <div className="mb-3 text-[10px] font-semibold uppercase tracking-[0.2em] text-[#ffd400]/65">Tonight’s pick</div>
+                  <div className="mb-3 text-xs font-medium text-[#ffd400]/65">Tonight’s pick</div>
                   <h2 className="text-4xl font-semibold leading-[0.98] tracking-[-0.05em] text-white md:text-6xl">{titleOf(movie)}</h2>
                   <div className="mt-4 flex flex-wrap items-center gap-2.5 text-sm text-white/44">
                     {Number(movie.vote_average) > 0 && <span className="inline-flex items-center gap-1.5 font-medium text-[#ffd400]"><Star className="h-3.5 w-3.5 fill-current" />{ratingStr(movie.vote_average)}</span>}
