@@ -1,8 +1,8 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "version": 2,
-  "buildCommand": "npm run build",
-  "outputDirectory": "public",
+  "buildCommand": "CI=false GENERATE_SOURCEMAP=false npm run build",
+  "outputDirectory": "frontend/build",
   "functions": {
     "api/index.py": {
       "includeFiles": "backend/**",
