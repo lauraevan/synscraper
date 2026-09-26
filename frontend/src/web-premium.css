@@ -594,11 +594,9 @@ html[data-synflix-web-client="true"] body {
 .synflix-web-episode-copy strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; font-weight: 650; color: rgba(255,255,255,.86); }
 .synflix-web-episode-copy > span { display: block; margin-top: 3px; font-size: 10px; color: rgba(255,255,255,.34); }
 
-/* Keep route and row motion quiet and expensive-looking, not bouncy. */
-@media (prefers-reduced-motion: no-preference) {
-  .synflix-web-client section[data-testid^="row-"] {
-    animation: synflix-web-row-enter 560ms cubic-bezier(.22,1,.36,1) both;
-  }
+/* Entrance slide motion removed. Rows render immediately in place. */
+.synflix-web-client section[data-testid^="row-"] {
+  animation: none;
 }
 
 @media (max-width: 1100px) {
