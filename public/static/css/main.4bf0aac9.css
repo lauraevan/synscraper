@@ -21,3 +21,4 @@
 .synflix-live-slide-left,
 .synflix-live-slide-right,
 .synflix-modal-slide{opacity:1!important}
+.synflix-site [data-testid=home-page]>div>section,.synflix-web-client section[data-testid^=row-],.synflix-site [data-testid=top-ten-row]{animation:none!important;transform:none!important;opacity:1!important}
