@@ -30,7 +30,8 @@ const SeasonPicker = ({ id, seasons, seriesMeta }) => {
     <section className="mx-auto max-w-[1500px] px-5 py-8 md:px-8" data-testid="season-picker">
       <div className="mb-5 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h2 className="text-xl font-semibold tracking-[-0.03em] text-white md:text-2xl">Episodes</h2>
+          <p className="mb-1 text-[10px] font-bold uppercase tracking-[.16em] text-[var(--site-accent,#ffd400)]">Episodes</p>
+          <h2 className="text-xl font-semibold tracking-[-0.03em] text-white md:text-2xl">Choose an episode</h2>
         </div>
         <select data-testid="season-select" value={selectedSeason} onChange={(event) => setSelectedSeason(Number(event.target.value))} className="rounded-lg border border-white/10 bg-white/[0.045] px-3 py-2 text-xs font-semibold text-white outline-none focus:border-white/25">
           {valid.map((season) => <option key={season.id} value={season.season_number} className="bg-[#111]">{season.name}</option>)}
@@ -122,6 +123,7 @@ export default function Title() {
 
         <div className="absolute inset-x-0 bottom-0 z-[2] mx-auto max-w-[1500px] px-5 pb-14 md:px-8 md:pb-16">
           <div className="max-w-[780px]">
+            <p className="mb-3 text-[10px] font-bold uppercase tracking-[.18em] text-[var(--site-accent,#ffd400)]">{mediaType === "tv" ? "Series" : "Feature film"}</p>
             <h1 className="text-balance text-5xl font-semibold leading-[0.94] tracking-[-0.06em] text-white md:text-7xl">{titleOf(data)}</h1>
 
             <div className="mt-5 flex flex-wrap items-center gap-3 text-sm font-medium text-white/55">
@@ -149,7 +151,8 @@ export default function Title() {
 
       {cast.length > 0 && (
         <section className="mx-auto max-w-[1500px] px-5 py-8 md:px-8">
-          <h2 className="text-xl font-semibold tracking-[-0.03em] text-white md:text-2xl">Cast</h2>
+          <p className="mb-1 text-[10px] font-bold uppercase tracking-[.16em] text-[var(--site-accent,#ffd400)]">Cast</p>
+          <h2 className="text-xl font-semibold tracking-[-0.03em] text-white md:text-2xl">People behind the title</h2>
           <div className="scrollbar-none mt-5 flex gap-4 overflow-x-auto pb-2">
             {cast.map((person) => (
               <button key={person.id} type="button" onClick={() => navigate(`/person/${person.id}`)} className="group w-24 shrink-0 text-center" aria-label={`View ${person.name}`}>

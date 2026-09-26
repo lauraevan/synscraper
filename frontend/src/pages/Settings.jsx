@@ -102,7 +102,7 @@ const EngineChoice = ({ value, onChange }) => (
         </div>
         {value === "system" && <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-[#ffd400] text-black"><Check className="h-3.5 w-3.5" /></span>}
       </div>
-      <div className="mt-4 text-[11px] font-medium text-[#ffd400]/70">Recommended</div>
+      <div className="mt-4 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#ffd400]/70">Recommended</div>
     </button>
 
     <button
@@ -117,7 +117,7 @@ const EngineChoice = ({ value, onChange }) => (
         </div>
         {value === "legacy" && <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-white text-black"><Check className="h-3.5 w-3.5" /></span>}
       </div>
-      <div className="mt-4 text-[11px] font-medium text-white/32">Compatibility</div>
+      <div className="mt-4 text-[10px] font-semibold uppercase tracking-[0.12em] text-white/28">Compatibility</div>
     </button>
   </div>
 );

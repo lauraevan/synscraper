@@ -90,6 +90,9 @@ export const CinematicRow = ({ title, subtitle, items = [], reverse = false, tes
     <section className="group/cinematic py-7 md:py-9" data-testid={testId}>
       <div className={`mb-4 flex items-end justify-between gap-4 px-5 md:px-8 ${reverse ? "md:flex-row-reverse md:text-right" : ""}`}>
         <div>
+          <div className={`mb-2 flex items-center gap-2 text-[9px] font-semibold uppercase tracking-[0.2em] text-[var(--site-accent,#ffd400)] ${reverse ? "md:justify-end" : ""}`}>
+            <span className="h-px w-5 bg-[var(--site-accent,#ffd400)]" /> Spotlight
+          </div>
           <h2 className="text-[20px] font-semibold tracking-[-0.03em] text-white md:text-[24px]">{title}</h2>
           {subtitle && <p className="mt-1 text-xs leading-5 text-white/34">{subtitle}</p>}
         </div>
