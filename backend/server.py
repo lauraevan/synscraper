@@ -315,22 +315,22 @@ video{width:100%;height:100%;display:block;background:#000;object-fit:contain}
 #shadeBottom{bottom:0;height:210px;background:linear-gradient(0deg,rgba(0,0,0,.9),rgba(0,0,0,.48) 50%,transparent)}
 .controls-hidden #shadeTop,.controls-hidden #shadeBottom,.controls-hidden #topbar,.controls-hidden #centerControls,.controls-hidden #controls{opacity:0}
 #topbar,#centerControls,#controls{transition:opacity .18s ease}
-#topbar{position:absolute;top:0;left:0;right:0;z-index:7;display:flex;align-items:flex-start;justify-content:space-between;padding:max(18px,env(safe-area-inset-top)) max(22px,env(safe-area-inset-right)) 0 max(22px,env(safe-area-inset-left));pointer-events:none}
+#topbar{position:absolute;top:0;left:0;right:0;z-index:7;display:flex;align-items:flex-start;padding:max(20px,env(safe-area-inset-top)) max(24px,env(safe-area-inset-right)) 0 max(24px,env(safe-area-inset-left));pointer-events:none}
 #identity{display:flex;align-items:flex-start;gap:12px;min-width:0}
 #mark{display:flex;align-items:center;gap:7px;height:30px;flex:0 0 auto;font-size:10px;font-weight:780;letter-spacing:.13em;color:#d8d8d8}
 #mark i{width:5px;height:5px;border-radius:50%;background:var(--accent)}
 #titleWrap{min-width:0}
 #title{font-size:15px;font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:min(58vw,680px)}
 #meta{font-size:10px;color:#8b8b8b;margin-top:3px;letter-spacing:.02em}
-#topActions{display:flex;gap:4px;pointer-events:auto}
-.iconBtn{width:38px;height:38px;border:0;border-radius:9px;background:transparent;color:#ededed;display:grid;place-items:center;cursor:pointer}
-.iconBtn:hover,.iconBtn.active{background:rgba(255,255,255,.09)}
-.iconBtn svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
-#centerControls{position:absolute;left:50%;top:50%;z-index:7;transform:translate(-50%,-50%);display:flex;align-items:center;gap:16px;pointer-events:auto}
-.centerBtn{border:0;color:#fff;background:rgba(10,10,10,.64);border:1px solid rgba(255,255,255,.14);display:grid;place-items:center;cursor:pointer;backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px)}
-.centerBtn.skip{width:52px;height:52px;border-radius:50%;font-size:11px;color:#d6d6d6}
-#centerPlay{width:72px;height:72px;border-radius:50%}
-#centerPlay svg{width:29px;height:29px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+#centerControls{position:absolute;left:50%;top:50%;z-index:7;transform:translate(-50%,-50%);display:flex;align-items:center;gap:22px;pointer-events:auto}
+.centerBtn{position:relative;border:0;color:#fff;background:rgba(0,0,0,.34);display:grid;place-items:center;cursor:pointer;backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px);transition:transform .14s ease,background .14s ease}
+.centerBtn:hover{transform:scale(1.045);background:rgba(0,0,0,.5)}
+.centerBtn.skip{width:48px;height:48px;border-radius:50%}
+.centerBtn.skip svg{width:27px;height:27px}
+.centerBtn.skip::after{content:"10";position:absolute;left:50%;top:50%;transform:translate(-50%,-46%);font-size:8px;font-weight:750;letter-spacing:-.03em}
+#centerPlay{width:68px;height:68px;border-radius:50%;background:#fff;color:#0a0a0a}
+#centerPlay:hover{background:#f2f2f2}
+#centerPlay svg{width:27px;height:27px}
 #controls{position:absolute;z-index:7;left:max(20px,env(safe-area-inset-left));right:max(20px,env(safe-area-inset-right));bottom:max(16px,env(safe-area-inset-bottom));pointer-events:auto}
 #timeline{position:relative;height:22px;display:flex;align-items:center}
 #seek{width:100%;height:22px;margin:0;appearance:none;-webkit-appearance:none;background:transparent;cursor:pointer;--p:0%;--b:0%}
@@ -341,9 +341,9 @@ video{width:100%;height:100%;display:block;background:#000;object-fit:contain}
 #seek::-moz-range-thumb{width:12px;height:12px;border:0;border-radius:50%;background:#fff}
 #controlRow{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-top:5px}
 #leftControls,#rightControls{display:flex;align-items:center;gap:3px}
-.control{height:38px;min-width:38px;border:0;border-radius:8px;background:transparent;color:#eee;display:grid;place-items:center;cursor:pointer;padding:0 9px}
-.control:hover,.control.active{background:rgba(255,255,255,.09)}
-.control svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.control{height:38px;min-width:38px;border:0;border-radius:7px;background:transparent;color:#f0f0f0;display:grid;place-items:center;cursor:pointer;padding:0 8px;transition:opacity .14s ease,background .14s ease}
+.control:hover,.control.active{background:rgba(255,255,255,.08)}
+.control svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
 #volume{width:78px;height:18px;margin:0 6px 0 1px;appearance:none;-webkit-appearance:none;background:transparent;--p:100%}
 #volume::-webkit-slider-runnable-track{height:3px;border-radius:99px;background:linear-gradient(90deg,#fff 0 var(--p),rgba(255,255,255,.22) var(--p) 100%)}
 #volume::-webkit-slider-thumb{appearance:none;-webkit-appearance:none;width:10px;height:10px;border-radius:50%;background:#fff;border:0;margin-top:-3.5px}
@@ -352,7 +352,7 @@ video{width:100%;height:100%;display:block;background:#000;object-fit:contain}
 #volume::-moz-range-thumb{width:10px;height:10px;border:0;border-radius:50%;background:#fff}
 #time{font-size:10px;color:#a7a7a7;font-variant-numeric:tabular-nums;white-space:nowrap;margin-left:4px}
 .textControl{font-size:10px;color:#c4c4c4;padding:0 10px;min-width:auto}
-#sourceBadge{max-width:140px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
 #menu{position:absolute;z-index:9;right:max(20px,env(safe-area-inset-right));bottom:72px;width:min(390px,calc(100vw - 28px));max-height:min(440px,65vh);background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:0 14px 40px rgba(0,0,0,.4);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);pointer-events:auto}
 #menu[hidden]{display:none}
 #menuTabs{display:flex;gap:2px;padding:8px;border-bottom:1px solid var(--line);overflow-x:auto;scrollbar-width:none}
@@ -413,22 +413,18 @@ video{width:100%;height:100%;display:block;background:#000;object-fit:contain}
         <div id="meta">__META__</div>
       </div>
     </div>
-    <div id="topActions">
-      <button class="iconBtn desktopOnly" id="pipTop" aria-label="Picture in picture">
-        <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"></rect><rect x="12" y="11" width="7" height="5" rx="1"></rect></svg>
-      </button>
-      <button class="iconBtn" id="settingsTop" aria-label="Player settings">
-        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M19 12a7 7 0 0 0-.08-1l2-1.5-2-3.4-2.35.95A7 7 0 0 0 14.8 6L14.5 3h-5L9.2 6a7 7 0 0 0-1.77 1.05L5.08 6.1l-2 3.4L5.08 11a7 7 0 0 0 0 2l-2 1.5 2 3.4 2.35-.95A7 7 0 0 0 9.2 18l.3 3h5l.3-3a7 7 0 0 0 1.77-1.05l2.35.95 2-3.4-2-1.5c.05-.33.08-.66.08-1z"></path></svg>
-      </button>
-    </div>
   </div>
 
   <div id="centerControls">
-    <button class="centerBtn skip" id="back10Center" aria-label="Back 10 seconds">−10</button>
-    <button class="centerBtn" id="centerPlay" aria-label="Play or pause">
-      <svg viewBox="0 0 24 24"><path class="playPath" d="M9 7.5 16 12l-7 4.5z"></path></svg>
+    <button class="centerBtn skip" id="back10Center" aria-label="Back 10 seconds">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.2 6.2H4.5V2.5"></path><path d="M4.7 6.1A8.2 8.2 0 1 1 3.6 15"></path></svg>
     </button>
-    <button class="centerBtn skip" id="forward10Center" aria-label="Forward 10 seconds">+10</button>
+    <button class="centerBtn" id="centerPlay" aria-label="Play or pause">
+      <span class="playGlyph"></span>
+    </button>
+    <button class="centerBtn skip" id="forward10Center" aria-label="Forward 10 seconds">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.8 6.2h3.7V2.5"></path><path d="M19.3 6.1A8.2 8.2 0 1 0 20.4 15"></path></svg>
+    </button>
   </div>
 
   <div id="controls">
@@ -437,33 +433,27 @@ video{width:100%;height:100%;display:block;background:#000;object-fit:contain}
     </div>
     <div id="controlRow">
       <div id="leftControls">
-        <button class="control" id="playPause" aria-label="Play or pause">
-          <svg viewBox="0 0 24 24"><path class="playPath" d="M9 7.5 16 12l-7 4.5z"></path></svg>
-        </button>
+        <button class="control" id="playPause" aria-label="Play or pause"><span class="playGlyph"></span></button>
         <button class="control desktopOnlyControl" id="back10" aria-label="Back 10 seconds">
-          <svg viewBox="0 0 24 24"><path d="M8 7H4v-4"></path><path d="M4 7a8 8 0 1 1-1 7"></path><text x="9" y="15" fill="currentColor" stroke="none" font-size="7">10</text></svg>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.2 6.2H4.5V2.5"></path><path d="M4.7 6.1A8.2 8.2 0 1 1 3.6 15"></path></svg>
         </button>
         <button class="control desktopOnlyControl" id="forward10" aria-label="Forward 10 seconds">
-          <svg viewBox="0 0 24 24"><path d="M16 7h4v-4"></path><path d="M20 7a8 8 0 1 0 1 7"></path><text x="8" y="15" fill="currentColor" stroke="none" font-size="7">10</text></svg>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.8 6.2h3.7V2.5"></path><path d="M19.3 6.1A8.2 8.2 0 1 0 20.4 15"></path></svg>
         </button>
-        <button class="control" id="mute" aria-label="Mute">
-          <svg viewBox="0 0 24 24"><path d="M5 10h3l4-3v10l-4-3H5z"></path><path id="volumeWave" d="M15 9.5a4 4 0 0 1 0 5"></path></svg>
-        </button>
+        <button class="control" id="mute" aria-label="Mute"><span id="volumeGlyph"></span></button>
         <input id="volume" type="range" min="0" max="1" step="0.01" value="1" aria-label="Volume">
         <div id="time">0:00 / 0:00</div>
       </div>
       <div id="rightControls">
         <button class="control textControl hideTiny" id="captionBtn" aria-label="Captions">CC</button>
-        <button class="control textControl hideTiny" id="speedBtn" aria-label="Playback speed">1×</button>
-        <button class="control textControl desktopOnlyControl" id="sourceBadge" aria-label="Sources">Source</button>
         <button class="control" id="pipBtn" aria-label="Picture in picture">
-          <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"></rect><rect x="12" y="11" width="7" height="5" rx="1"></rect></svg>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="14" rx="2"></rect><rect x="12.5" y="11.5" width="6" height="4.5" rx="1"></rect></svg>
         </button>
-        <button class="control" id="settingsBtn" aria-label="Settings">
-          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M19 12a7 7 0 0 0-.08-1l2-1.5-2-3.4-2.35.95A7 7 0 0 0 14.8 6L14.5 3h-5L9.2 6a7 7 0 0 0-1.77 1.05L5.08 6.1l-2 3.4L5.08 11a7 7 0 0 0 0 2l-2 1.5 2 3.4 2.35-.95A7 7 0 0 0 9.2 18l.3 3h5l.3-3a7 7 0 0 0 1.77-1.05l2.35.95 2-3.4-2-1.5c.05-.33.08-.66.08-1z"></path></svg>
+        <button class="control" id="settingsBtn" aria-label="Playback settings">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h10"></path><path d="M18 7h2"></path><circle cx="16" cy="7" r="2"></circle><path d="M4 17h2"></path><path d="M10 17h10"></path><circle cx="8" cy="17" r="2"></circle></svg>
         </button>
         <button class="control" id="fullscreen" aria-label="Fullscreen">
-          <svg viewBox="0 0 24 24"><path d="M8 4H4v4M16 4h4v4M8 20H4v-4M16 20h4v-4"></path></svg>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 4H4v4"></path><path d="M16 4h4v4"></path><path d="M8 20H4v-4"></path><path d="M16 20h4v-4"></path></svg>
         </button>
       </div>
     </div>
@@ -495,9 +485,9 @@ video{width:100%;height:100%;display:block;background:#000;object-fit:contain}
   const $ = (id) => document.getElementById(id);
   const stage=$('stage'), video=$('video'), status=$('status'), buffering=$('buffering');
   const seek=$('seek'), volume=$('volume'), time=$('time'), menu=$('menu'), menuBody=$('menuBody');
-  const playPause=$('playPause'), centerPlay=$('centerPlay'), mute=$('mute'), volumeWave=$('volumeWave');
-  const fullscreen=$('fullscreen'), pipBtn=$('pipBtn'), pipTop=$('pipTop');
-  const settingsBtn=$('settingsBtn'), settingsTop=$('settingsTop'), captionBtn=$('captionBtn'), speedBtn=$('speedBtn'), sourceBadge=$('sourceBadge');
+  const playPause=$('playPause'), centerPlay=$('centerPlay'), mute=$('mute');
+  const fullscreen=$('fullscreen'), pipBtn=$('pipBtn');
+  const settingsBtn=$('settingsBtn'), captionBtn=$('captionBtn');
   let hls=null, servers=[], activeServerIndex=-1, activeServer=null, hideTimer=null, toastTimer=null;
   let seeking=false, menuTab='quality', switching=false;
 
@@ -522,9 +512,16 @@ video{width:100%;height:100%;display:block;background:#000;object-fit:contain}
     el.style.setProperty('--p',Math.max(0,Math.min(100,played*100))+'%');
     if(buffered!==null)el.style.setProperty('--b',Math.max(0,Math.min(100,buffered*100))+'%');
   };
-  const setPlayIcon=(playing)=>{
-    document.querySelectorAll('.playPath').forEach((p)=>p.setAttribute('d',playing?'M8.5 7v10M15.5 7v10':'M9 7.5 16 12l-7 4.5z'));
+  const iconSvg=(name)=>{
+    const icons={
+      play:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.2v13.6L19 12z" fill="currentColor" stroke="none"></path></svg>',
+      pause:'<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="5" width="3.5" height="14" rx="1" fill="currentColor" stroke="none"></rect><rect x="13.5" y="5" width="3.5" height="14" rx="1" fill="currentColor" stroke="none"></rect></svg>',
+      volume:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 9.5h3L12 6v12l-4-3.5H5z"></path><path d="M15.5 9a4.2 4.2 0 0 1 0 6"></path><path d="M18 6.5a7.5 7.5 0 0 1 0 11"></path></svg>',
+      muted:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 9.5h3L12 6v12l-4-3.5H5z"></path><path d="m16 10 4 4"></path><path d="m20 10-4 4"></path></svg>'
+    };
+    return icons[name]||'';
   };
+  const setPlayIcon=(playing)=>document.querySelectorAll('.playGlyph').forEach((el)=>el.innerHTML=iconSvg(playing?'pause':'play'));
   const showControls=()=>{
     stage.classList.remove('controls-hidden');clearTimeout(hideTimer);
     if(!video.paused&&!video.ended&&!menu.hidden) return;
@@ -549,7 +546,7 @@ video{width:100%;height:100%;display:block;background:#000;object-fit:contain}
   };
   const updateVolume=()=>{
     const v=video.muted?0:video.volume;volume.value=String(v);setRange(volume,v);
-    volumeWave.style.opacity=v===0?'0':'1';
+    $('volumeGlyph').innerHTML=iconSvg(v===0?'muted':'volume');
   };
   const clearTracks=()=>{
     Array.from(video.querySelectorAll('track')).forEach((t)=>t.remove());
@@ -638,7 +635,6 @@ video{width:100%;height:100%;display:block;background:#000;object-fit:contain}
     try{
       await attachServer(server);
       activeServerIndex=index;activeServer=server;applyCaptions(server);
-      sourceBadge.textContent=serverLabel(server,index);
       if(resumeAt>0&&Number.isFinite(video.duration))video.currentTime=Math.min(resumeAt,Math.max(0,video.duration-1));
       clearStatus();renderMenu(menuTab);
       if(shouldPlay)video.play().catch(()=>{});
@@ -662,7 +658,7 @@ video{width:100%;height:100%;display:block;background:#000;object-fit:contain}
     const tracks=Array.from(video.textTracks||[]);
     return [{label:'Off',detail:'',active:activeCaptionIndex()<0,click:()=>setCaption(-1)}].concat(tracks.map((t,i)=>({label:t.label||('Subtitle '+(i+1)),detail:t.language||'',active:t.mode==='showing',click:()=>setCaption(i)})));
   };
-  const renderSpeed=()=>[.5,.75,1,1.25,1.5,1.75,2].map((v)=>({label:v+'×',detail:v===1?'Normal':'',active:Math.abs(video.playbackRate-v)<.01,click:()=>{video.playbackRate=v;speedBtn.textContent=v+'×';renderMenu('speed')}}));
+  const renderSpeed=()=>[.5,.75,1,1.25,1.5,1.75,2].map((v)=>({label:v+'×',detail:v===1?'Normal':'',active:Math.abs(video.playbackRate-v)<.01,click:()=>{video.playbackRate=v;renderMenu('speed')}}));
   const renderSources=()=>servers.map((s,i)=>({label:serverLabel(s,i),detail:[s.provider,s.quality].filter(Boolean).join(' · '),active:i===activeServerIndex,click:()=>switchServer(i,false)}));
   const renderMenu=(tab=menuTab)=>{
     menuTab=tab;
@@ -706,9 +702,9 @@ video{width:100%;height:100%;display:block;background:#000;object-fit:contain}
   volume.oninput=()=>{video.muted=false;video.volume=Number(volume.value);updateVolume()};
   seek.oninput=()=>{seeking=true;setRange(seek,Number(seek.value)/1000);if(Number.isFinite(video.duration))time.textContent=fmt((Number(seek.value)/1000)*video.duration)+' / '+fmt(video.duration)};
   seek.onchange=()=>{if(Number.isFinite(video.duration))video.currentTime=(Number(seek.value)/1000)*video.duration;seeking=false;updateTimeline()};
-  fullscreen.onclick=doFullscreen;pipBtn.onclick=doPip;pipTop.onclick=doPip;
-  settingsBtn.onclick=()=>toggleMenu(menuTab);settingsTop.onclick=()=>toggleMenu(menuTab);
-  captionBtn.onclick=()=>toggleMenu('captions');speedBtn.onclick=()=>toggleMenu('speed');sourceBadge.onclick=()=>toggleMenu('source');
+  fullscreen.onclick=doFullscreen;pipBtn.onclick=doPip;
+  settingsBtn.onclick=()=>toggleMenu(menuTab);
+  captionBtn.onclick=()=>toggleMenu('captions');
   document.querySelectorAll('.tab').forEach((b)=>b.onclick=()=>renderMenu(b.dataset.tab));
   stage.addEventListener('pointermove',showControls);
   stage.addEventListener('pointerdown',(e)=>{if(!menu.contains(e.target)&&!settingsBtn.contains(e.target)&&!settingsTop.contains(e.target))menu.hidden=true;showControls()});
@@ -735,7 +731,7 @@ video{width:100%;height:100%;display:block;background:#000;object-fit:contain}
     else if(key==='c')toggleMenu('captions');
     showControls();
   });
-  if(!document.pictureInPictureEnabled&&!video.webkitSetPresentationMode){pipBtn.style.display='none';pipTop.style.display='none'}
+  if(!document.pictureInPictureEnabled&&!video.webkitSetPresentationMode){pipBtn.style.display='none'}
   updateVolume();updateTimeline();setPlayIcon(false);showControls();
 
   (async()=>{
