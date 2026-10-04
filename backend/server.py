@@ -20,6 +20,9 @@ TMDB_TOKEN = os.environ.get("TMDB_TOKEN", "").strip()
 TMDB_API_KEY = os.environ.get("TMDB_API_KEY", "68e094699525b18a70bab2f86b1fa706").strip()
 TMDB_BASE = "https://api.themoviedb.org/3"
 UA = scraper.USER_AGENT
+PUBLIC_API_PREFIX = (os.environ.get("PUBLIC_API_PREFIX", "/api").strip() or "/api").rstrip("/")
+if not PUBLIC_API_PREFIX.startswith("/"):
+    PUBLIC_API_PREFIX = "/" + PUBLIC_API_PREFIX
 
 app = FastAPI(title="SynScraper API")
 api_router = APIRouter(prefix="/api")
@@ -136,7 +139,7 @@ async def discover(media_type: str, request: Request):
 
 # ----------------------- Stream scraping -----------------------
 def _play_url(url, ref, origin):
-    q = f"/api/hls?url={quote(url, safe='')}"
+    q = f"{PUBLIC_API_PREFIX}/hls?url={quote(url, safe='')}"
     if ref:
         q += f"&ref={quote(ref, safe='')}"
     if origin:
@@ -145,7 +148,7 @@ def _play_url(url, ref, origin):
 
 
 def _caption_url(url, ref, origin):
-    q = f"/api/caption?url={quote(url, safe='')}"
+    q = f"{PUBLIC_API_PREFIX}/caption?url={quote(url, safe='')}"
     if ref:
         q += f"&ref={quote(ref, safe='')}"
     if origin:
@@ -259,6 +262,8 @@ async def hls(url: str = Query(...), ref: str | None = None,
             upstream = None
             text = raw.decode("utf-8", errors="replace")
             body = scraper.rewrite_m3u8(text, url, ref or "", origin or "")
+            if PUBLIC_API_PREFIX != "/api":
+                body = body.replace("/api/hls?", f"{PUBLIC_API_PREFIX}/hls?")
             return Response(
                 body,
                 media_type="application/vnd.apple.mpegurl",
