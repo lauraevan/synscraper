@@ -20,6 +20,7 @@ TMDB_TOKEN = os.environ.get("TMDB_TOKEN", "").strip()
 TMDB_API_KEY = os.environ.get("TMDB_API_KEY", "68e094699525b18a70bab2f86b1fa706").strip()
 TMDB_BASE = "https://api.themoviedb.org/3"
 UA = scraper.USER_AGENT
+SYNSCRAPER_FALLBACK_ORIGIN = os.environ.get("SYNSCRAPER_FALLBACK_ORIGIN", "https://synscraper-tffk.vercel.app").strip().rstrip("/")
 PUBLIC_API_PREFIX = (os.environ.get("PUBLIC_API_PREFIX", "/api").strip() or "/api").rstrip("/")
 if not PUBLIC_API_PREFIX.startswith("/"):
     PUBLIC_API_PREFIX = "/" + PUBLIC_API_PREFIX
@@ -147,6 +148,23 @@ def _play_url(url, ref, origin):
     return q
 
 
+def _localize_fallback_proxy_url(value: str, endpoint: str) -> str:
+    from urllib.parse import urlsplit
+
+    raw = str(value or "").strip()
+    if not raw:
+        return raw
+    try:
+        parsed = urlsplit(raw)
+        path = parsed.path if parsed.scheme else raw.split("?", 1)[0]
+        query = parsed.query if parsed.scheme else (raw.split("?", 1)[1] if "?" in raw else "")
+        if path.endswith(f"/{endpoint}") and query:
+            return f"{PUBLIC_API_PREFIX}/{endpoint}?{query}"
+    except Exception:
+        pass
+    return raw
+
+
 def _caption_url(url, ref, origin):
     q = f"{PUBLIC_API_PREFIX}/caption?url={quote(url, safe='')}"
     if ref:
@@ -187,6 +205,64 @@ async def streams(type: str = "movie", id: str = Query(...),
             "play_url": _play_url(s["url"], s["referer"], s["origin"]),
             "captions": captions,
         })
+    fallback_used = False
+    if not out and SYNSCRAPER_FALLBACK_ORIGIN:
+        try:
+            params = {
+                "type": type,
+                "id": id,
+                "season": season,
+                "episode": episode,
+                "provider": provider,
+                "mirror": mirror,
+                "exclude": exclude,
+                "title": title,
+                "year": year,
+                "imdb_id": imdb_id,
+            }
+            params = {k: v for k, v in params.items() if v is not None and v != ""}
+            fallback_response = await _http().get(
+                f"{SYNSCRAPER_FALLBACK_ORIGIN}/api/streams",
+                params=params,
+                timeout=60.0,
+            )
+            if fallback_response.status_code < 400:
+                payload = fallback_response.json()
+                fallback_servers = payload.get("servers", []) if isinstance(payload, dict) else []
+                for item in fallback_servers:
+                    if not isinstance(item, dict):
+                        continue
+                    server = dict(item)
+                    server["play_url"] = _localize_fallback_proxy_url(server.get("play_url", ""), "hls")
+                    captions = []
+                    for caption_item in server.get("captions", []) or []:
+                        if not isinstance(caption_item, dict):
+                            continue
+                        caption_copy = dict(caption_item)
+                        caption_copy["play_url"] = _localize_fallback_proxy_url(caption_copy.get("play_url", ""), "caption")
+                        captions.append(caption_copy)
+                    server["captions"] = captions
+                    if server.get("play_url"):
+                        out.append(server)
+                fallback_used = bool(out)
+            else:
+                logger.warning(
+                    "fallback streams returned HTTP %s for %s:%s",
+                    fallback_response.status_code,
+                    type,
+                    id,
+                )
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("fallback streams failed for %s:%s: %s", type, id, exc)
+
+    logger.info(
+        "streams resolved type=%s id=%s count=%d fallback=%s providers=%s",
+        type,
+        id,
+        len(out),
+        fallback_used,
+        ",".join(sorted({str(item.get("provider") or "unknown") for item in out})) if out else "none",
+    )
     return {"type": type, "id": id, "season": season, "episode": episode,
             "count": len(out), "servers": out}
 
