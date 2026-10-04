@@ -27,6 +27,16 @@ if not PUBLIC_API_PREFIX.startswith("/"):
 
 app = FastAPI(title="SynScraper API")
 api_router = APIRouter(prefix="/api")
+
+@app.middleware("http")
+async def public_api_prefix_alias(request: Request, call_next):
+    if PUBLIC_API_PREFIX != "/api":
+        path = request.scope.get("path", "")
+        if path == PUBLIC_API_PREFIX or path.startswith(PUBLIC_API_PREFIX + "/"):
+            suffix = path[len(PUBLIC_API_PREFIX):]
+            request.scope["path"] = "/api" + suffix
+            request.scope["raw_path"] = request.scope["path"].encode("utf-8")
+    return await call_next(request)
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger("synscraper")
 
