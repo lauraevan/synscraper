@@ -301,6 +301,7 @@ async def player(type: str = "movie", id: str = Query(...),
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="color-scheme" content="dark">
 <title>__DOC_TITLE__</title>
+<script src="https://cdn.jsdelivr.net/npm/lucide@0.468.0/dist/umd/lucide.min.js"></script>
 <style>
 :root{--accent:#f07a22;--panel:rgba(12,12,12,.94);--line:rgba(255,255,255,.12);--muted:#8d8d8d}
 html,body{margin:0;width:100%;height:100%;background:#000;color:#fff;font:14px system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;overflow:hidden}
@@ -326,8 +327,8 @@ video{width:100%;height:100%;display:block;background:#000;object-fit:contain}
 .centerBtn{position:relative;border:0;color:#fff;background:rgba(0,0,0,.34);display:grid;place-items:center;cursor:pointer;backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px);transition:transform .14s ease,background .14s ease}
 .centerBtn:hover{transform:scale(1.045);background:rgba(0,0,0,.5)}
 .centerBtn.skip{width:48px;height:48px;border-radius:50%}
-.centerBtn.skip svg{width:27px;height:27px}
-.centerBtn.skip::after{content:"10";position:absolute;left:50%;top:50%;transform:translate(-50%,-46%);font-size:8px;font-weight:750;letter-spacing:-.03em}
+.centerBtn.skip svg{width:26px;height:26px;display:block}
+.centerBtn.skip .ten{position:absolute;left:50%;top:50%;transform:translate(-50%,-44%);font-size:7px;font-weight:800;letter-spacing:-.04em;pointer-events:none}
 #centerPlay{width:68px;height:68px;border-radius:50%;background:#fff;color:#0a0a0a}
 #centerPlay:hover{background:#f2f2f2}
 #centerPlay svg{width:27px;height:27px}
@@ -343,7 +344,7 @@ video{width:100%;height:100%;display:block;background:#000;object-fit:contain}
 #leftControls,#rightControls{display:flex;align-items:center;gap:3px}
 .control{height:38px;min-width:38px;border:0;border-radius:7px;background:transparent;color:#f0f0f0;display:grid;place-items:center;cursor:pointer;padding:0 8px;transition:opacity .14s ease,background .14s ease}
 .control:hover,.control.active{background:rgba(255,255,255,.08)}
-.control svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+.control svg{width:21px;height:21px;display:block;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 #volume{width:78px;height:18px;margin:0 6px 0 1px;appearance:none;-webkit-appearance:none;background:transparent;--p:100%}
 #volume::-webkit-slider-runnable-track{height:3px;border-radius:99px;background:linear-gradient(90deg,#fff 0 var(--p),rgba(255,255,255,.22) var(--p) 100%)}
 #volume::-webkit-slider-thumb{appearance:none;-webkit-appearance:none;width:10px;height:10px;border-radius:50%;background:#fff;border:0;margin-top:-3.5px}
@@ -416,15 +417,9 @@ video{width:100%;height:100%;display:block;background:#000;object-fit:contain}
   </div>
 
   <div id="centerControls">
-    <button class="centerBtn skip" id="back10Center" aria-label="Back 10 seconds">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.2 6.2H4.5V2.5"></path><path d="M4.7 6.1A8.2 8.2 0 1 1 3.6 15"></path></svg>
-    </button>
-    <button class="centerBtn" id="centerPlay" aria-label="Play or pause">
-      <span class="playGlyph"></span>
-    </button>
-    <button class="centerBtn skip" id="forward10Center" aria-label="Forward 10 seconds">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.8 6.2h3.7V2.5"></path><path d="M19.3 6.1A8.2 8.2 0 1 0 20.4 15"></path></svg>
-    </button>
+    <button class="centerBtn skip" id="back10Center" aria-label="Back 10 seconds"><i data-lucide="rotate-ccw"></i><span class="ten">10</span></button>
+    <button class="centerBtn" id="centerPlay" aria-label="Play or pause"><span class="playGlyph"></span></button>
+    <button class="centerBtn skip" id="forward10Center" aria-label="Forward 10 seconds"><i data-lucide="rotate-cw"></i><span class="ten">10</span></button>
   </div>
 
   <div id="controls">
@@ -434,27 +429,17 @@ video{width:100%;height:100%;display:block;background:#000;object-fit:contain}
     <div id="controlRow">
       <div id="leftControls">
         <button class="control" id="playPause" aria-label="Play or pause"><span class="playGlyph"></span></button>
-        <button class="control desktopOnlyControl" id="back10" aria-label="Back 10 seconds">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.2 6.2H4.5V2.5"></path><path d="M4.7 6.1A8.2 8.2 0 1 1 3.6 15"></path></svg>
-        </button>
-        <button class="control desktopOnlyControl" id="forward10" aria-label="Forward 10 seconds">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.8 6.2h3.7V2.5"></path><path d="M19.3 6.1A8.2 8.2 0 1 0 20.4 15"></path></svg>
-        </button>
+        <button class="control desktopOnlyControl" id="back10" aria-label="Back 10 seconds"><i data-lucide="rotate-ccw"></i></button>
+        <button class="control desktopOnlyControl" id="forward10" aria-label="Forward 10 seconds"><i data-lucide="rotate-cw"></i></button>
         <button class="control" id="mute" aria-label="Mute"><span id="volumeGlyph"></span></button>
         <input id="volume" type="range" min="0" max="1" step="0.01" value="1" aria-label="Volume">
         <div id="time">0:00 / 0:00</div>
       </div>
       <div id="rightControls">
-        <button class="control textControl hideTiny" id="captionBtn" aria-label="Captions">CC</button>
-        <button class="control" id="pipBtn" aria-label="Picture in picture">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="14" rx="2"></rect><rect x="12.5" y="11.5" width="6" height="4.5" rx="1"></rect></svg>
-        </button>
-        <button class="control" id="settingsBtn" aria-label="Playback settings">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h10"></path><path d="M18 7h2"></path><circle cx="16" cy="7" r="2"></circle><path d="M4 17h2"></path><path d="M10 17h10"></path><circle cx="8" cy="17" r="2"></circle></svg>
-        </button>
-        <button class="control" id="fullscreen" aria-label="Fullscreen">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 4H4v4"></path><path d="M16 4h4v4"></path><path d="M8 20H4v-4"></path><path d="M16 20h4v-4"></path></svg>
-        </button>
+        <button class="control hideTiny" id="captionBtn" aria-label="Captions"><i data-lucide="captions"></i></button>
+        <button class="control" id="pipBtn" aria-label="Picture in picture"><i data-lucide="picture-in-picture-2"></i></button>
+        <button class="control" id="settingsBtn" aria-label="Playback settings"><i data-lucide="sliders-horizontal"></i></button>
+        <button class="control" id="fullscreen" aria-label="Fullscreen"><i data-lucide="maximize"></i></button>
       </div>
     </div>
   </div>
@@ -512,16 +497,17 @@ video{width:100%;height:100%;display:block;background:#000;object-fit:contain}
     el.style.setProperty('--p',Math.max(0,Math.min(100,played*100))+'%');
     if(buffered!==null)el.style.setProperty('--b',Math.max(0,Math.min(100,buffered*100))+'%');
   };
-  const iconSvg=(name)=>{
-    const icons={
-      play:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.2v13.6L19 12z" fill="currentColor" stroke="none"></path></svg>',
-      pause:'<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="5" width="3.5" height="14" rx="1" fill="currentColor" stroke="none"></rect><rect x="13.5" y="5" width="3.5" height="14" rx="1" fill="currentColor" stroke="none"></rect></svg>',
-      volume:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 9.5h3L12 6v12l-4-3.5H5z"></path><path d="M15.5 9a4.2 4.2 0 0 1 0 6"></path><path d="M18 6.5a7.5 7.5 0 0 1 0 11"></path></svg>',
-      muted:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 9.5h3L12 6v12l-4-3.5H5z"></path><path d="m16 10 4 4"></path><path d="m20 10-4 4"></path></svg>'
-    };
-    return icons[name]||'';
+  const renderLucide=()=>{
+    try{window.lucide?.createIcons({attrs:{'stroke-width':'1.8'}})}catch(_){}
   };
-  const setPlayIcon=(playing)=>document.querySelectorAll('.playGlyph').forEach((el)=>el.innerHTML=iconSvg(playing?'pause':'play'));
+  const setPlayIcon=(playing)=>{
+    document.querySelectorAll('.playGlyph').forEach((el)=>{el.innerHTML='<i data-lucide="'+(playing?'pause':'play')+'"></i>'});
+    renderLucide();
+  };
+  const setVolumeIcon=(muted)=>{
+    $('volumeGlyph').innerHTML='<i data-lucide="'+(muted?'volume-x':'volume-2')+'"></i>';
+    renderLucide();
+  };
   const showControls=()=>{
     stage.classList.remove('controls-hidden');clearTimeout(hideTimer);
     if(!video.paused&&!video.ended&&!menu.hidden) return;
@@ -546,7 +532,7 @@ video{width:100%;height:100%;display:block;background:#000;object-fit:contain}
   };
   const updateVolume=()=>{
     const v=video.muted?0:video.volume;volume.value=String(v);setRange(volume,v);
-    $('volumeGlyph').innerHTML=iconSvg(v===0?'muted':'volume');
+    setVolumeIcon(v===0);
   };
   const clearTracks=()=>{
     Array.from(video.querySelectorAll('track')).forEach((t)=>t.remove());
@@ -732,7 +718,7 @@ video{width:100%;height:100%;display:block;background:#000;object-fit:contain}
     showControls();
   });
   if(!document.pictureInPictureEnabled&&!video.webkitSetPresentationMode){pipBtn.style.display='none'}
-  updateVolume();updateTimeline();setPlayIcon(false);showControls();
+  renderLucide();updateVolume();updateTimeline();setPlayIcon(false);showControls();
 
   (async()=>{
     try{
