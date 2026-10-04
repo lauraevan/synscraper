@@ -8,7 +8,7 @@ from urllib.parse import quote
 import httpx
 from dotenv import load_dotenv
 from fastapi import APIRouter, FastAPI, HTTPException, Query, Request, Response
-from fastapi.responses import StreamingResponse
+from fastapi.responses import HTMLResponse, StreamingResponse
 from starlette.middleware.cors import CORSMiddleware
 
 import scraper
@@ -265,6 +265,199 @@ async def streams(type: str = "movie", id: str = Query(...),
     )
     return {"type": type, "id": id, "season": season, "episode": episode,
             "count": len(out), "servers": out}
+
+
+
+@api_router.get("/player", response_class=HTMLResponse)
+async def player(type: str = "movie", id: str = Query(...),
+                 season: int | None = None, episode: int | None = None):
+    media_type = "tv" if type == "tv" else "movie"
+    safe_id = "".join(ch for ch in str(id) if ch.isdigit()) or str(id)
+    safe_season = max(1, int(season or 1))
+    safe_episode = max(1, int(episode or 1))
+    html = f"""<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<title>Arc Player</title>
+<style>
+html,body{{margin:0;width:100%;height:100%;background:#000;color:#fff;font:14px system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;overflow:hidden}}
+*{{box-sizing:border-box}}
+#stage{{position:fixed;inset:0;background:#000;display:grid;place-items:center}}
+video{{width:100%;height:100%;background:#000;object-fit:contain}}
+#status{{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px;text-align:center;padding:24px;background:#050505;color:#8a8a8a}}
+#status b{{color:#eee;font-size:16px}}
+#status small{{max-width:520px;line-height:1.5;color:#666}}
+#status[hidden]{{display:none}}
+</style>
+</head>
+<body>
+<div id="stage">
+  <video id="video" controls autoplay playsinline webkit-playsinline></video>
+  <div id="status"><b>Finding a stream</b><small>Connecting to Arc media…</small></div>
+</div>
+<script>
+(() => {{
+  const API = location.pathname.startsWith('/media/v1/') ? '/media/v1' : '/api';
+  const TYPE = {media_type!r};
+  const ID = {safe_id!r};
+  const SEASON = {safe_season};
+  const EPISODE = {safe_episode};
+  const video = document.getElementById('video');
+  const status = document.getElementById('status');
+  let hls = null;
+
+  const setStatus = (title, detail='') => {{
+    status.hidden = false;
+    status.innerHTML = '<b></b><small></small>';
+    status.querySelector('b').textContent = title;
+    status.querySelector('small').textContent = detail;
+  }};
+  const clearStatus = () => {{ status.hidden = true; }};
+  const absolute = (url) => {{
+    if (!url) return '';
+    if (/^https?:\/\//i.test(url)) return url;
+    return url.startsWith('/') ? url : '/' + url;
+  }};
+  const destroy = () => {{
+    try {{ if (hls) hls.destroy(); }} catch (_) {{}}
+    hls = null;
+    try {{ video.pause(); }} catch (_) {{}}
+    video.removeAttribute('src');
+    try {{ video.load(); }} catch (_) {{}}
+  }};
+  const waitNative = (timeout=13000) => new Promise((resolve,reject) => {{
+    let done=false;
+    const finish=(err) => {{
+      if(done) return;
+      done=true;
+      clearTimeout(timer);
+      video.removeEventListener('loadedmetadata',ok);
+      video.removeEventListener('canplay',ok);
+      video.removeEventListener('error',bad);
+      err ? reject(err) : resolve();
+    }};
+    const ok=()=>finish();
+    const bad=()=>finish(new Error('Video source failed'));
+    const timer=setTimeout(()=>finish(new Error('Video source timed out')),timeout);
+    video.addEventListener('loadedmetadata',ok);
+    video.addEventListener('canplay',ok);
+    video.addEventListener('error',bad);
+  }});
+  const loadHlsLib = () => new Promise((resolve,reject) => {{
+    if (window.Hls) return resolve(window.Hls);
+    const urls = [
+      'https://cdn.jsdelivr.net/npm/hls.js@1/dist/hls.min.js',
+      'https://unpkg.com/hls.js@1/dist/hls.min.js'
+    ];
+    let index=0;
+    const next=()=>{{
+      if(index>=urls.length) return reject(new Error('HLS player library could not load'));
+      const script=document.createElement('script');
+      script.src=urls[index++];
+      script.onload=()=>window.Hls ? resolve(window.Hls) : next();
+      script.onerror=()=>{{script.remove();next();}};
+      document.head.appendChild(script);
+    }};
+    next();
+  }});
+  const tryServer = async (server) => {{
+    destroy();
+    const url = absolute(server.play_url || '');
+    if (!url) throw new Error('Missing playback URL');
+    const isHls = server.type === 'hls' || /\.m3u8(?:$|\?)/i.test(url);
+    if (isHls && video.canPlayType('application/vnd.apple.mpegurl')) {{
+      video.src = url;
+      video.load();
+      await waitNative();
+      return;
+    }}
+    if (isHls) {{
+      const Hls = await loadHlsLib();
+      if (!Hls || !Hls.isSupported()) throw new Error('HLS is not supported by this browser');
+      hls = new Hls({{
+        enableWorker:true,
+        lowLatencyMode:false,
+        manifestLoadingTimeOut:10000,
+        levelLoadingTimeOut:10000,
+        fragLoadingTimeOut:12000,
+        manifestLoadingMaxRetry:2,
+        levelLoadingMaxRetry:2,
+        fragLoadingMaxRetry:3
+      }});
+      await new Promise((resolve,reject) => {{
+        let settled=false;
+        const timer=setTimeout(()=>{{
+          if(settled) return;
+          settled=true;
+          reject(new Error('HLS source timed out'));
+        }},15000);
+        hls.on(Hls.Events.MANIFEST_PARSED,()=>{{
+          if(settled) return;
+          settled=true;
+          clearTimeout(timer);
+          resolve();
+        }});
+        hls.on(Hls.Events.ERROR,(_event,data)=>{{
+          if(!data || !data.fatal || settled) return;
+          settled=true;
+          clearTimeout(timer);
+          reject(new Error('HLS source failed'));
+        }});
+        hls.loadSource(url);
+        hls.attachMedia(video);
+      }});
+      return;
+    }}
+    video.src=url;
+    video.load();
+    await waitNative();
+  }};
+
+  (async () => {{
+    try {{
+      const params = new URLSearchParams({{type:TYPE,id:ID}});
+      if(TYPE === 'tv') {{
+        params.set('season', String(SEASON));
+        params.set('episode', String(EPISODE));
+      }}
+      const response = await fetch(API + '/streams?' + params.toString(), {{cache:'no-store'}});
+      const payload = await response.json().catch(()=>({{}}));
+      if(!response.ok) throw new Error(payload.detail || payload.error || 'Stream lookup failed');
+      const servers = Array.isArray(payload.servers) ? payload.servers : [];
+      if(!servers.length) throw new Error('No stream sources were returned');
+      let lastError = null;
+      for(let i=0;i<servers.length;i++) {{
+        const server = servers[i];
+        setStatus('Trying ' + (server.name || server.provider || ('source ' + (i+1))), server.quality || '');
+        try {{
+          await tryServer(server);
+          clearStatus();
+          video.play().catch(()=>{{}});
+          return;
+        }} catch (err) {{
+          lastError = err;
+        }}
+      }}
+      throw lastError || new Error('All available stream sources failed');
+    }} catch (err) {{
+      destroy();
+      setStatus('Playback unavailable', err && err.message ? err.message : 'Could not start this title');
+    }}
+  }})();
+}})();
+</script>
+</body>
+</html>"""
+    return HTMLResponse(
+        html,
+        headers={
+            "Cache-Control": "no-store",
+            "X-Arc-Player": "synscraper",
+        },
+    )
 
 
 @api_router.get("/caption")
