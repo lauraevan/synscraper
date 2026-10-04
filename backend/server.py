@@ -295,18 +295,90 @@ async def player(type: str = "movie", id: str = Query(...),
 <style>
 html,body{{margin:0;width:100%;height:100%;background:#000;color:#fff;font:14px system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;overflow:hidden}}
 *{{box-sizing:border-box}}
-#stage{{position:fixed;inset:0;background:#000;display:grid;place-items:center}}
-video{{width:100%;height:100%;background:#000;object-fit:contain}}
-#status{{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px;text-align:center;padding:24px;background:#050505;color:#8a8a8a}}
-#status b{{color:#eee;font-size:16px}}
-#status small{{max-width:520px;line-height:1.5;color:#666}}
+button,input{{font:inherit}}
+button{{-webkit-tap-highlight-color:transparent}}
+#stage{{position:fixed;inset:0;background:#000;overflow:hidden}}
+video{{width:100%;height:100%;display:block;background:#000;object-fit:contain}}
+#stage.controls-hidden{{cursor:none}}
+#status{{position:absolute;inset:0;z-index:8;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px;text-align:center;padding:24px;background:#050505;color:#7d7d7d}}
+#status b{{color:#eee;font-size:15px;font-weight:650}}
+#status small{{max-width:520px;line-height:1.5;color:#5f5f5f}}
 #status[hidden]{{display:none}}
+#chrome{{position:absolute;inset:0;z-index:7;pointer-events:none;opacity:1;transition:opacity 180ms ease}}
+#chrome::after{{content:"";position:absolute;left:0;right:0;bottom:0;height:180px;background:linear-gradient(0deg,rgba(0,0,0,.92),rgba(0,0,0,.54) 45%,transparent);pointer-events:none}}
+.controls-hidden #chrome{{opacity:0}}
+.controls-hidden #chrome *{{pointer-events:none!important}}
+#brand{{position:absolute;top:max(18px,env(safe-area-inset-top));left:max(20px,env(safe-area-inset-left));z-index:2;display:flex;align-items:center;gap:8px;font-size:11px;font-weight:750;letter-spacing:.12em;color:rgba(255,255,255,.78);text-transform:uppercase;pointer-events:none}}
+#brand i{{width:5px;height:5px;border-radius:50%;background:#f07a22;display:block}}
+#centerPlay{{position:absolute;left:50%;top:50%;z-index:3;transform:translate(-50%,-50%);width:64px;height:64px;border:1px solid rgba(255,255,255,.18);border-radius:50%;background:rgba(8,8,8,.72);color:#fff;display:grid;place-items:center;pointer-events:auto;cursor:pointer;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}}
+#centerPlay svg{{width:26px;height:26px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}}
+#controls{{position:absolute;left:max(18px,env(safe-area-inset-left));right:max(18px,env(safe-area-inset-right));bottom:max(16px,env(safe-area-inset-bottom));z-index:3;pointer-events:auto}}
+#timelineRow{{display:flex;align-items:center;gap:12px;margin-bottom:10px}}
+#time{{min-width:94px;color:#bdbdbd;font-size:11px;font-variant-numeric:tabular-nums;text-align:right}}
+input[type=range]{{appearance:none;-webkit-appearance:none;height:18px;background:transparent;margin:0}}
+input[type=range]::-webkit-slider-runnable-track{{height:3px;border-radius:99px;background:linear-gradient(90deg,#f07a22 0 var(--p,0%),rgba(255,255,255,.22) var(--p,0%) 100%)}}
+input[type=range]::-webkit-slider-thumb{{appearance:none;-webkit-appearance:none;width:11px;height:11px;border-radius:50%;background:#fff;border:0;margin-top:-4px}}
+input[type=range]::-moz-range-track{{height:3px;border-radius:99px;background:rgba(255,255,255,.22)}}
+input[type=range]::-moz-range-progress{{height:3px;border-radius:99px;background:#f07a22}}
+input[type=range]::-moz-range-thumb{{width:11px;height:11px;border:0;border-radius:50%;background:#fff}}
+#seek{{width:100%}}
+#bottomRow{{display:flex;align-items:center;justify-content:space-between;gap:14px}}
+#leftControls,#rightControls{{display:flex;align-items:center;gap:5px}}
+.control{{width:38px;height:38px;border:0;border-radius:8px;background:transparent;color:#e8e8e8;display:grid;place-items:center;cursor:pointer}}
+.control:hover{{background:rgba(255,255,255,.08)}}
+.control svg{{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}}
+.skip{{width:43px;font-size:10px;color:#bdbdbd}}
+#volume{{width:84px;--p:100%}}
+#sourceLabel{{font-size:10px;color:#747474;max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-left:6px}}
+@media(max-width:640px){{
+  #controls{{left:12px;right:12px;bottom:max(10px,env(safe-area-inset-bottom))}}
+  #brand{{top:max(12px,env(safe-area-inset-top));left:14px}}
+  #centerPlay{{width:58px;height:58px}}
+  #volume,#sourceLabel{{display:none}}
+  .control{{width:36px;height:36px}}
+  .skip{{width:40px}}
+  #time{{min-width:82px;font-size:10px}}
+}}
 </style>
 </head>
 <body>
 <div id="stage">
-  <video id="video" controls autoplay playsinline webkit-playsinline></video>
+  <video id="video" autoplay playsinline webkit-playsinline></video>
   <div id="status"><b>Finding a stream</b><small>Connecting to Arc media…</small></div>
+
+  <div id="chrome">
+    <div id="brand"><i></i> ARC PLAYER</div>
+
+    <button id="centerPlay" aria-label="Play or pause">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path class="playPath" d="M9 7.5 16 12l-7 4.5z"></path></svg>
+    </button>
+
+    <div id="controls">
+      <div id="timelineRow">
+        <input id="seek" type="range" min="0" max="1000" value="0" aria-label="Seek">
+        <div id="time">0:00 / 0:00</div>
+      </div>
+      <div id="bottomRow">
+        <div id="leftControls">
+          <button class="control" id="playPause" aria-label="Play or pause">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path class="playPath" d="M9 7.5 16 12l-7 4.5z"></path></svg>
+          </button>
+          <button class="control skip" id="back10" aria-label="Back 10 seconds">−10</button>
+          <button class="control skip" id="forward10" aria-label="Forward 10 seconds">+10</button>
+          <button class="control" id="mute" aria-label="Mute">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 10h3l4-3v10l-4-3H5z"></path><path id="volumeWave" d="M15 9.5a4 4 0 0 1 0 5"></path></svg>
+          </button>
+          <input id="volume" type="range" min="0" max="1" step="0.01" value="1" aria-label="Volume">
+          <span id="sourceLabel"></span>
+        </div>
+        <div id="rightControls">
+          <button class="control" id="fullscreen" aria-label="Fullscreen">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 4H4v4M16 4h4v4M8 20H4v-4M16 20h4v-4"></path></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 <script>
 (() => {{
@@ -315,9 +387,24 @@ video{{width:100%;height:100%;background:#000;object-fit:contain}}
   const ID = {safe_id!r};
   const SEASON = {safe_season};
   const EPISODE = {safe_episode};
+  const stage = document.getElementById('stage');
   const video = document.getElementById('video');
   const status = document.getElementById('status');
+  const chrome = document.getElementById('chrome');
+  const playPause = document.getElementById('playPause');
+  const centerPlay = document.getElementById('centerPlay');
+  const back10 = document.getElementById('back10');
+  const forward10 = document.getElementById('forward10');
+  const mute = document.getElementById('mute');
+  const volume = document.getElementById('volume');
+  const volumeWave = document.getElementById('volumeWave');
+  const seek = document.getElementById('seek');
+  const time = document.getElementById('time');
+  const fullscreen = document.getElementById('fullscreen');
+  const sourceLabel = document.getElementById('sourceLabel');
   let hls = null;
+  let hideTimer = null;
+  let seeking = false;
 
   const setStatus = (title, detail='') => {{
     status.hidden = false;
@@ -331,6 +418,44 @@ video{{width:100%;height:100%;background:#000;object-fit:contain}}
     if (/^https?:\/\//i.test(url)) return url;
     return url.startsWith('/') ? url : '/' + url;
   }};
+  const formatTime = (seconds) => {{
+    if(!Number.isFinite(seconds) || seconds < 0) return '0:00';
+    const s=Math.floor(seconds%60);
+    const m=Math.floor(seconds/60)%60;
+    const h=Math.floor(seconds/3600);
+    return h ? h+':'+String(m).padStart(2,'0')+':'+String(s).padStart(2,'0') : m+':'+String(s).padStart(2,'0');
+  }};
+  const setRangeProgress = (input,ratio) => {{
+    input.style.setProperty('--p',Math.max(0,Math.min(100,ratio*100))+'%');
+  }};
+  const setPlayIcon = (playing) => {{
+    document.querySelectorAll('.playPath').forEach((path) => {{
+      path.setAttribute('d', playing ? 'M8.5 7v10M15.5 7v10' : 'M9 7.5 16 12l-7 4.5z');
+    }});
+    centerPlay.style.opacity = playing ? '0' : '1';
+    centerPlay.style.pointerEvents = playing ? 'none' : 'auto';
+  }};
+  const showControls = () => {{
+    stage.classList.remove('controls-hidden');
+    clearTimeout(hideTimer);
+    if(!video.paused && !video.ended) {{
+      hideTimer=setTimeout(()=>stage.classList.add('controls-hidden'),2400);
+    }}
+  }};
+  const updateTimeline = () => {{
+    if(!seeking && Number.isFinite(video.duration) && video.duration>0) {{
+      const ratio=video.currentTime/video.duration;
+      seek.value=String(Math.round(ratio*1000));
+      setRangeProgress(seek,ratio);
+    }}
+    time.textContent=formatTime(video.currentTime)+' / '+formatTime(video.duration);
+  }};
+  const updateVolume = () => {{
+    volume.value=String(video.muted ? 0 : video.volume);
+    setRangeProgress(volume,video.muted?0:video.volume);
+    volumeWave.style.opacity=(video.muted||video.volume===0)?'0':'1';
+  }};
+  const togglePlay = () => video.paused ? video.play().catch(()=>{{}}) : video.pause();
   const destroy = () => {{
     try {{ if (hls) hls.destroy(); }} catch (_) {{}}
     hls = null;
@@ -426,6 +551,56 @@ video{{width:100%;height:100%;background:#000;object-fit:contain}}
     await waitNative();
   }};
 
+  playPause.addEventListener('click',togglePlay);
+  centerPlay.addEventListener('click',togglePlay);
+  video.addEventListener('click',()=>{{togglePlay();showControls()}});
+  stage.addEventListener('pointermove',showControls);
+  stage.addEventListener('pointerdown',showControls);
+  video.addEventListener('play',()=>{{setPlayIcon(true);showControls()}});
+  video.addEventListener('pause',()=>{{setPlayIcon(false);showControls()}});
+  video.addEventListener('ended',()=>{{setPlayIcon(false);showControls()}});
+  video.addEventListener('timeupdate',updateTimeline);
+  video.addEventListener('durationchange',updateTimeline);
+  back10.addEventListener('click',()=>{{video.currentTime=Math.max(0,video.currentTime-10);showControls()}});
+  forward10.addEventListener('click',()=>{{video.currentTime=Math.min(Number.isFinite(video.duration)?video.duration:video.currentTime+10,video.currentTime+10);showControls()}});
+  seek.addEventListener('input',()=>{{
+    seeking=true;
+    setRangeProgress(seek,Number(seek.value)/1000);
+    if(Number.isFinite(video.duration)) time.textContent=formatTime((Number(seek.value)/1000)*video.duration)+' / '+formatTime(video.duration);
+  }});
+  seek.addEventListener('change',()=>{{
+    if(Number.isFinite(video.duration)) video.currentTime=(Number(seek.value)/1000)*video.duration;
+    seeking=false;
+    updateTimeline();
+  }});
+  volume.addEventListener('input',()=>{{
+    video.muted=false;
+    video.volume=Number(volume.value);
+    updateVolume();
+  }});
+  mute.addEventListener('click',()=>{{video.muted=!video.muted;updateVolume();showControls()}});
+  video.addEventListener('volumechange',updateVolume);
+  fullscreen.addEventListener('click',async()=>{{
+    try {{
+      if(document.fullscreenElement) await document.exitFullscreen();
+      else if(stage.requestFullscreen) await stage.requestFullscreen();
+      else if(video.webkitEnterFullscreen) video.webkitEnterFullscreen();
+    }} catch (_) {{}}
+    showControls();
+  }});
+  document.addEventListener('keydown',(event)=>{{
+    if(event.target && /input|select|textarea/i.test(event.target.tagName)) return;
+    if(event.code==='Space'){{event.preventDefault();togglePlay()}}
+    else if(event.code==='ArrowLeft') video.currentTime=Math.max(0,video.currentTime-10);
+    else if(event.code==='ArrowRight') video.currentTime=Math.min(Number.isFinite(video.duration)?video.duration:video.currentTime+10,video.currentTime+10);
+    else if(event.key.toLowerCase()==='f') fullscreen.click();
+    showControls();
+  }});
+  updateVolume();
+  updateTimeline();
+  setPlayIcon(false);
+  showControls();
+
   (async () => {{
     try {{
       const params = new URLSearchParams({{type:TYPE,id:ID}});
@@ -444,6 +619,7 @@ video{{width:100%;height:100%;background:#000;object-fit:contain}}
         setStatus('Trying ' + (server.name || server.provider || ('source ' + (i+1))), server.quality || '');
         try {{
           await tryServer(server);
+          sourceLabel.textContent=[server.name||server.provider,server.quality].filter(Boolean).join(' · ');
           clearStatus();
           video.play().catch(()=>{{}});
           return;
