@@ -235,7 +235,7 @@ async def streams(type: str = "movie", id: str = Query(...),
             fallback_response = await _http().get(
                 f"{SYNSCRAPER_FALLBACK_ORIGIN}/api/streams",
                 params=params,
-                timeout=60.0,
+                timeout=12.0,
             )
             if fallback_response.status_code < 400:
                 payload = fallback_response.json()
@@ -486,9 +486,9 @@ video{width:100%;height:100%;display:block;background:#000;object-fit:contain}
     const el=$('toast');el.textContent=text;el.classList.add('show');clearTimeout(toastTimer);
     toastTimer=setTimeout(()=>el.classList.remove('show'),700);
   };
-  const setStatus=(title,detail='')=>{
+  const setStatus=(title,detail='',loading=true)=>{
     status.hidden=false;
-    status.innerHTML='<div class="spinner"></div><b></b><small></small>';
+    status.innerHTML=(loading?'<div class="spinner"></div>':'')+'<b></b><small></small>';
     status.querySelector('b').textContent=title;
     status.querySelector('small').textContent=detail;
   };
@@ -724,19 +724,31 @@ video{width:100%;height:100%;display:block;background:#000;object-fit:contain}
     try{
       const params=new URLSearchParams({type:TYPE,id:ID});
       if(TYPE==='tv'){params.set('season',String(SEASON));params.set('episode',String(EPISODE))}
-      const response=await fetch(API+'/streams?'+params.toString(),{cache:'no-store'});
-      const payload=await response.json().catch(()=>({}));
+      const controller=new AbortController();
+      const streamTimer=setTimeout(()=>controller.abort(),30000);
+      let response;
+      let payload;
+      try{
+        response=await fetch(API+'/streams?'+params.toString(),{cache:'no-store',signal:controller.signal});
+        payload=await response.json().catch(()=>({}));
+      }catch(error){
+        if(controller.signal.aborted)throw new Error('Stream search timed out');
+        throw error;
+      }finally{
+        clearTimeout(streamTimer);
+      }
       if(!response.ok)throw new Error(payload.detail||payload.error||'Stream lookup failed');
       servers=Array.isArray(payload.servers)?payload.servers:[];
       if(!servers.length)throw new Error('No stream sources were returned');
       renderMenu('source');
       let lastError=null;
-      for(let i=0;i<servers.length;i++){
+      const autoAttempts=Math.min(3,servers.length);
+      for(let i=0;i<autoAttempts;i++){
         try{await switchServer(i,false);return}catch(err){lastError=err;switching=false}
       }
       throw lastError||new Error('All available stream sources failed');
     }catch(err){
-      destroySource();setStatus('Playback unavailable',err?.message||'Could not start this title');
+      destroySource();setStatus('Playback unavailable',err?.message||'Could not start this title',false);
     }
   })();
 })();
