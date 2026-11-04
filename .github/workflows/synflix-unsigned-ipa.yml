@@ -1,4 +1,4 @@
-name: SynFlix - unsigned IPA
+name: Civy - unsigned IPA
 on:
   push:
     branches: ["synflix-ios-ipa"]
@@ -26,14 +26,14 @@ jobs:
           PY
           mkdir -p ios/build-src
           unzip -oq ios/project.zip -d ios/build-src
-          test -d ios/build-src/SynFlix.xcodeproj
+          test -d ios/build-src/Civy.xcodeproj
       - name: Xcode version
         run: xcodebuild -version
       - name: Compile for physical iPhone with signing disabled
         run: |
           set -euo pipefail
-          xcodebuild -project ios/build-src/SynFlix.xcodeproj \
-            -scheme SynFlix -configuration Release -sdk iphoneos \
+          xcodebuild -project ios/build-src/Civy.xcodeproj \
+            -scheme Civy -configuration Release -sdk iphoneos \
             -destination 'generic/platform=iOS' \
             -derivedDataPath "$RUNNER_TEMP/DerivedData" \
             CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY='' \
@@ -42,15 +42,15 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p dist/Payload
-          cp -R "$RUNNER_TEMP/DerivedData/Build/Products/Release-iphoneos/SynFlix.app" dist/Payload/
-          test -f dist/Payload/SynFlix.app/SynFlix
+          cp -R "$RUNNER_TEMP/DerivedData/Build/Products/Release-iphoneos/Civy.app" dist/Payload/
+          test -f dist/Payload/Civy.app/Civy
           cd dist
-          zip -qry SynFlix-unsigned.ipa Payload
-          unzip -t SynFlix-unsigned.ipa | tail -1
+          zip -qry Civy-unsigned.ipa Payload
+          unzip -t Civy-unsigned.ipa | tail -1
       - name: Upload IPA artifact
         uses: actions/upload-artifact@v4
         with:
-          name: SynFlix-unsigned-IPA
-          path: dist/SynFlix-unsigned.ipa
+          name: Civy-unsigned-IPA
+          path: dist/Civy-unsigned.ipa
           if-no-files-found: error
           compression-level: 0
