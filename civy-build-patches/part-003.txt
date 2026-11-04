@@ -1,0 +1,100 @@
+-                                .font(.system(size: isWide ? 39 : 33, weight: .light))
++                                .font(.system(size: largerButtons ? (isWide ? 45 : 39) : (isWide ? 39 : 33), weight: .light))
+                         }
+                     }
+                     .foregroundStyle(.white)
+@@ -600,7 +617,7 @@
+                             }
+                             bottomButton("captions.bubble", "Audio & Subtitles") { panel = .subtitles }
+                             bottomButton("speedometer", "Speed (\(speedLabel))") { panel = .speed }
+-                            bottomButton("waveform.path", "Stats") { panel = .statistics }
++                                                            if showStatsButton { bottomButton("waveform.path", "Stats") { panel = .statistics } }
+                             Spacer(minLength: 0)
+                             if request.media.kind == "tv" {
+                                 bottomButton("forward.end.fill", "Next Episode") {
+@@ -649,9 +666,12 @@
+         } label: {
+             HStack(spacing: 8) {
+                 Image(systemName: icon).font(.system(size: 16, weight: .medium))
+-                Text(title).font(.system(size: 12, weight: .semibold)).lineLimit(1)
++                if !compactControls { Text(title).font(.system(size: 12, weight: .semibold)).lineLimit(1) }
+             }
+             .foregroundStyle(.white)
++            .padding(.horizontal, glassButtons ? 12 : 0)
++            .padding(.vertical, glassButtons ? 9 : 0)
++            .civyGlassCapsule(glassButtons)
+             .contentShape(Rectangle())
+         }
+         .buttonStyle(.plain)
+@@ -698,13 +718,13 @@
+     }
+ 
+     private func toggleControls() {
+-        withAnimation(.easeOut(duration: 0.18)) { controlsVisible.toggle() }
++        withAnimation(reduceMotion ? .linear(duration: 0.1) : .smooth(duration: 0.28)) { controlsVisible.toggle() }
+         if controlsVisible { scheduleHide() }
+         else { hideTask?.cancel() }
+     }
+ 
+     private func showControls() {
+-        withAnimation(.easeOut(duration: 0.2)) { controlsVisible = true }
++        withAnimation(reduceMotion ? .linear(duration: 0.1) : .smooth(duration: 0.28)) { controlsVisible = true }
+         scheduleHide()
+     }
+ 
+@@ -712,9 +732,9 @@
+         hideTask?.cancel()
+         guard autoHide && controlsVisible && playback.isPlaying && panel == nil && playback.error == nil && !isWebPlayback else { return }
+         hideTask = Task {
+-            try? await Task.sleep(for: .seconds(3.5))
++            try? await Task.sleep(for: .seconds(Double(hideDelay)))
+             guard !Task.isCancelled else { return }
+-            withAnimation(.easeOut(duration: 0.25)) { controlsVisible = false }
++            withAnimation(reduceMotion ? .linear(duration: 0.1) : .smooth(duration: 0.28)) { controlsVisible = false }
+         }
+     }
+ 
+--- a/Civy/RootView.swift
++++ b/Civy/RootView.swift
+@@ -38,6 +38,8 @@
+     @AppStorage("civy.home.heroRotation") private var rotate = true
+     @AppStorage("civy.appearance.motion") private var motion = true
+     @AppStorage("civy.appearance.reduceMotion") private var reduceMotion = false
++    @AppStorage("civy.appearance.motionStyle") private var motionStyle = "Smooth"
++    @AppStorage("civy.home.heroInterval") private var heroInterval = 10
+ 
+     private var heroes: [Media] {
+         guard let home = app.home else { return [] }
+@@ -131,12 +133,16 @@
+             .sheet(item: $selected) { media in DetailView(media: media).environmentObject(app) }
+             .sheet(isPresented: $settingsOpen) { SettingsView().environmentObject(app) }
+             .task { if app.home == nil { await app.loadHome() }; await app.loadCurated() }
+-            .task(id: filter) {
++            .task(id: "\(filter.rawValue)-\(heroInterval)") {
+                 while !Task.isCancelled {
+-                    try? await Task.sleep(for: .seconds(10))
++                    try? await Task.sleep(for: .seconds(Double(heroInterval)))
+                     if Task.isCancelled { return }
+                     if rotate && heroes.count > 1 {
+-                        if motion && !reduceMotion { withAnimation(.easeInOut(duration: 0.45)) { heroIndex = (heroIndex + 1) % heroes.count } }
++                        if motion && !reduceMotion {
++                            let transition: Animation = motionStyle == "Expressive" ? .spring(response: 0.7, dampingFraction: 0.84)
++                                : motionStyle == "Gentle" ? .smooth(duration: 0.75) : .smooth(duration: 0.5)
++                            withAnimation(transition) { heroIndex = (heroIndex + 1) % heroes.count }
++                        }
+                         else { heroIndex = (heroIndex + 1) % heroes.count }
+                     }
+                 }
+@@ -177,6 +183,9 @@
+     @AppStorage("civy.appearance.largeArtwork") private var highRes = true
+     @AppStorage("civy.appearance.immersiveArt") private var immersive = true
+     @AppStorage("civy.appearance.glass") private var glass = true
++    @AppStorage("civy.appearance.motion") private var motion = true
++    @AppStorage("civy.appearance.reduceMotion") private var reduceMotion = false
++    @AppStorage("civy.appearance.haptics") private var haptics = true
+     @AppStorage("civy.profile.icon") private var avatar = "person.fill"
+ 
+     var body: some View {
+@@ -196,25 +205,29 @@
+                 HStack {
+                     SynLogo(size: 28)
