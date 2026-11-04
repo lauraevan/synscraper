@@ -1,0 +1,56 @@
+name: SynFlix - unsigned IPA
+on:
+  push:
+    branches: ["synflix-ios-ipa"]
+    paths:
+      - 'ios/**'
+      - '.github/workflows/synflix-unsigned-ipa.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: xcode-27
+    timeout-minutes: 35
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Unpack iOS project
+        shell: bash
+        run: |
+          mkdir -p ios
+          python3 - <<'PY'
+          import base64, pathlib
+          archive = pathlib.Path('ios/synflix-project.txt')
+          pathlib.Path('ios/project.zip').write_bytes(base64.b64decode(archive.read_text()))
+          PY
+          cd ios
+          unzip -q project.zip
+          test -d SynFlix.xcodeproj
+      - name: Xcode version
+        run: xcodebuild -version
+      - name: Compile for physical iPhone with signing disabled
+        run: |
+          set -euo pipefail
+          xcodebuild -project ios/SynFlix.xcodeproj \
+            -scheme SynFlix -configuration Release -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath "$RUNNER_TEMP/DerivedData" \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY='' \
+            build
+      - name: Package unsigned IPA
+        run: |
+          set -euo pipefail
+          mkdir -p dist/Payload
+          cp -R "$RUNNER_TEMP/DerivedData/Build/Products/Release-iphoneos/SynFlix.app" dist/Payload/
+          test -f dist/Payload/SynFlix.app/SynFlix
+          cd dist
+          zip -qry SynFlix-unsigned.ipa Payload
+          unzip -t SynFlix-unsigned.ipa | tail -1
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: SynFlix-unsigned-IPA
+          path: dist/SynFlix-unsigned.ipa
+          if-no-files-found: error
+          compression-level: 0
