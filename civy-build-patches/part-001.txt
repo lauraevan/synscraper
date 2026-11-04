@@ -1,0 +1,100 @@
+--- a/Civy/Design.swift
++++ b/Civy/Design.swift
+@@ -81,12 +81,13 @@
+     @AppStorage("civy.appearance.posterLabels") private var posterLabels = false
+     @AppStorage("civy.home.showScore") private var showScore = true
+     @AppStorage("civy.home.showGenre") private var showGenre = true
++    @AppStorage("civy.appearance.largeText") private var largeText = false
+     var body: some View {
+         Button { onTap(media) } label: {
+             VStack(alignment: .leading, spacing: 7) {
+                 MovieImage(url: media.posterURL, radius: 8).frame(width: width)
+                 if posterLabels {
+-                    Text(media.displayTitle).font(.system(size: 13, weight: .semibold)).lineLimit(1).foregroundStyle(.white)
++                    Text(media.displayTitle).font(.system(size: largeText ? 15 : 13, weight: .semibold)).lineLimit(1).foregroundStyle(.white)
+                 }
+                 if showScore && (media.voteAverage ?? 0) > 0 {
+                     HStack(spacing: 4) {
+@@ -115,13 +116,14 @@
+     var kicker: String? = nil
+     var trailing: String? = nil
+     let onTap: (Media) -> Void
++    @AppStorage("civy.home.compactPosters") private var compactPosters = false
+     var body: some View {
+         if !items.isEmpty {
+             VStack(alignment: .leading, spacing: 14) {
+                 SectionTitle(text: title, kicker: kicker, trailing: trailing)
+                 ScrollView(.horizontal) {
+                     LazyHStack(alignment: .top, spacing: 11) {
+-                        ForEach(items.prefix(24)) { media in MediaCard(media: media, onTap: onTap) }
++                        ForEach(items.prefix(24)) { media in MediaCard(media: media, width: compactPosters ? 116 : 139, onTap: onTap) }
+                     }
+                     .padding(.horizontal, 21)
+                     .padding(.bottom, 3)
+@@ -133,6 +135,7 @@
+ }
+ 
+ struct LandscapeRail: View {
++    @AppStorage("civy.appearance.largeText") private var largeText = false
+     let title: String
+     let items: [Media]
+     var kicker: String? = nil
+@@ -148,7 +151,7 @@
+                                 VStack(alignment: .leading, spacing: 8) {
+                                     MovieImage(url: media.backdropURL, aspect: 1.78, radius: 12).frame(width: 251)
+                                     HStack(spacing: 6) {
+-                                        Text(media.displayTitle).font(.system(size: 13, weight: .semibold)).lineLimit(1)
++                                        Text(media.displayTitle).font(.system(size: largeText ? 15 : 13, weight: .semibold)).lineLimit(1)
+                                         Spacer(minLength: 0)
+                                         Text(media.year).font(.system(size: 12)).foregroundStyle(Color.synMuted)
+                                     }.foregroundStyle(.white)
+@@ -261,3 +264,20 @@
+         .accessibilityLabel("Civy")
+     }
+ }
++
++
++// Reusable native Liquid Glass treatments; no glass renderer running when disabled.
++extension View {
++    @ViewBuilder func civyGlassCapsule(_ enabled: Bool) -> some View {
++        if enabled { self.glassEffect(.regular, in: Capsule()) }
++        else { self }
++    }
++    @ViewBuilder func civyGlassCircle(_ enabled: Bool) -> some View {
++        if enabled { self.glassEffect(.regular, in: Circle()) }
++        else { self }
++    }
++    @ViewBuilder func civyGlassPanel(_ enabled: Bool, radius: CGFloat = 18) -> some View {
++        if enabled { self.glassEffect(.regular, in: .rect(cornerRadius: radius)) }
++        else { self }
++    }
++}
+--- a/Civy/DetailView.swift
++++ b/Civy/DetailView.swift
+@@ -127,7 +127,7 @@
+                         Label(app.isFavorite(media) ? "Added" : "My List", systemImage: app.isFavorite(media) ? "checkmark" : "plus")
+                             .font(.system(size: 15, weight: .semibold))
+                             .foregroundStyle(.white).frame(maxWidth: .infinity).frame(height: 50)
+-                            .background(.white.opacity(0.19), in: RoundedRectangle(cornerRadius: 12))
++                            .glassEffect(.regular, in: .rect(cornerRadius: 13))
+                     }
+                 }.buttonStyle(.plain).padding(.top, 15)
+             }
+--- a/Civy/PlayerScreen.swift
++++ b/Civy/PlayerScreen.swift
+@@ -145,6 +145,8 @@
+             item.preferredForwardBufferDuration = prefs.bool(forKey: "civy.streaming.dataSaver") ? 5.0 :
+                 (prefs.bool(forKey: "civy.streaming.lowLatency") ? 3.0 :
+                  Double(prefs.integer(forKey: "civy.streaming.buffer") == 0 ? 18 : prefs.integer(forKey: "civy.streaming.buffer")))
++            let peakMbps = prefs.integer(forKey: "civy.streaming.prefersPeakBitrate")
++            if peakMbps > 0 { item.preferredPeakBitRate = Double(peakMbps) * 1_000_000 }
+             player.automaticallyWaitsToMinimizeStalling = !prefs.bool(forKey: "civy.streaming.lowLatency")
+             player.replaceCurrentItem(with: item)
+             if prefs.bool(forKey: "civy.subtitles.auto") {
+@@ -357,6 +359,16 @@
+     @AppStorage("civy.subtitles.size") private var subtitleSize = 21
+     @AppStorage("civy.subtitles.background") private var subtitleBackground = true
+     @AppStorage("civy.subtitles.bold") private var subtitleBold = true
++    @AppStorage("civy.subtitles.opacity") private var subtitleOpacity = 0.65
++    @AppStorage("civy.subtitles.bottomOffset") private var subtitleBottomOffset = 40
++    @AppStorage("civy.player.hideDelay") private var hideDelay = 4
