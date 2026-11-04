@@ -1,0 +1,100 @@
+                     Spacer()
+-                    Button(action: onSettings) {
++                    Button {
++                        if haptics { UISelectionFeedbackGenerator().selectionChanged() }
++                        onSettings()
++                    } label: {
+                         Image(systemName: avatar).font(.system(size: 18, weight: .bold)).frame(width: 40, height: 40)
+                             .foregroundStyle(.white).background(Color.synAccent.gradient, in: RoundedRectangle(cornerRadius: 13))
+                     }
++                    .civyGlassPanel(glass, radius: 13)
+                     .accessibilityLabel("Profile and settings")
+                 }
+                 .padding(.horizontal, 21).padding(.top, 64)
+                 HStack(spacing: 9) {
+                     ForEach(BrowseFilter.allCases) { item in
+-                        Button { withAnimation(.easeInOut(duration: 0.24)) { onFilter(item) } } label: {
++                        Button { withAnimation(motion && !reduceMotion ? .snappy(duration: 0.35) : .linear(duration: 0.1)) { onFilter(item) } } label: {
+                             Text(item == .all ? "For You" : item.rawValue)
+                                 .font(.system(size: 12, weight: .semibold))
+                                 .foregroundStyle(.white)
+                                 .padding(.horizontal, 17).padding(.vertical, 9)
+                                 .background {
+-                                    if glass { Capsule().fill(.ultraThinMaterial).opacity(item == filter ? 0.95 : 0.58) }
+-                                    else { Capsule().fill(item == filter ? .white.opacity(0.17) : .black.opacity(0.30)) }
++                                    if !glass { Capsule().fill(item == filter ? .white.opacity(0.17) : .black.opacity(0.30)) }
+                                 }
+-                                .overlay(Capsule().strokeBorder(.white.opacity(item == filter ? 0.35 : 0.15), lineWidth: 0.8))
++                                .civyGlassCapsule(glass)
++                                .overlay(Capsule().strokeBorder(item == filter ? Color.synAccent.opacity(0.8) : .white.opacity(0.12), lineWidth: item == filter ? 1.5 : 0.8))
+                         }.buttonStyle(.plain)
+                     }
+                     Spacer(minLength: 0)
+@@ -255,8 +268,8 @@
+                             Label("More info", systemImage: "info.circle")
+                                 .font(.system(size: 15, weight: .semibold)).frame(maxWidth: .infinity).frame(height: 48)
+                                 .foregroundStyle(.white)
+-                                .background(Color.white.opacity(0.18), in: RoundedRectangle(cornerRadius: 11))
+-                                .overlay(RoundedRectangle(cornerRadius: 11).stroke(.white.opacity(0.12)))
++                                .civyGlassPanel(glass, radius: 14)
++                                .overlay(RoundedRectangle(cornerRadius: 14).stroke(.white.opacity(0.18)))
+                         }
+                     }
+                     .buttonStyle(.plain).padding(.top, 9)
+@@ -296,7 +309,7 @@
+                 HStack(spacing: 9) {
+                     ForEach(categories.indices, id: \.self) { index in
+                         let entry = categories[index]
+-                        Button { withAnimation(.easeInOut(duration: 0.2)) { selectedID = entry.1 } } label: {
++                        Button { withAnimation(.snappy(duration: 0.32)) { selectedID = entry.1 } } label: {
+                             Label(entry.0, systemImage: entry.2)
+                                 .font(.system(size: 12, weight: .semibold))
+                                 .foregroundStyle(.white)
+--- a/Civy/SettingsView.swift
++++ b/Civy/SettingsView.swift
+@@ -1,81 +1,322 @@
+ import SwiftUI
+ import AVFoundation
+-
+-// Every preference here is local-only and intentionally avoids fictitious cloud accounts.
++import UIKit
++
++// All settings use device-local storage. No fake account, subscription or cloud controls.
++private enum CivySettingsPage: String, Hashable, CaseIterable, Identifiable {
++    case profile, appearance, home, player, controls, subtitles, streaming, diagnostics, connection, library, accessibility, storage, about
++    var id: String { rawValue }
++    var title: String {
++        switch self {
++        case .profile: "Profile"
++        case .appearance: "Appearance & motion"
++        case .home: "Home & discovery"
++        case .player: "Playback"
++        case .controls: "Player controls"
++        case .subtitles: "Subtitles & captions"
++        case .streaming: "Streaming & quality"
++        case .diagnostics: "Stats for nerds"
++        case .connection: "Synscraper connection"
++        case .library: "Your library"
++        case .accessibility: "Accessibility"
++        case .storage: "Storage & privacy"
++        case .about: "About Civy"
++        }
++    }
++    var subtitle: String {
++        switch self {
++        case .profile: "Name, avatar, personal cinema"
++        case .appearance: "Liquid Glass, motion, artwork"
++        case .home: "Rows, recommendations, featured titles"
++        case .player: "Autoplay, display, playback speed"
++        case .controls: "Glass controls, skip, auto-hide"
++        case .subtitles: "Language, size, contrast and preview"
++        case .streaming: "Quality, buffer and server fallback"
++        case .diagnostics: "Real playback measurements"
++        case .connection: "Server status and endpoint testing"
++        case .library: "Watchlist, activity and sharing"
++        case .accessibility: "Readable text, motion, feedback"
++        case .storage: "Clear history and cached images"
++        case .about: "Version, technology, attribution"
++        }
++    }
++    var symbol: String {
