@@ -24,15 +24,15 @@ jobs:
           archive = pathlib.Path('ios/synflix-project.txt')
           pathlib.Path('ios/project.zip').write_bytes(base64.b64decode(archive.read_text()))
           PY
-          cd ios
-          unzip -q project.zip
-          test -d SynFlix.xcodeproj
+          mkdir -p ios/build-src
+          unzip -oq ios/project.zip -d ios/build-src
+          test -d ios/build-src/SynFlix.xcodeproj
       - name: Xcode version
         run: xcodebuild -version
       - name: Compile for physical iPhone with signing disabled
         run: |
           set -euo pipefail
-          xcodebuild -project ios/SynFlix.xcodeproj \
+          xcodebuild -project ios/build-src/SynFlix.xcodeproj \
             -scheme SynFlix -configuration Release -sdk iphoneos \
             -destination 'generic/platform=iOS' \
             -derivedDataPath "$RUNNER_TEMP/DerivedData" \
