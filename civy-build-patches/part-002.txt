@@ -1,0 +1,100 @@
++    @AppStorage("civy.player.glassButtons") private var glassButtons = true
++    @AppStorage("civy.player.largerButtons") private var largerButtons = false
++    @AppStorage("civy.player.showStatsButton") private var showStatsButton = true
++    @AppStorage("civy.player.compactControls") private var compactControls = false
++    @AppStorage("civy.player.statsPosition") private var statsPosition = "Left"
++    @AppStorage("civy.appearance.reduceMotion") private var reduceMotion = false
++    @AppStorage("civy.appearance.haptics") private var haptics = true
+ 
+     var body: some View {
+         GeometryReader { geo in
+@@ -385,21 +397,21 @@
+                         .shadow(color: .black, radius: 5)
+                         .padding(.horizontal, 34)
+                         .padding(.vertical, 7)
+-                        .background(subtitleBackground ? .black.opacity(0.65) : .clear, in: RoundedRectangle(cornerRadius: 5))
++                        .background(subtitleBackground ? .black.opacity(subtitleOpacity) : .clear, in: RoundedRectangle(cornerRadius: 5))
+                         .frame(maxHeight: .infinity, alignment: .bottom)
+-                        .padding(.bottom, controlsVisible ? 125 : 40)
++                        .padding(.bottom, controlsVisible ? 125 : CGFloat(subtitleBottomOffset))
+                         .allowsHitTesting(false)
+                 }
+ 
+                 if statsVisible && !isWebPlayback {
+                     statsOverlay
+-                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+-                        .padding(.leading, 18).padding(.top, controlsVisible ? 72 : 18)
++                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: statsPosition == "Right" ? .topTrailing : .topLeading)
++                        .padding(.horizontal, 18).padding(.top, controlsVisible ? 72 : 18)
+                         .allowsHitTesting(false)
+                 }
+                 if controlsVisible {
+                     playerChrome(isWide: geo.size.width > geo.size.height, bounds: geo.size)
+-                        .transition(.opacity)
++                        .transition(.opacity.combined(with: .scale(scale: 0.985)))
+                 }
+                 if playback.isResolving || (playback.isBuffering && !playback.isPlaying && !isWebPlayback && playback.error == nil) {
+                     ProgressView()
+@@ -456,7 +468,7 @@
+             if playing { scheduleHide() }
+             else {
+                 hideTask?.cancel()
+-                withAnimation(.easeOut(duration: 0.18)) { controlsVisible = true }
++                withAnimation(reduceMotion ? .linear(duration: 0.1) : .smooth(duration: 0.28)) { controlsVisible = true }
+             }
+         }
+         .onReceive(NotificationCenter.default.publisher(for: .AVPlayerItemFailedToPlayToEndTime)) { note in
+@@ -509,6 +521,7 @@
+                         Image(systemName: "chevron.down")
+                             .font(.system(size: 23, weight: .medium))
+                             .frame(width: 42, height: 42)
++                            .civyGlassCircle(glassButtons)
+                     }
+                     VStack(alignment: .leading, spacing: 3) {
+                         Text(request.media.displayTitle)
+@@ -524,15 +537,19 @@
+                         Button("Native") { isWebPlayback = false; playback.player.play() }
+                             .font(.system(size: 12, weight: .semibold))
+                     }
+-                    Button { panel = .statistics; hideTask?.cancel() } label: {
+-                        Image(systemName: "waveform.path.ecg.rectangle")
+-                            .font(.system(size: 18, weight: .medium)).frame(width: 38, height: 42)
+-                    }
+-                    .accessibilityLabel("Player statistics")
++                    if showStatsButton {
++                        Button { panel = .statistics; hideTask?.cancel() } label: {
++                            Image(systemName: "waveform.path.ecg.rectangle")
++                                .font(.system(size: 18, weight: .medium)).frame(width: 38, height: 42)
++                                .civyGlassCircle(glassButtons)
++                        }
++                        .accessibilityLabel("Player statistics")
++                    }
+                     Button { panel = .sources; hideTask?.cancel() } label: {
+                         Image(systemName: "ellipsis")
+                             .font(.system(size: 20, weight: .semibold))
+                             .frame(width: 42, height: 42)
++                            .civyGlassCircle(glassButtons)
+                     }
+                 }
+                 .buttonStyle(.plain)
+@@ -549,14 +566,14 @@
+                             showControls()
+                         } label: {
+                             Image(systemName: "gobackward.\(skipInterval)")
+-                                .font(.system(size: isWide ? 39 : 33, weight: .light))
++                                .font(.system(size: largerButtons ? (isWide ? 45 : 39) : (isWide ? 39 : 33), weight: .light))
+                         }
+                         Button {
+                             playback.togglePlayback()
+                             showControls()
+                         } label: {
+                             Image(systemName: playback.isPlaying ? "pause.fill" : "play.fill")
+-                                .font(.system(size: isWide ? 52 : 43, weight: .regular))
++                                .font(.system(size: largerButtons ? (isWide ? 61 : 50) : (isWide ? 52 : 43), weight: .regular))
+                                 .frame(width: 66, height: 68)
+                         }
+                         Button {
+@@ -564,7 +581,7 @@
+                             showControls()
+                         } label: {
+                             Image(systemName: "goforward.\(skipInterval)")
