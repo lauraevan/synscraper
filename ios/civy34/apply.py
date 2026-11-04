@@ -91,7 +91,7 @@ settings.write_text(settings.read_text().replace("design: .rounded", "design: .d
 
 project = root / "Civy.xcodeproj" / "project.pbxproj"
 p = project.read_text()
-p, count = re.subn(r'MARKETING_VERSION = "3\\.[23]\\.0";', 'MARKETING_VERSION = "3.4.0";', p)
+p, count = p.replace('MARKETING_VERSION = "3.2.0";', 'MARKETING_VERSION = "3.4.0";'), p.count('MARKETING_VERSION = "3.2.0";')
 if count != 2:
     raise RuntimeError(f"Expected two Xcode version settings; found {count}")
 project.write_text(p)
