@@ -1,0 +1,65 @@
+name: Civy 3.4 - Native Liquid Glass iOS IPA
+on:
+  push:
+    branches: [civy-34-liquidglass]
+    paths:
+      - 'ios/civy34/**'
+      - '.github/workflows/civy-3.4-ipa.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: xcode-27
+    timeout-minutes: 40
+    steps:
+      - name: Check out Civy
+        uses: actions/checkout@v4
+      - name: Reconstruct project and apply Liquid Glass redesign
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import base64, pathlib
+          archive = pathlib.Path('ios/synflix-project.txt')
+          pathlib.Path('ios/project.zip').write_bytes(base64.b64decode(archive.read_text()))
+          PY
+          mkdir -p ios/build-src
+          unzip -oq ios/project.zip -d ios/build-src
+          cp ios/civy33/RootView.swift ios/build-src/Civy/RootView.swift
+          python3 ios/civy34/apply.py ios/build-src
+          grep -q 'GlassEffectContainer' ios/build-src/Civy/RootView.swift
+          grep -q 'MARKETING_VERSION = "3.4.0"' ios/build-src/Civy.xcodeproj/project.pbxproj
+      - name: Validate Swift syntax
+        run: |
+          xcodebuild -version
+          xcrun swiftc -frontend -parse ios/build-src/Civy/*.swift
+      - name: Build for iPhone without signing
+        shell: bash
+        run: |
+          set -euo pipefail
+          xcodebuild -project ios/build-src/Civy.xcodeproj \
+            -scheme Civy -configuration Release -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath "$RUNNER_TEMP/DerivedData" \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY='' \
+            build
+      - name: Package unsigned IPA
+        shell: bash
+        run: |
+          set -euo pipefail
+          APP="$RUNNER_TEMP/DerivedData/Build/Products/Release-iphoneos/Civy.app"
+          test -f "$APP/Civy"
+          test ! -d "$APP/_CodeSignature"
+          mkdir -p dist/Payload
+          cp -R "$APP" dist/Payload/Civy.app
+          cd dist
+          zip -qry Civy-3.4-unsigned.ipa Payload
+          unzip -t Civy-3.4-unsigned.ipa | tail -1
+      - name: Upload unsigned IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: Civy-3.4-unsigned-IPA
+          path: dist/Civy-3.4-unsigned.ipa
+          compression-level: 0
+          if-no-files-found: error
