@@ -1,0 +1,63 @@
+name: Civy 3.3 - Screenshot-Inspired iOS IPA
+on:
+  push:
+    branches: [civy-reference-home-33]
+    paths:
+      - 'ios/civy33/**'
+      - '.github/workflows/civy-3.3-ipa.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: xcode-27
+    timeout-minutes: 40
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Reconstruct Civy 3.2 base and overlay redesigned Home
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import base64, pathlib
+          archive = pathlib.Path('ios/synflix-project.txt')
+          pathlib.Path('ios/project.zip').write_bytes(base64.b64decode(archive.read_text()))
+          PY
+          mkdir -p ios/build-src
+          unzip -oq ios/project.zip -d ios/build-src
+          test -f ios/build-src/Civy/RootView.swift
+          cp ios/civy33/RootView.swift ios/build-src/Civy/RootView.swift
+          sed -i '' 's/MARKETING_VERSION = "3.2.0"/MARKETING_VERSION = "3.3.0"/g' ios/build-src/Civy.xcodeproj/project.pbxproj
+      - name: Verify source and Xcode
+        run: |
+          xcodebuild -version
+          grep -q 'CivyPosterHero' ios/build-src/Civy/RootView.swift
+      - name: Compile unsigned iPhone app
+        shell: bash
+        run: |
+          set -euo pipefail
+          xcodebuild -project ios/build-src/Civy.xcodeproj \
+            -scheme Civy -configuration Release -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath "$RUNNER_TEMP/DerivedData" \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY='' build
+      - name: Package unsigned IPA
+        shell: bash
+        run: |
+          set -euo pipefail
+          APP="$RUNNER_TEMP/DerivedData/Build/Products/Release-iphoneos/Civy.app"
+          test -f "$APP/Civy"
+          test ! -d "$APP/_CodeSignature"
+          mkdir -p dist/Payload
+          cp -R "$APP" dist/Payload/Civy.app
+          cd dist
+          zip -qry Civy-3.3-unsigned.ipa Payload
+          unzip -t Civy-3.3-unsigned.ipa | tail -1
+      - name: Upload unsigned IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: Civy-3.3-unsigned-IPA
+          path: dist/Civy-3.3-unsigned.ipa
+          compression-level: 0
+          if-no-files-found: error
