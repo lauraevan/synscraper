@@ -1,0 +1,262 @@
+    private func openSettings() {
+        hideTask?.cancel()
+        settingsPage = .main
+        withAnimation(.easeInOut(duration: 0.22)) {
+            showPlayerSettings = true
+            controlsVisible = false
+        }
+    }
+
+    private func closeSettings() {
+        withAnimation(.easeInOut(duration: 0.22)) {
+            showPlayerSettings = false
+            controlsVisible = true
+        }
+        scheduleHide()
+    }
+
+    private func chooseSleepTimer(_ minutes: Int) {
+        sleepTask?.cancel()
+        sleepMinutes = minutes
+        guard minutes > 0 else { return }
+        sleepTask = Task { @MainActor in
+            try? await Task.sleep(for: .seconds(Double(minutes) * 60))
+            guard !Task.isCancelled else { return }
+            playback.player.pause()
+            sleepMinutes = 0
+            showControls()
+        }
+    }
+
+    private func rewindWithCaptions() {
+        playback.skip(-10)
+        if playback.selectedCaptionID == nil,
+           let caption = playback.currentSource?.captions?.first {
+            playback.selectCaption(caption)
+        }
+        closeSettings()
+    }
+
+    private func fetchCast() {
+        castLoading = true
+        settingsPage = .cast
+        Task {
+            defer { castLoading = false }
+            do {
+                let details = try await app.api.details(request.media)
+                castNames = details.castNames.isEmpty ? "Cast details aren't available for this title." : details.castNames
+            } catch { castNames = "Cast details couldn't be loaded. Check your connection." }
+        }
+    }
+
+    private var settingsTitle: String {
+        switch settingsPage {
+        case .main: "Settings"
+        case .quality: "Quality"
+        case .sleep: "Sleep timer"
+        case .subtitleStyle: "Subtitle style"
+        case .screen: "Screen"
+        case .sources: "Playback servers"
+        case .cast: "Who's in this?"
+        }
+    }
+
+    private func playerSettingsOverlay(isWide: Bool) -> some View {
+        GeometryReader { geo in
+            ZStack {
+                Color.black.opacity(0.77).ignoresSafeArea()
+                    .onTapGesture { closeSettings() }
+                VStack(spacing: 0) {
+                    HStack(spacing: 12) {
+                        if settingsPage != .main {
+                            Button { withAnimation(.easeInOut(duration: 0.18)) { settingsPage = .main } } label: {
+                                Image(systemName: "chevron.left")
+                                    .font(.system(size: 20, weight: .semibold))
+                                    .frame(width: 44, height: 44)
+                                    .glassEffect(.regular.interactive(), in: Circle())
+                            }
+                            .accessibilityLabel("Back to settings")
+                        }
+                        Text(settingsTitle)
+                            .font(.system(size: 25, weight: .bold))
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        Button { closeSettings() } label: {
+                            Image(systemName: "xmark")
+                                .font(.system(size: 23, weight: .medium))
+                                .frame(width: 48, height: 48)
+                                .glassEffect(.regular.interactive(), in: Circle())
+                        }
+                        .accessibilityLabel("Close player settings")
+                    }
+                    .padding(.bottom, 12)
+
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 1) {
+                            playerSettingsContent
+                        }
+                    }
+                    .scrollIndicators(.hidden)
+                }
+                .foregroundStyle(.white)
+                .padding(.horizontal, isWide ? 27 : 20)
+                .padding(.vertical, isWide ? 10 : 26)
+                .frame(maxWidth: isWide ? 720 : 560)
+                .frame(maxHeight: geo.size.height - 12)
+                .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 28, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: 28, style: .continuous)
+                    .strokeBorder(.white.opacity(0.15), lineWidth: 0.8))
+                .padding(.horizontal, isWide ? 20 : 10)
+            }
+            .frame(width: geo.size.width, height: geo.size.height)
+        }
+    }
+
+    @ViewBuilder
+    private var playerSettingsContent: some View {
+        switch settingsPage {
+        case .main:
+            settingRow("Quality", icon: "sparkles.tv", value: playback.selectedQuality == "Auto" ? (playback.currentSource?.quality ?? "Auto") : playback.selectedQuality) {
+                settingsPage = .quality
+            }
+            settingRow("Sleep timer", icon: "moon", value: sleepMinutes == 0 ? "Off" : "\(sleepMinutes)m") {
+                settingsPage = .sleep
+            }
+            settingRow("Subtitle style", icon: "textformat", value: subtitleStyle) {
+                settingsPage = .subtitleStyle
+            }
+            settingRow("Screen", icon: "rectangle.on.rectangle", value: aspectFill ? "Fill" : "Fit") {
+                settingsPage = .screen
+            }
+            HStack(spacing: 15) {
+                Image(systemName: "exclamationmark.bubble").frame(width: 29)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Content heads-up").font(.system(size: 16, weight: .semibold))
+                    Text("Requires a connected content-warning provider")
+                        .font(.system(size: 12)).foregroundStyle(.white.opacity(0.55))
+                }
+                Spacer(minLength: 10)
+                Text("Unavailable").font(.system(size: 12)).foregroundStyle(.white.opacity(0.5))
+            }
+            .padding(.vertical, 12)
+            .accessibilityElement(children: .combine)
+            settingRow("What did they say?", icon: "gobackward.10", value: nil,
+                       detail: "Back 10s with subtitles on") { rewindWithCaptions() }
+            settingRow("Who's in this?", icon: "person.2", value: nil,
+                       detail: "Cast information from TMDB") { fetchCast() }
+            settingRow("Server", icon: "server.rack", value: "Server \((playback.selectedIndex ?? 0) + 1)") {
+                settingsPage = .sources
+            }
+            settingRow("Playback speed", icon: "speedometer", value: speedLabel) {
+                showPlayerSettings = false
+                panel = .speed
+            }
+        case .quality:
+            settingChoice("Auto", subtitle: "Adaptive playback when the stream supports it", selected: playback.selectedQuality == "Auto") {
+                playback.chooseQuality("Auto")
+                settingsPage = .main
+            }
+            ForEach(playback.qualityLevels) { quality in
+                settingChoice(quality.label,
+                              subtitle: quality.bitrate > 0 ? String(format: "%.1f Mbps rendition", Double(quality.bitrate) / 1_000_000) : "Available rendition",
+                              selected: playback.selectedQuality == quality.label) {
+                    playback.chooseQuality(quality.label)
+                    settingsPage = .main
+                }
+            }
+            if playback.qualityLevels.isEmpty {
+                Text("This server hasn't exposed selectable video resolutions. Auto uses the quality provided by the stream. Try another server if you need a different resolution.")
+                    .font(.system(size: 14))
+                    .foregroundStyle(.white.opacity(0.62))
+                    .padding(.vertical, 16)
+            }
+        case .sleep:
+            ForEach([0, 15, 30, 45, 60, 90], id: \.self) { minutes in
+                settingChoice(minutes == 0 ? "Off" : "\(minutes) minutes", subtitle: nil, selected: sleepMinutes == minutes) {
+                    chooseSleepTimer(minutes)
+                    settingsPage = .main
+                }
+            }
+        case .subtitleStyle:
+            ForEach(["Standard", "Large", "High Contrast"], id: \.self) { style in
+                settingChoice(style, subtitle: nil, selected: subtitleStyle == style) {
+                    subtitleStyle = style
+                    subtitleSize = style == "Large" ? 28 : 21
+                    subtitleBold = style != "Standard"
+                    subtitleBackground = style == "High Contrast"
+                    subtitleOpacity = style == "High Contrast" ? 0.9 : 0.65
+                    settingsPage = .main
+                }
+            }
+        case .screen:
+            settingChoice("Fit", subtitle: "Show the full frame", selected: !aspectFill) {
+                aspectFill = false
+                settingsPage = .main
+            }
+            settingChoice("Fill", subtitle: "Fill the screen, cropping the edges", selected: aspectFill) {
+                aspectFill = true
+                settingsPage = .main
+            }
+        case .sources:
+            if playback.sources.isEmpty {
+                Text("No playback servers are available right now.")
+                    .foregroundStyle(.white.opacity(0.7)).padding(.vertical, 15)
+            }
+            ForEach(Array(playback.sources.enumerated()), id: \.offset) { index, source in
+                settingChoice("Server \(index + 1)",
+                              subtitle: "\(source.quality ?? "Auto") · \(source.name)",
+                              selected: playback.selectedIndex == index) {
+                    isWebPlayback = false
+                    playback.selectSource(at: index)
+                    settingsPage = .main
+                }
+            }
+        case .cast:
+            if castLoading { ProgressView().tint(.white).padding(20) }
+            Text(castLoading ? "Loading cast information…" : castNames)
+                .font(.system(size: 16))
+                .foregroundStyle(.white.opacity(0.88))
+                .padding(.vertical, 14)
+        }
+    }
+
+    private func settingRow(_ title: String, icon: String, value: String?, detail: String? = nil, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 15) {
+                Image(systemName: icon).font(.system(size: 22, weight: .light))
+                    .frame(width: 29)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(title).font(.system(size: 17, weight: .semibold))
+                    if let detail { Text(detail).font(.system(size: 12)).foregroundStyle(.white.opacity(0.58)) }
+                }
+                Spacer(minLength: 14)
+                if let value {
+                    Text(value).font(.system(size: 14)).foregroundStyle(.white.opacity(0.66))
+                        .lineLimit(1).minimumScaleFactor(0.75)
+                }
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .semibold)).foregroundStyle(.white.opacity(0.48))
+            }
+            .frame(minHeight: 47)
+            .padding(.vertical, 7)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func settingChoice(_ title: String, subtitle: String?, selected: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 12) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(title).font(.system(size: 16, weight: selected ? .bold : .medium))
+                    if let subtitle { Text(subtitle).font(.system(size: 12)).foregroundStyle(.white.opacity(0.58)) }
+                }
+                Spacer()
+                if selected { Image(systemName: "checkmark.circle.fill").foregroundStyle(Color.synAccent) }
+            }
+            .padding(.horizontal, 17).padding(.vertical, 12)
+            .glassEffect(selected ? .regular.interactive() : .identity, in: RoundedRectangle(cornerRadius: 12))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
