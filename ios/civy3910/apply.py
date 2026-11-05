@@ -122,7 +122,18 @@ private struct CivyCinematicStartup: View {
 
 '''
 s = s.replace(place, splash + place, 1)
+# The profile selector otherwise presents immediately over the animation.
+# Delay the actual full-screen presentation until after the brand splash fades.
+old_picker = ".fullScreenCover(isPresented: $viewers.choosing) {"
+assert s.count(old_picker) == 1
+s = s.replace(old_picker, """        .fullScreenCover(
+            isPresented: Binding(
+                get: { viewers.choosing && !showingStartup },
+                set: { if !$0 { viewers.choosing = false } }
+            )
+        ) {""", 1)
 assert s.count("CivyCinematicStartup") == 2
+assert "get: { viewers.choosing && !showingStartup }" in s
 root_file.write_text(s)
 
 p = project_file.read_text()
