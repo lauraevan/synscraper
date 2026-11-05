@@ -228,7 +228,7 @@ private struct CivyResumeMiniBar: View {
 '''
 root_view = root_view.replace(dock_marker, mini_bar + dock_marker, 1)
 dock_start = root_view.index(dock_marker)
-dock_end = root_view.index("// Display the exact TV-and-waves cast glyph", dock_start)
+dock_end = root_view.index("private struct CivyAirPlayPicker: UIViewRepresentable {", dock_start)
 dock = root_view[dock_start:dock_end]
 assert dock.count(".frame(height: 64)") == 1
 dock = dock.replace(".frame(height: 64)", ".frame(height: 60)")
