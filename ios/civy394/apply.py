@@ -54,7 +54,7 @@ updates = [
     ("Text(\"Change resolution while watching under Player Settings → Quality. Miami's available resolutions are grouped there; unsupported resolutions are never invented.\")",
      'Text("Auto is recommended. You can change picture quality while watching. Only supported resolutions are shown.")'),
     ('Section("Buffering") {', 'Section("Playback performance") {'),
-    ('}.navigationTitle("Streaming")', '}.navigationTitle("Video quality")')
+    ('.navigationTitle("Streaming")', '.navigationTitle("Video quality")')
 ]
 for old, new in updates:
     if old == new: continue
