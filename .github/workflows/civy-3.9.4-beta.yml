@@ -1,0 +1,111 @@
+name: Civy 3.9.4 Beta - My Civy and Simple Quality
+on:
+  push:
+    branches: [civy-394-personal-library-beta]
+    paths:
+      - 'ios/civy39/**'
+      - 'ios/civy391/**'
+      - 'ios/civy392/**'
+      - 'ios/civy393/**'
+      - 'ios/civy394/**'
+      - '.github/workflows/civy-3.9.4-beta.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: xcode-27
+    timeout-minutes: 45
+    steps:
+      - name: Checkout Civy
+        uses: actions/checkout@v4
+      - name: Recreate Civy Beta and apply 3.9 redesign
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import pathlib, base64
+          archive=pathlib.Path('ios/synflix-project.txt')
+          pathlib.Path('ios/base.zip').write_bytes(base64.b64decode(archive.read_text()))
+          PY
+          mkdir -p ios/build-src
+          unzip -oq ios/base.zip -d ios/build-src
+          cp ios/civy33/RootView.swift ios/build-src/Civy/RootView.swift
+          python3 ios/civy34/apply.py ios/build-src
+          python3 ios/civy36/apply.py ios/build-src
+          (cd ios/build-src && patch --batch -p1 < ../civy37/root.patch)
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('ios/build-src/Civy/RootView.swift')
+          s=p.read_text().replace('private struct CivyAirPlayControl: View', 'struct CivyAirPlayControl: View', 1)
+          p.write_text(s)
+          PY
+          python3 ios/civy36/beta_brand.py ios/build-src
+          cp ios/civy37/SearchView.swift ios/build-src/Civy/SearchView.swift
+          cp ios/civy37/CivyReels.swift ios/build-src/Civy/CivyReels.swift
+          cp ios/civy37/CivyLive.swift ios/build-src/Civy/CivyLive.swift
+          python3 ios/civy37/project.py ios/build-src
+          cp ios/civy38/OfflineLibrary.swift ios/build-src/Civy/OfflineLibrary.swift
+          cp ios/civy38/OfflineArtwork.swift ios/build-src/Civy/OfflineArtwork.swift
+          python3 ios/civy38/apply.py ios/build-src
+          cp ios/civy39/CivyProfiles.swift ios/build-src/Civy/CivyProfiles.swift
+          python3 ios/civy39/apply_civy39.py ios/build-src
+          python3 ios/civy39/apply_civy39_player.py ios/build-src
+          cp ios/civy391/CivyProfiles.swift ios/build-src/Civy/CivyProfiles.swift
+          cp ios/civy391/CivyReels.swift ios/build-src/Civy/CivyReels.swift
+          python3 ios/civy391/apply.py ios/build-src
+          python3 ios/civy392/apply.py ios/build-src
+          python3 ios/civy393/apply.py ios/build-src
+          python3 ios/civy393/fix_quality_preference.py ios/build-src
+          cp ios/civy394/CivyMyCivy.swift ios/build-src/Civy/CivyMyCivy.swift
+          python3 ios/civy394/apply.py ios/build-src
+          grep -q 'struct CivyMyCivyView' ios/build-src/Civy/CivyMyCivy.swift
+          grep -q 'MARKETING_VERSION = "3.9.4"' ios/build-src/Civy.xcodeproj/project.pbxproj
+          grep -q 'CURRENT_PROJECT_VERSION = "11"' ios/build-src/Civy.xcodeproj/project.pbxproj
+          grep -q 'CURRENT_PROJECT_VERSION = "10"' ios/build-src/Civy.xcodeproj/project.pbxproj
+          grep -q 'var serverChoices' ios/build-src/Civy/PlayerScreen.swift
+          grep -q 'Make it yours.' ios/build-src/Civy/SettingsView.swift
+          grep -q 'CivyCinematicLoading' ios/build-src/Civy/PlayerScreen.swift
+          grep -q 'Server \\(index + 1)' ios/build-src/Civy/PlayerScreen.swift
+          grep -q 'CivyQualityLevel' ios/build-src/Civy/PlayerScreen.swift
+          grep -q 'sepiasearch.org' ios/build-src/Civy/CivyReels.swift
+          grep -q 'Who.s Watching?' ios/build-src/Civy/CivyProfiles.swift
+          grep -q 'MARKETING_VERSION = "3.9.4"' ios/build-src/Civy.xcodeproj/project.pbxproj
+          test ! -e ios/build-src/Civy/OfflineLibrary.swift
+          ! grep -R -q 'CivyOfflineLibraryView' ios/build-src/Civy
+          grep -q 'Who.s Watching?' ios/build-src/Civy/CivyProfiles.swift
+          grep -q 'MARKETING_VERSION = "3.9.4"' ios/build-src/Civy.xcodeproj/project.pbxproj
+          grep -q 'CFBundleDisplayName = "Civy Beta"' ios/build-src/Civy.xcodeproj/project.pbxproj
+      - name: Validate source and Xcode project
+        run: |
+          xcodebuild -version
+          plutil -lint ios/build-src/Civy.xcodeproj/project.pbxproj
+          xcrun swiftc -frontend -parse ios/build-src/Civy/*.swift
+      - name: Compile unsigned ARM64 iPhone app
+        shell: bash
+        run: |
+          set -euo pipefail
+          xcodebuild -project ios/build-src/Civy.xcodeproj \
+            -scheme Civy -configuration Release -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath "$RUNNER_TEMP/CivyBuild" \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY='' build
+      - name: Package Civy Beta
+        shell: bash
+        run: |
+          set -euo pipefail
+          APP="$RUNNER_TEMP/CivyBuild/Build/Products/Release-iphoneos/Civy.app"
+          test -f "$APP/Civy"
+          test ! -d "$APP/_CodeSignature"
+          mkdir -p dist/Payload
+          cp -R "$APP" dist/Payload/Civy.app
+          cd dist
+          zip -qry Civy-3.9.4-Beta-unsigned.ipa Payload
+          unzip -t Civy-3.9.4-Beta-unsigned.ipa | tail -1
+      - name: Upload unsigned IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: Civy-3.9.4-Beta-unsigned-IPA
+          path: dist/Civy-3.9.4-Beta-unsigned.ipa
+          compression-level: 0
+          if-no-files-found: error
