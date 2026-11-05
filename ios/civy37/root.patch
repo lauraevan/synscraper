@@ -116,15 +116,6 @@
                      .allowsHitTesting(false)
              }
              .shadow(color: Color.black.opacity(0.48), radius: 22, y: 11)
-@@ -172,7 +185,7 @@
-     func updateUIView(_ uiView: AVRoutePickerView, context: Context) { }
- }
- 
--private struct CivyAirPlayControl: View {
-+struct CivyAirPlayControl: View {
-     var body: some View {
-         ZStack {
-             CivyCastGlyph().allowsHitTesting(false)
 @@ -261,6 +274,10 @@
                              ContinueWatchingRail(history: app.history, heading: continuationTitle) { selected = $0 }
                                  .padding(.top, 25)
