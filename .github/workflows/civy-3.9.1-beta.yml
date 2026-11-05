@@ -5,7 +5,7 @@ on:
     paths:
       - 'ios/civy39/**'
       - 'ios/civy391/**'
-      - '.github/workflows/civy-3.9-beta.yml'
+      - '.github/workflows/civy-3.9.1-beta.yml'
   workflow_dispatch:
 permissions:
   contents: read
