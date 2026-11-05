@@ -29,7 +29,14 @@ jobs:
           cp ios/civy33/RootView.swift ios/build-src/Civy/RootView.swift
           python3 ios/civy34/apply.py ios/build-src
           python3 ios/civy36/apply.py ios/build-src
-          (cd ios/build-src && patch --batch -p1 < ../civy37/root.patch) || { cat ios/build-src/Civy/RootView.swift.rej; exit 1; }
+          (cd ios/build-src && patch --batch -p1 < ../civy37/root.patch)
+          python3 - <<'PY'
+          from pathlib import Path
+          file = Path('ios/build-src/Civy/RootView.swift')
+          text = file.read_text()
+          assert 'private struct CivyAirPlayControl: View' in text
+          file.write_text(text.replace('private struct CivyAirPlayControl: View', 'struct CivyAirPlayControl: View', 1))
+          PY
           python3 ios/civy36/beta_brand.py ios/build-src
           cp ios/civy37/SearchView.swift ios/build-src/Civy/SearchView.swift
           cp ios/civy37/CivyReels.swift ios/build-src/Civy/CivyReels.swift
