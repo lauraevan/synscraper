@@ -57,7 +57,7 @@ jobs:
           test ! -e ios/build-src/Civy/OfflineLibrary.swift
           ! grep -R -q 'CivyOfflineLibraryView' ios/build-src/Civy
           grep -q 'Who.s Watching?' ios/build-src/Civy/CivyProfiles.swift
-          grep -q 'MARKETING_VERSION = "3.9.0"' ios/build-src/Civy.xcodeproj/project.pbxproj
+          grep -q 'MARKETING_VERSION = "3.9.1"' ios/build-src/Civy.xcodeproj/project.pbxproj
           grep -q 'CFBundleDisplayName = "Civy Beta"' ios/build-src/Civy.xcodeproj/project.pbxproj
       - name: Validate source and Xcode project
         run: |
