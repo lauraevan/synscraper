@@ -55,6 +55,8 @@ jobs:
           python3 ios/civy391/apply.py ios/build-src
           python3 ios/civy392/apply.py ios/build-src
           python3 ios/civy393/apply.py ios/build-src
+          python3 ios/civy393/fix_quality_preference.py ios/build-src
+          grep -q 'CURRENT_PROJECT_VERSION = "10"' ios/build-src/Civy.xcodeproj/project.pbxproj
           grep -q 'var serverChoices' ios/build-src/Civy/PlayerScreen.swift
           grep -q 'Make it yours.' ios/build-src/Civy/SettingsView.swift
           grep -q 'CivyCinematicLoading' ios/build-src/Civy/PlayerScreen.swift
