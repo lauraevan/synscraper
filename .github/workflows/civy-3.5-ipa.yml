@@ -34,6 +34,7 @@ jobs:
           Path('ios/civy35/swift-only.patch').write_text(source.split('--- a/Civy.xcodeproj/project.pbxproj')[0])
           PY
           (cd ios/build-src && patch -p1 < ../civy35/swift-only.patch)
+          python3 ios/civy35/fix.py ios/build-src
           python3 - <<'PY'
           from pathlib import Path
           path = Path('ios/build-src/Civy.xcodeproj/project.pbxproj')
