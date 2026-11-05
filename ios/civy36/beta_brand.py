@@ -42,7 +42,7 @@ home.write_text(s)
 a = settings.read_text()
 assert 'Text("Version 3.2 · Cinema Edition")' in a
 a = a.replace('Text("Version 3.2 · Cinema Edition")',
-              'Text("Version \\(Bundle.main.object(forInfoDictionaryKey: \\"CFBundleShortVersionString\\") as? String ?? \\"3.6.0\\") · Beta")', 1)
+              r'''Text("Version \(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "3.6.0") · Beta")''', 1)
 # Label About as Beta while keeping non-release app identity Civy.
 a = a.replace('Text("civy").font(.system(size: 37, weight: .bold, design: .default)).tracking(-1.8)',
               'Text("civy beta").font(.system(size: 37, weight: .bold, design: .default)).tracking(-1.8)', 1)
