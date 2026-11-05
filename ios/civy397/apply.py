@@ -9,7 +9,7 @@ project = root / "Civy.xcodeproj/project.pbxproj"
 
 src = file.read_text()
 start = src.index("private struct CivyFloatingDock: View {")
-end = src.index("// Display the exact TV-and-waves cast glyph", start)
+end = src.index("\n}\n\n", start) + len("\n}\n\n")
 dock = '''// iOS 26 Apple Music pattern: one fluid glass tab capsule and an
 // independent circular Search button, not a single five-column pill.
 private struct CivyFloatingDock: View {
