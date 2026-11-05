@@ -1,0 +1,41 @@
+    func chooseQuality(_ label: String) {
+        guard let index = selectedIndex else { return }
+        if label == "Auto" { selectSource(at: index) }
+        else if let variant = qualityLevels.first(where: { $0.label == label }) {
+            selectSource(at: index, quality: variant)
+        }
+    }
+
+    // Query only HLS playlists. Never download MP4 content just to inspect quality.
+    private static func discoverHLSQuality(url: URL, kind: String) async -> [CivyQualityLevel] {
+        let path = url.absoluteString.lowercased()
+        guard kind.lowercased().contains("hls") || path.contains("m3u8") || path.contains("/api/hls") else { return [] }
+        var request = URLRequest(url: url, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 8)
+        request.setValue("application/vnd.apple.mpegurl", forHTTPHeaderField: "Accept")
+        do {
+            let (data, response) = try await URLSession.shared.data(for: request)
+            guard (response as? HTTPURLResponse)?.statusCode == 200, data.count < 240_000,
+                  let playlist = String(data: data, encoding: .utf8),
+                  playlist.hasPrefix("#EXTM3U"), playlist.contains("#EXT-X-STREAM-INF") else { return [] }
+            let lines = playlist.components(separatedBy: .newlines)
+            var best: [String: CivyQualityLevel] = [:]
+            for (index, raw) in lines.enumerated() where raw.hasPrefix("#EXT-X-STREAM-INF") {
+                guard let portion = raw.components(separatedBy: "RESOLUTION=").dropFirst().first,
+                      let heightText = portion.split(separator: ",").first?.split(separator: "x").last,
+                      let height = Int(heightText), (144...4320).contains(height) else { continue }
+                let bandwidthText = raw.components(separatedBy: "BANDWIDTH=").dropFirst().first?.split(separator: ",").first
+                let bandwidth = bandwidthText.flatMap { Int($0) } ?? 0
+                guard let next = lines.dropFirst(index + 1).first(where: { !$0.isEmpty && !$0.hasPrefix("#") }),
+                      let resolved = URL(string: next.trimmingCharacters(in: .whitespacesAndNewlines), relativeTo: url)?.absoluteURL,
+                      resolved.scheme == "https" else { continue }
+                let label = "\(height)p"
+                let level = CivyQualityLevel(label: label, url: resolved, bitrate: bandwidth)
+                if best[label] == nil || (best[label]?.bitrate ?? 0) < bandwidth { best[label] = level }
+            }
+            return best.values.sorted { a, b in
+                let av = Int(a.label.dropLast()) ?? 0, bv = Int(b.label.dropLast()) ?? 0
+                return av > bv
+            }
+        } catch { return [] }
+    }
+
