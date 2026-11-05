@@ -30,7 +30,7 @@ swap('''subtitle: "Available on \\(playback.currentSource?.name ?? "this server"
      '''subtitle: nil,''')
 swap('''Text("This stream provides no switchable resolutions. The server controls its output quality.")''',
      '''Text("This video adjusts its picture quality automatically.")''')
-    ("Text(\"Change resolution while watching under Player Settings → Quality. Miami's available resolutions are grouped there; unsupported resolutions are never invented.\")",
+swap('''Text("Choose a provider. Resolutions for the selected provider, including Miami, appear under Quality.")''',
      '''Text("If playback isn't working, try another source. Picture quality is adjusted separately.")''')
 swap('''settingRow("Server", icon: "server.rack", value: "Server \\(playback.selectedServerNumber)")''',
      '''settingRow("Playback source", icon: "rectangle.on.rectangle", value: nil)''')
@@ -51,7 +51,7 @@ updates = [
     ('Picker("Preferred quality", selection: $quality)', 'Picker("Preferred quality", selection: $quality)'),
     ('Section("Sources") {\n                Picker("Preferred quality"', 'Section("Picture quality") {\n                Picker("Preferred quality"'),
     ('Toggle("Try next source on failure", isOn: $failover)', 'Toggle("Keep playing if a stream fails", isOn: $failover)'),
-    ('Text("Change resolution while watching under Player Settings → Quality. Miami\\'s available resolutions are grouped there; unsupported resolutions are never invented.")',
+    ("Text(\"Change resolution while watching under Player Settings → Quality. Miami's available resolutions are grouped there; unsupported resolutions are never invented.\")",
      'Text("Auto is recommended. You can change picture quality while watching. Only supported resolutions are shown.")'),
     ('Section("Buffering") {', 'Section("Playback performance") {'),
     ('}.navigationTitle("Streaming")', '}.navigationTitle("Video quality")')
