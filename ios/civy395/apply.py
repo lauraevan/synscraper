@@ -22,13 +22,18 @@ text = text.replace(original,
 
 original = '''        .sheet(item: $selected) { DetailView(media: $0).environmentObject(app) }
 '''
-assert text.count(original) == 1, "Home's sheet anchoring has changed"
-text = text.replace(original,
+# Other views can also present DetailView; patch only the HomeView sheet.
+home_start = text.index("struct HomeView: View {")
+home_end = text.index("private extension Optional", home_start)
+home_chunk = text[home_start:home_end]
+assert home_chunk.count(original) == 1, "Home sheet anchor changed"
+home_chunk = home_chunk.replace(original,
 '''        .overlay(alignment: .top) {
             pinnedHomeHeader
                 .zIndex(20)
         }
 ''' + original, 1)
+text = text[:home_start] + home_chunk + text[home_end:]
 
 anchor = '''    private var topBar: some View {
 '''
