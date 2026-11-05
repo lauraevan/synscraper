@@ -110,7 +110,7 @@ insert = '''        B51F8A63D7B14C72AB9A3E20 /* PBXFileReference */ = { isa = PB
         B51F8A63D7B14C72AB9A3E22 /* PBXFileReference */ = { isa = PBXFileReference; lastKnownFileType = "sourcecode.swift"; path = "OfflineArtwork.swift"; sourceTree = "<group>"; };
         B51F8A63D7B14C72AB9A3E23 /* PBXBuildFile */ = { isa = PBXBuildFile; fileRef = "B51F8A63D7B14C72AB9A3E22"; };
 '''
-a = '        9F6CFF8906F1A9A5F87CD18B /* PBXFileReference */ = {'
+a = '\t\t9F6CFF8906F1A9A5F87CD18B /* PBXFileReference */ = {'
 assert a in s
 s = s.replace(a, insert + a, 1)
 a = 'B51F8A63D7B14C72AB9A3E12, 4DB5DC12'
