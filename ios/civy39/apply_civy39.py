@@ -39,7 +39,8 @@ def root_changes(s):
     s=s.replace('''            .sheet(isPresented: $showOffline) { CivyOfflineLibraryView() }
 ''','',1)
     s=re.sub(r'''struct CivyDownloadsView: View \{\n    var body: some View \{ CivyOfflineLibraryView\(\) \}\n\}\n\n''','',s,count=1)
-    assert 'showOffline = true' not in s, 'Offline import entry must be removed'\n    # More expressive translucent dock inspired by Apple's system material.
+    assert 'showOffline = true' not in s, 'Offline import entry must be removed'
+    # More expressive translucent dock inspired by Apple's system material.
     s=s.replace('''                    .glassEffectID("selected-civy-tab", in: selectionGlass)''','''                    .glassEffectID("selected-civy-tab", in: selectionGlass)''')
     s=s.replace('''                                    .fill(Color.white.opacity(glass ? 0.10 : 0.16))''','''                                    .fill(Color.white.opacity(glass ? 0.20 : 0.16))''',1)
     s=s.replace('''.glassEffect(glass ? .regular.tint(Color.white.opacity(0.12)).interactive() : .identity, in: Capsule())''','''.glassEffect(glass ? .regular.tint(Color.white.opacity(0.24)).interactive() : .identity, in: Capsule())''',1)
