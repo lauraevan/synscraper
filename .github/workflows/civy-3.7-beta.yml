@@ -29,7 +29,7 @@ jobs:
           cp ios/civy33/RootView.swift ios/build-src/Civy/RootView.swift
           python3 ios/civy34/apply.py ios/build-src
           python3 ios/civy36/apply.py ios/build-src
-          (cd ios/build-src && patch --batch -p1 < ../civy37/root.patch)
+          (cd ios/build-src && patch --batch -p1 < ../civy37/root.patch) || { cat ios/build-src/Civy/RootView.swift.rej; exit 1; }
           python3 ios/civy36/beta_brand.py ios/build-src
           cp ios/civy37/SearchView.swift ios/build-src/Civy/SearchView.swift
           cp ios/civy37/CivyReels.swift ios/build-src/Civy/CivyReels.swift
