@@ -1,0 +1,37 @@
+
+// Cinematic Civy-branded buffering indicator. Retains artwork behind it.
+private struct CivyCinematicLoading: View {
+    let message: String
+    @State private var active = false
+
+    var body: some View {
+        VStack(spacing: 18) {
+            ZStack {
+                Circle().strokeBorder(Color.synAccent.opacity(0.19), lineWidth: 2)
+                    .frame(width: 76, height: 76)
+                Circle().trim(from: 0.05, to: 0.28)
+                    .stroke(Color.synAccent, style: StrokeStyle(lineWidth: 3.5, lineCap: .round))
+                    .frame(width: 76, height: 76)
+                    .rotationEffect(.degrees(active ? 360 : 0))
+                Text("C")
+                    .font(.system(size: 39, weight: .black, design: .rounded))
+                    .italic()
+                    .foregroundStyle(Color.synAccent)
+                    .scaleEffect(active ? 1.07 : 0.92)
+                    .shadow(color: Color.synAccent.opacity(0.36), radius: active ? 15 : 6)
+            }
+            .frame(width: 90, height: 90)
+            Text(message)
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(.white.opacity(0.88))
+                .lineLimit(1)
+        }
+        .padding(.horizontal, 28).padding(.vertical, 20)
+        .background(.black.opacity(0.44), in: RoundedRectangle(cornerRadius: 22))
+        .onAppear {
+            withAnimation(.linear(duration: 1.4).repeatForever(autoreverses: false)) { active = true }
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(message)
+    }
+}
