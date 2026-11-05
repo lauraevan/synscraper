@@ -1,9 +1,10 @@
-name: Civy 3.9 Beta - Profiles and Cinematic Player
+name: Civy 3.9.1 Beta - Clear Glass Profiles and 10-Minute Clips
 on:
   push:
-    branches: [civy-39-profiles-player-beta]
+    branches: [civy-391-glass-clips-beta]
     paths:
       - 'ios/civy39/**'
+      - 'ios/civy391/**'
       - '.github/workflows/civy-3.9-beta.yml'
   workflow_dispatch:
 permissions:
@@ -47,6 +48,10 @@ jobs:
           cp ios/civy39/CivyProfiles.swift ios/build-src/Civy/CivyProfiles.swift
           python3 ios/civy39/apply_civy39.py ios/build-src
           python3 ios/civy39/apply_civy39_player.py ios/build-src
+          cp ios/civy391/CivyProfiles.swift ios/build-src/Civy/CivyProfiles.swift
+          cp ios/civy391/CivyReels.swift ios/build-src/Civy/CivyReels.swift
+          python3 ios/civy391/apply.py ios/build-src
+          grep -q 'sepiasearch.org' ios/build-src/Civy/CivyReels.swift
           test ! -e ios/build-src/Civy/OfflineLibrary.swift
           ! grep -R -q 'CivyOfflineLibraryView' ios/build-src/Civy
           grep -q 'Who.s Watching?' ios/build-src/Civy/CivyProfiles.swift
@@ -76,12 +81,12 @@ jobs:
           mkdir -p dist/Payload
           cp -R "$APP" dist/Payload/Civy.app
           cd dist
-          zip -qry Civy-3.9-Beta-unsigned.ipa Payload
-          unzip -t Civy-3.9-Beta-unsigned.ipa | tail -1
+          zip -qry Civy-3.9.1-Beta-unsigned.ipa Payload
+          unzip -t Civy-3.9.1-Beta-unsigned.ipa | tail -1
       - name: Upload unsigned IPA
         uses: actions/upload-artifact@v4
         with:
-          name: Civy-3.9-Beta-unsigned-IPA
-          path: dist/Civy-3.9-Beta-unsigned.ipa
+          name: Civy-3.9.1-Beta-unsigned-IPA
+          path: dist/Civy-3.9.1-Beta-unsigned.ipa
           compression-level: 0
           if-no-files-found: error
