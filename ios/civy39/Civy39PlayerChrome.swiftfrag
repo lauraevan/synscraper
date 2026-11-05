@@ -1,0 +1,143 @@
+    private func playerChrome(isWide: Bool, bounds: CGSize) -> some View {
+        ZStack {
+            LinearGradient(stops: [
+                .init(color: .black.opacity(0.64), location: 0),
+                .init(color: .black.opacity(0.12), location: 0.25),
+                .init(color: .clear, location: 0.44),
+                .init(color: .clear, location: 0.63),
+                .init(color: .black.opacity(0.20), location: 0.75),
+                .init(color: .black.opacity(0.89), location: 1)
+            ], startPoint: .top, endPoint: .bottom)
+                .ignoresSafeArea().allowsHitTesting(false)
+
+            VStack(spacing: 0) {
+                HStack(spacing: isWide ? 12 : 7) {
+                    Text("C")
+                        .font(.system(size: isWide ? 33 : 26, weight: .black))
+                        .italic().foregroundStyle(Color.synAccent)
+                        .accessibilityLabel("Civy Beta")
+                    Text(request.media.kind == "tv" ? "S\(request.season ?? 1):E\(request.episode ?? 1) \(episodeTitle.isEmpty ? request.media.displayTitle : "\"\(episodeTitle)\"")" : request.media.displayTitle)
+                        .font(.system(size: isWide ? 15 : 13, weight: .medium))
+                        .foregroundStyle(.white.opacity(0.95))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.65)
+                    Spacer(minLength: 2)
+                    if isWide {
+                        playerIcon("hand.thumbsdown", "Dislike", isSelected: rating == -1) { setRating(-1) }
+                        playerIcon("hand.thumbsup", "Like", isSelected: rating == 1) { setRating(1) }
+                        playerIcon(app.isFavorite(request.media) ? "heart.fill" : "heart", "My List", isSelected: app.isFavorite(request.media)) {
+                            app.toggleFavorite(request.media)
+                        }
+                    }
+                    CivyAirPlayControl()
+                        .frame(width: 40, height: 40)
+                    if isWide {
+                        playerIcon("flag", "Report playback issue") { showReport = true }
+                        playerIcon("lock.open", "Lock controls") { controlsLocked = true; controlsVisible = false }
+                    }
+                    playerIcon("gearshape", "Player settings") { panel = .sources }
+                    Button { closePlayer() } label: {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 22, weight: .medium))
+                            .frame(width: 38, height: 40)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain).accessibilityLabel("Close player")
+                }
+                .padding(.horizontal, isWide ? 30 : 18)
+                .padding(.top, isWide ? 9 : 52)
+
+                Spacer(minLength: 8)
+                if !isWebPlayback && playback.error == nil && !playback.isResolving {
+                    HStack(spacing: isWide ? 104 : 52) {
+                        Button { playback.skip(-Double(skipInterval)); showControls() } label: {
+                            Image(systemName: "gobackward.\(skipInterval)")
+                                .font(.system(size: isWide ? 44 : 34, weight: .light))
+                        }.accessibilityLabel("Back \(skipInterval) seconds")
+                        Button { playback.togglePlayback(); showControls() } label: {
+                            Image(systemName: playback.isPlaying ? "pause.fill" : "play.fill")
+                                .font(.system(size: isWide ? 65 : 52))
+                                .frame(width: 82, height: 80)
+                        }.accessibilityLabel(playback.isPlaying ? "Pause" : "Play")
+                        Button { playback.skip(Double(skipInterval)); showControls() } label: {
+                            Image(systemName: "goforward.\(skipInterval)")
+                                .font(.system(size: isWide ? 44 : 34, weight: .light))
+                        }.accessibilityLabel("Forward \(skipInterval) seconds")
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(.white)
+                    .shadow(color: .black.opacity(0.72), radius: 9)
+                }
+                Spacer(minLength: 8)
+
+                if !isWebPlayback {
+                    VStack(spacing: 17) {
+                        HStack(spacing: 17) {
+                            PlaybackScrubber(position: scrubValue ?? playback.currentTime,
+                                             duration: playback.duration,
+                                             onDrag: { scrubValue = $0; hideTask?.cancel() },
+                                             onCommit: { value in playback.seek(to: value); scrubValue = nil; scheduleHide() })
+                                .frame(height: 27)
+                            Text(playback.duration > 0 ? (remainingTime ? "−\(clock(max(0, playback.duration - (scrubValue ?? playback.currentTime))))" : clock(playback.duration)) : "−—:—")
+                                .font(.system(size: 13, weight: .medium))
+                                .monospacedDigit()
+                                .foregroundStyle(.white.opacity(0.91))
+                                .frame(minWidth: 55, alignment: .trailing)
+                        }
+                        HStack(spacing: isWide ? 25 : 10) {
+                            bottomButton("clock.arrow.circlepath", "Speed (\(speedLabel))") { panel = .speed }
+                            if request.media.kind == "tv" { bottomButton("rectangle.stack", "Episodes") { panel = .episodes } }
+                            bottomButton("captions.bubble", "Audio & Subtitles") { panel = .subtitles }
+                            if showStatsButton && !isWide { bottomButton("waveform.path", "Stats") { panel = .statistics } }
+                            Spacer(minLength: 0)
+                            if request.media.kind == "tv" {
+                                bottomButton("forward.end", "Next Episode") {
+                                    app.play(request.media, season: request.season ?? 1, episode: (request.episode ?? 1) + 1)
+                                }
+                            }
+                        }
+                    }
+                    .padding(.horizontal, isWide ? 32 : 16)
+                    .padding(.bottom, isWide ? 17 : 48)
+                }
+            }
+            .foregroundStyle(.white)
+
+            if isWide && !isWebPlayback {
+                VStack(spacing: 10) {
+                    Image(systemName: "sun.max")
+                        .font(.system(size: 17, weight: .medium))
+                        .foregroundStyle(.white)
+                    Slider(value: $brightness, in: 0.05...1)
+                        .tint(.white)
+                        .rotationEffect(.degrees(-90))
+                        .frame(width: 155, height: 32)
+                        .frame(width: 34, height: 165)
+                        .accessibilityLabel("Screen brightness")
+                        .onChange(of: brightness) { _, newValue in UIScreen.main.brightness = CGFloat(newValue) }
+                }
+                .padding(.leading, 10)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+                .allowsHitTesting(true)
+            }
+        }
+    }
+
+    private func playerIcon(_ symbol: String, _ label: String, isSelected: Bool = false, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: symbol)
+                .font(.system(size: 20, weight: .regular))
+                .foregroundStyle(isSelected ? Color.synAccent : .white)
+                .frame(width: 39, height: 39)
+                .background(.black.opacity(0.36), in: Circle())
+                .overlay(Circle().strokeBorder(.white.opacity(0.17), lineWidth: 0.7))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(label)
+    }
+
+    private func setRating(_ value: Int) {
+        rating = rating == value ? 0 : value
+        UserDefaults.standard.set(rating, forKey: "civy.rating.\(app.activeProfileID ?? "primary").\(request.media.key)")
+        UISelectionFeedbackGenerator().selectionChanged()
+    }
