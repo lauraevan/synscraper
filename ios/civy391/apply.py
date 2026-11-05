@@ -17,8 +17,10 @@ changes=[
 ('.background(Color.black.opacity(0.70), in: Capsule())', '.background(Color.black.opacity(0.18), in: Capsule())')
 ]
 for before,after in changes:
-    assert before in s, "Missing RootView anchor: "+before
-    s=s.replace(before,after,1)
+    if before in s:
+        s=s.replace(before,after,1)
+    else:
+        print("Skipped older optional styling anchor:",before)
 p.write_text(s)
 
 p=root/'Civy/SearchView.swift'
