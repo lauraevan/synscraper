@@ -75,6 +75,7 @@ jobs:
           python3 ios/civy3910/apply.py ios/build-src
           python3 ios/civy3911/apply.py ios/build-src
           python3 ios/civy3912/apply.py ios/build-src
+          set -x
           grep -q 'civy.flagshipSearch' ios/build-src/Civy/SearchView.swift
           grep -q 'civy.search.recentQueries' ios/build-src/Civy/SearchView.swift
           grep -q 'Cinematic Startup' ios/build-src/Civy/SettingsView.swift
