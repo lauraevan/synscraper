@@ -86,7 +86,9 @@ assert hero.count(old) == 1
 hero = hero.replace(old, old + '''    @Environment(\.verticalSizeClass) private var verticalSizeClass
 ''', 1)
 
-old = '''    private var imageURL: URL? { TMDBImage.url(media.posterPath, size: largeArt ? "original" : "w780") ?? media.originalBackdropURL }'''
+# Replace the computed image URL whether earlier patches made it multiline.
+image_start = hero.index("    private var imageURL: URL? {")
+image_end = hero.index("    private var genres:", image_start)
 new = '''    private var imageURL: URL? {
         if verticalSizeClass == .compact {
             return media.originalBackdropURL ??
@@ -94,10 +96,10 @@ new = '''    private var imageURL: URL? {
         }
         return TMDBImage.url(media.posterPath, size: largeArt ? "original" : "w780") ??
                media.originalBackdropURL
-    }'''
-assert hero.count(old) == 1
-hero = hero.replace(old, new, 1)
-old = '.aspectRatio(0.705, contentMode: .fit)'
+    }
+'''
+hero = hero[:image_start] + new + hero[image_end:]
+old = '.aspectRatio(0.72, contentMode: .fit)'
 assert hero.count(old) == 1
 hero = hero.replace(old, '.aspectRatio(verticalSizeClass == .compact ? 1.85 : 0.705, contentMode: .fit)', 1)
 old = '''.frame(maxWidth: geo.size.width * 0.78, maxHeight: 106)'''
