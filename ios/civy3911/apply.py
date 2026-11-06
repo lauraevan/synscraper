@@ -17,7 +17,7 @@ old = """struct HomeView: View {
 """
 new = """struct HomeView: View {
     @EnvironmentObject private var app: AppState
-    @Environment(\\.verticalSizeClass) private var verticalSizeClass
+    @Environment(\.verticalSizeClass) private var verticalSizeClass
 """
 assert home.count(old) == 1
 home = home.replace(old, new, 1)
@@ -83,7 +83,7 @@ hero = s[a:b]
 old = '''    @EnvironmentObject private var app: AppState
 '''
 assert hero.count(old) == 1
-hero = hero.replace(old, old + '''    @Environment(\\.verticalSizeClass) private var verticalSizeClass
+hero = hero.replace(old, old + '''    @Environment(\.verticalSizeClass) private var verticalSizeClass
 ''', 1)
 
 old = '''    private var imageURL: URL? { TMDBImage.url(media.posterPath, size: largeArt ? "original" : "w780") ?? media.originalBackdropURL }'''
@@ -121,7 +121,7 @@ source = reels.read_text()
 start = source.index("// Immersive clips using official TMDB-listed trailers.")
 end = source.index("// Public creator-posted short films", start)
 trimmed = source[start:end].replace("struct CivyTrailerClipsView: View {", "struct CivyClipsView: View {", 1)
-out = "import SwiftUI\\nimport SafariServices\\n\\n" + trimmed
+out = "import SwiftUI\nimport SafariServices\n\n" + trimmed
 assert out.count("struct CivyClipsView: View {") == 1
 assert "SFSafariViewController" in out
 for banned in ["PeerTube", "peertube", "sepiasearch", "CivyShortFilm",
