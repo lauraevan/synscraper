@@ -21,7 +21,7 @@ struct SearchView: View {
     @State private var searchError: String?
     @State private var retryToken = 0
     @State private var selected: Media?
-    @State private var showDownloads = false
+    @State private var showList = false
     @State private var showNew = false
 
     private var cleanedQuery: String { query.trimmingCharacters(in: .whitespacesAndNewlines) }
@@ -131,7 +131,7 @@ struct SearchView: View {
             }
             .toolbar(.hidden, for: .navigationBar)
             .sheet(item: $selected) { media in DetailView(media: media).environmentObject(app) }
-            .sheet(isPresented: $showDownloads) { CivyDownloadsView().environmentObject(app) }
+            .sheet(isPresented: $showList) { MyListView().environmentObject(app) }
             .sheet(isPresented: $showNew) { CivyNewAndHotView().environmentObject(app) }
             .task { if app.home == nil { await app.loadHome() } }
             .task(id: "\(cleanedQuery)|\(retryToken)") {
@@ -173,13 +173,13 @@ struct SearchView: View {
             }
             Spacer()
             CivyAirPlayControl()
-            Button { showDownloads = true } label: {
-                Image(systemName: "arrow.down.to.line")
+            Button { showList = true } label: {
+                Image(systemName: "bookmark")
                     .font(.system(size: 19, weight: .medium))
                     .frame(width: 44, height: 44)
                     .background(.white.opacity(0.06), in: Circle())
             }
-            .accessibilityLabel("Downloads")
+            .accessibilityLabel("My List")
             Button { showNew = true } label: {
                 Image(systemName: "bell")
                     .font(.system(size: 19, weight: .medium))
