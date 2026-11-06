@@ -89,7 +89,7 @@ jobs:
           grep -q 'struct CivyClipsView: View' ios/build-src/Civy/CivyReels.swift
           grep -q 'SFSafariViewController' ios/build-src/Civy/CivyReels.swift
           grep -q 'civy.appearance.accentTheme' ios/build-src/Civy/Design.swift
-          grep -q 'Section("Home & Discovery")' ios/build-src/Civy/SettingsView.swift
+          grep -q 'Section("Discover")' ios/build-src/Civy/SettingsView.swift
           grep -q 'Civy Beta · Version 3.9.12' ios/build-src/Civy/SettingsView.swift
           grep -q 'TabView(selection: \$tab)' ios/build-src/Civy/RootView.swift
           grep -q 'tabBarMinimizeBehavior(.onScrollDown)' ios/build-src/Civy/RootView.swift
