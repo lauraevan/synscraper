@@ -283,8 +283,8 @@ tb_begin = home.index("    private var topBar: some View {")
 tb_end = home.index("    private var filterBar: some View {", tb_begin)
 tb = home[tb_begin:tb_end]
 # Compact navigation should never take a portrait-height row in landscape.
-assert tb.count('.frame(height: 51)') == 1
-tb = tb.replace('.frame(height: 51)', '.frame(height: verticalSizeClass == .compact ? 43 : 51)', 1)
+assert tb.count('.frame(height: 54)') == 1
+tb = tb.replace('.frame(height: 54)', '.frame(height: verticalSizeClass == .compact ? 43 : 54)', 1)
 home = home[:tb_begin] + tb + home[tb_end:]
 root_source = root_source[:home_start] + home + root_source[home_end:]
 
