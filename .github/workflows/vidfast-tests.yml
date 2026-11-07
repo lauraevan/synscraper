@@ -65,7 +65,7 @@ jobs:
                       stream["url"], headers=stream.get("headers", {}),
                       impersonate="chrome", timeout=9, stream=True,
                   )
-                  with response:
+                  try:
                       body = next(response.iter_content(chunk_size=2048), b"")
                       kind = stream.get("type", "unknown")
                       mime = response.headers.get("content-type", "").lower()
@@ -78,6 +78,8 @@ jobs:
                             "http:", response.status_code, "manifest_ok:", manifest_ok,
                             "valid:", ok)
                       playable += int(ok)
+                  finally:
+                      response.close()
               except Exception as exc:
                   print("source_probe:", index, "error:", type(exc).__name__)
           print("verified_playable_count:", playable)
