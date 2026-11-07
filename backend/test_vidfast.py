@@ -88,6 +88,28 @@ class VidFastResolverTests(unittest.TestCase):
         result = json.loads(self.resolver.resolve("550"))
         self.assertEqual(result["status"], "error")
 
+    def test_provider_registered_and_normalized(self):
+        import scraper
+        matching = [spec for spec in scraper.PROVIDERS if spec[1] == "vidfast"]
+        self.assertEqual(len(matching), 1)
+        self.assertEqual(matching[0][2], ("providers.vidfast", "VidFastResolver"))
+        with patch.object(scraper, "_resolver_class") as resolver_class:
+            resolver = Mock()
+            resolver.resolve.return_value = json.dumps({
+                "status": "success",
+                "playable_urls": [{
+                    "server": "VidFast CDN", "type": "hls", "quality": "Auto",
+                    "url": "https://media.example.test/playlist.m3u8",
+                    "headers": {"Referer": "https://vidfast.vc/"},
+                }],
+            })
+            resolver_class.return_value.return_value = resolver
+            output = scraper._run_one(matching[0][2], "vidfast", "movie", "550", None, None)
+        self.assertEqual(len(output), 1)
+        self.assertEqual(output[0]["subserver"], "VidFast CDN")
+        self.assertEqual(output[0]["type"], "hls")
+        self.assertEqual(output[0]["referer"], "https://vidfast.vc/")
+
     def test_direct_api_full_handshake_and_server_decryption(self):
         """Simulate the published multi-stage VidFast protocol end-to-end."""
         def data(payload=None, text=""):
