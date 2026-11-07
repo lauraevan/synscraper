@@ -24,7 +24,7 @@ jobs:
         with:
           python-version: "3.12"
       - name: Install resolver dependencies
-        run: python -m pip install requests
+        run: python -m pip install requests curl_cffi
       - name: Compile provider and run offline contract tests
         run: |
           python -m py_compile providers/vidfast.py test_vidfast.py
@@ -43,7 +43,7 @@ jobs:
           python-version: "3.12"
       - name: Install browser and requests
         run: |
-          python -m pip install requests playwright
+          python -m pip install requests curl_cffi playwright
           python -m playwright install --with-deps chromium
       - name: Diagnose VidFast browser startup without exposing media URLs
         run: python scripts/vidfast_probe.py
