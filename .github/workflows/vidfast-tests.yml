@@ -57,6 +57,32 @@ jobs:
           print("source_count:", len(result.get("playable_urls", [])))
           if result.get("status") != "success":
               raise SystemExit(1)
+          from curl_cffi import requests as curl_requests
+          playable = 0
+          for index, stream in enumerate(result["playable_urls"]):
+              try:
+                  response = curl_requests.get(
+                      stream["url"], headers=stream.get("headers", {}),
+                      impersonate="chrome", timeout=9, stream=True,
+                  )
+                  with response:
+                      body = next(response.iter_content(chunk_size=2048), b"")
+                      kind = stream.get("type", "unknown")
+                      mime = response.headers.get("content-type", "").lower()
+                      manifest_ok = body.lstrip().startswith(b"#EXTM3U")
+                      ok = response.status_code in (200, 206) and (
+                          (kind == "hls" and (manifest_ok or "mpegurl" in mime)) or
+                          (kind == "mp4" and (b"ftyp" in body[:16] or "video/mp4" in mime))
+                      )
+                      print("source_probe:", index, "type:", kind,
+                            "http:", response.status_code, "manifest_ok:", manifest_ok,
+                            "valid:", ok)
+                      playable += int(ok)
+              except Exception as exc:
+                  print("source_probe:", index, "error:", type(exc).__name__)
+          print("verified_playable_count:", playable)
+          if playable == 0:
+              raise SystemExit(1)
           PY
 
   live-smoke:
