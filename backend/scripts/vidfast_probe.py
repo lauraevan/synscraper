@@ -4,6 +4,7 @@ from collections import Counter
 from urllib.parse import urlparse
 import requests
 from playwright.sync_api import sync_playwright
+from curl_cffi import requests as curl_requests
 
 url = os.environ.get("VIDFAST_TEST_URL", "https://vidfast.vc/movie/550?autoPlay=true")
 try:
@@ -11,6 +12,12 @@ try:
     print("plain_http_status:", r.status_code, "bytes:", len(r.content))
 except Exception as e:
     print("plain_http_failure:", type(e).__name__)
+
+try:
+    r = curl_requests.get(url, impersonate="chrome", timeout=8)
+    print("impersonated_http_status:", r.status_code, "bytes:", len(r.content))
+except Exception as e:
+    print("impersonated_http_failure:", type(e).__name__)
 
 with sync_playwright() as p:
     browser = p.chromium.launch(headless=os.environ.get("VIDFAST_HEADFUL") != "1")
