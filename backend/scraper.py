@@ -189,7 +189,7 @@ async def scrape_streams(media_type: str, tmdb_id, season=None, episode=None, pr
     async def run(name, pid, spec):
         try:
             provider_hint = mirror if pid == "vidy" and mirror else None
-            per_provider_timeout = 14.0 if pid == "orlando" else (8.5 if provider_id else 9.0)
+            per_provider_timeout = 19.0 if pid == "vidfast" and os.getenv("VIDFAST_BROWSER") == "1" else (14.0 if pid == "orlando" else (8.5 if provider_id else 9.0))
             streams = await asyncio.wait_for(
                 asyncio.to_thread(
                     _run_one, spec, pid, media_type, tmdb_id, season, episode,
