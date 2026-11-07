@@ -16,6 +16,9 @@ class FakeResponse:
     def raise_for_status(self):
         pass
 
+    def close(self):
+        pass
+
     def iter_content(self, chunk_size=4096):
         yield self.content[:chunk_size]
 
