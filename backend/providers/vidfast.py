@@ -132,9 +132,10 @@ class VidFastResolver:
 
 
     def _verify_media(self, url, referer, kind):
-        """Verify static HTML media links before exposing them as playable."""
+        """Verify declared media links without downloading the whole file."""
+        response = None
         try:
-            with self.session.get(
+            response = self.session.get(
                 url,
                 headers={
                     "User-Agent": USER_AGENT,
@@ -144,23 +145,25 @@ class VidFastResolver:
                 },
                 timeout=4,
                 stream=True,
-            ) as response:
-                response.raise_for_status()
-                mime = response.headers.get("Content-Type", "").lower()
-                if kind == "hls":
-                    if "mpegurl" in mime:
-                        return True
-                    head = next(response.iter_content(4096), b"")
-                    return head.lstrip().startswith(b"#EXTM3U")
-                if kind == "mp4":
-                    if mime.startswith("video/mp4"):
-                        return True
-                    head = next(response.iter_content(32), b"")
-                    return b"ftyp" in head[:16]
+            )
+            response.raise_for_status()
+            mime = response.headers.get("Content-Type", "").lower()
+            if kind == "hls":
+                if "mpegurl" in mime:
+                    return True
+                head = next(response.iter_content(4096), b"")
+                return head.lstrip().startswith(b"#EXTM3U")
+            if kind == "mp4":
+                if mime.startswith("video/mp4"):
+                    return True
+                head = next(response.iter_content(32), b"")
+                return b"ftyp" in head[:16]
         except Exception:
             return False
+        finally:
+            if response is not None:
+                response.close()
         return False
-
 
     def _resolve_via_api(self, page_url):
         """Resolve streams using the publicly documented EncDec VidFast flow.
