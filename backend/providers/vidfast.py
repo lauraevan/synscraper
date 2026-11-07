@@ -188,7 +188,7 @@ class VidFastResolver:
         try:
             # Use the documented autoplay route; it also avoids the trailing-slash
             # URL returning a 403 on some edges while this form serves HTML.
-            response = self.session.get(page_url + "?autoPlay=true", headers=host_headers, timeout=5)
+            response = self.session.get(page_url + "?autoPlay=true", timeout=5)
             response.raise_for_status()
             page = response.text.replace('\\\"', '"')
             match = re.search(r'"(?:en|token)"\s*:\s*"([^"]+)"', page)
