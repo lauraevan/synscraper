@@ -41,6 +41,10 @@ class VidFastResolver:
         self.origin = (origin or os.getenv("VIDFAST_ORIGIN") or DEFAULT_ORIGIN).rstrip("/")
 
 
+    def _debug(self, message):
+        if self.debug:
+            print("[VidFast]", message)
+
     @staticmethod
     def _make_session():
         # Prefer browser-compatible TLS for sites serving different HTML to
@@ -187,6 +191,7 @@ class VidFastResolver:
             page = response.text.replace('\\\"', '"')
             match = re.search(r'"(?:en|token)"\s*:\s*"([^"]+)"', page)
             if not match:
+                self._debug("Direct API: page token was not exposed")
                 return []
             token = match.group(1)
 
@@ -214,9 +219,11 @@ class VidFastResolver:
                 json={"text": encrypted_servers.text}, timeout=5,
             ))
             if not isinstance(servers, list):
+                self._debug("Direct API: decrypted server list unavailable")
                 return []
-        except Exception:
+        except Exception as exc:
             # curl_cffi raises its own request exception family.
+            self._debug("Direct API request failed: " + type(exc).__name__)
             return []
 
         def fetch_stream(server):
@@ -270,6 +277,7 @@ class VidFastResolver:
                 if stream and stream["url"] not in seen:
                     seen.add(stream["url"])
                     output.append(stream)
+        self._debug(f"Direct API resolved {len(output)} media sources")
         return output
 
     def resolve(self, url_or_id, media_type="movie", season=None, episode=None):
