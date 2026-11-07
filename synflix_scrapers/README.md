@@ -15,39 +15,45 @@ Standalone TMDB-id -> stream resolvers. Each returns JSON {status, playable_urls
     python3 vidy.py 16498 --type anime --episode 1 --pretty
     python3 nest.py 1396 --type tv --season 1 --episode 1 --pretty
 
-## VidFast integration (thanks Byte)
+## VidFast integration (credit: Byte)
 
-The backend provider `backend/providers/vidfast.py` is registered as `vidfast` in SynScraper.
-It checks the documented VidFast movie/TV pages for directly declared HLS, MP4,
-or DASH sources and returns the existing `playable_urls` schema. Override the
-host with `VIDFAST_ORIGIN` if Byte supplies a different approved VidFast origin.
+`backend/providers/vidfast.py` is registered as provider `vidfast` in the
+existing `/api/streams?type=movie&id=550&provider=vidfast` API. TV requests use
+`type=tv&id=1399&season=1&episode=1&provider=vidfast`.
 
-**Limitation:** VidFast's documented public API is an **embed player**, not a
-public stream-resolution endpoint. If the page only exposes a dynamic player,
-this extractor correctly returns no sources rather than passing an iframe URL
-as an HLS stream. A provider-authorized stream API or embedded-player integration
-would be needed for that case; no obfuscation/DRM/anti-bot bypass is included.
+The primary resolver implements the publicly documented VidFast flow from
+[EncDecEndpoints' sample](https://github.com/smy778/EncDecEndpoints/blob/main/samples/vidfast.py):
+page token, stage-one encryption, stage-two server routes, server decryption,
+and per-server stream decryption. The resolver uses `curl_cffi` for
+browser-compatible HTTP when installed and falls back to `requests`.
+Sources are normalized for SynPlayer and duplicates removed. DASH sources are
+excluded because SynPlayer currently accepts HLS and MP4 only.
 
-Run offline tests from the backend directory:
+This relies on an independent third-party API (`enc-dec.app`), which may have
+its own availability and privacy implications. Override with
+`VIDFAST_ENCDEC_API`, or set `VIDFAST_API=0` to disable it. The
+`VIDFAST_ORIGIN` setting overrides the documented embed host.
 
-    python -m unittest test_vidfast
+If the direct API fails, the resolver checks publicly declared HTML media URLs
+and **validates** HLS/MP4 content rather than trusting file extensions. When
+`VIDFAST_BROWSER=1` and Playwright Chromium is installed, it additionally
+observes real network responses from the normal player. To host with a browser,
+build `backend/Dockerfile.vidfast` and deploy as a separate Python service.
+Vercel Python functions do not install Chromium automatically.
 
-### Optional dynamic player observation
+**Verification:** Offline unit tests run on every relevant push. A separate
+live Chromium smoke test may fail when the upstream website blocks GitHub
+runners (HTTP 403 / Cloudflare); that failure is not proof of a working or
+non-working stream on a normal network. Do not treat an embed URL as a direct
+stream or claim successful playback without a positive live test.
 
-VidFast commonly loads media after JavaScript starts. The HTML extractor alone
-may return no streams. To enable a browser observation fallback on a server with
-Chromium available (this is **not installed automatically** by the backend):
+Run unit tests:
 
-    pip install playwright
-    python -m playwright install chromium
-    VIDFAST_BROWSER=1 python -m uvicorn server:app --host 0.0.0.0 --port 8000
+    cd backend && python -m unittest -v test_vidfast
 
-The browser fallback watches successful network responses for HLS/DASH/MP4
-and normalizes their request headers for the existing proxy. It does **not**
-bypass bot checks, decrypt private payloads, or promise availability. Deployments
-without Chromium keep using the lightweight static extractor. On serverless
-platforms without browser binaries, run a separate supported worker instead.
+The optional live probe prints only statuses and hostnames and avoids logging
+CDN links, cookies or tokens:
 
-Provider smoke test: request `/api/streams/movie/550?provider=vidfast` if
-that route is present on your deployment, or exercise `VidFastResolver.resolve`
-locally. Do not treat an embed page as a direct HLS stream.
+    cd backend && python scripts/vidfast_probe.py
+
+Shoutout to Byte for permission to implement the VidFast integration.
