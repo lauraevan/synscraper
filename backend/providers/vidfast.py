@@ -17,7 +17,7 @@ import requests
 
 DEFAULT_ORIGIN = "https://vidfast.vc"
 USER_AGENT = "Mozilla/5.0 (compatible; SynScraper/1.0)"
-MEDIA_EXTENSIONS = (".m3u8", ".mp4", ".mpd")
+MEDIA_EXTENSIONS = (".m3u8", ".mp4")
 
 
 class _MediaParser(HTMLParser):
@@ -62,14 +62,12 @@ class VidFastResolver:
                     return
                 parsed = urlparse(url)
                 media_kind = next((kind for ext, kind in
-                    ((".m3u8", "hls"), (".mp4", "mp4"), (".mpd", "dash"))
+                    ((".m3u8", "hls"), (".mp4", "mp4"))
                     if parsed.path.lower().endswith(ext)), None)
                 if not media_kind:
                     content_type = response.headers.get("content-type", "").lower()
                     if "mpegurl" in content_type:
                         media_kind = "hls"
-                    elif "dash+xml" in content_type:
-                        media_kind = "dash"
                     elif content_type.startswith("video/mp4"):
                         media_kind = "mp4"
                 if not media_kind or parsed.scheme not in ("http", "https"):
@@ -97,8 +95,8 @@ class VidFastResolver:
                     context = browser.new_context(user_agent=USER_AGENT)
                     page = context.new_page()
                     page.on("response", record)
-                    page.goto(page_url, wait_until="domcontentloaded", timeout=12000)
-                    page.wait_for_timeout(1200)
+                    page.goto(page_url + "?autoPlay=true", wait_until="domcontentloaded", timeout=12000)
+                    page.wait_for_timeout(2000)
                     if not results:
                         for selector in ('video', 'button[aria-label*="Play"]', 'button[title*="Play"]'):
                             try:
@@ -108,12 +106,43 @@ class VidFastResolver:
                                     break
                             except Exception:
                                 pass
-                        page.wait_for_timeout(2800)
+                        page.wait_for_timeout(6000)
                 finally:
                     browser.close()
         except Exception:
             return []
         return results
+
+
+    def _verify_media(self, url, referer, kind):
+        """Verify static HTML media links before exposing them as playable."""
+        try:
+            with self.session.get(
+                url,
+                headers={
+                    "User-Agent": USER_AGENT,
+                    "Referer": referer,
+                    "Origin": self.origin,
+                    "Range": "bytes=0-4095",
+                },
+                timeout=4,
+                stream=True,
+            ) as response:
+                response.raise_for_status()
+                mime = response.headers.get("Content-Type", "").lower()
+                if kind == "hls":
+                    if "mpegurl" in mime:
+                        return True
+                    head = next(response.iter_content(4096), b"")
+                    return head.lstrip().startswith(b"#EXTM3U")
+                if kind == "mp4":
+                    if mime.startswith("video/mp4"):
+                        return True
+                    head = next(response.iter_content(32), b"")
+                    return b"ftyp" in head[:16]
+        except (requests.RequestException, ValueError, StopIteration):
+            return False
+        return False
 
     def resolve(self, url_or_id, media_type="movie", season=None, episode=None):
         tmdb_id = str(url_or_id).strip()
@@ -165,9 +194,11 @@ class VidFastResolver:
             # Only accept unambiguous media URLs, not embeds or thumbnails.
             media_path = parsed.path.lower()
             media_type_out = next((kind for ext, kind in
-                ((".m3u8", "hls"), (".mp4", "mp4"), (".mpd", "dash"))
+                ((".m3u8", "hls"), (".mp4", "mp4"))
                 if media_path.endswith(ext)), None)
             if not media_type_out or url in seen:
+                continue
+            if not self._verify_media(url, page_url, media_type_out):
                 continue
             seen.add(url)
             playable.append({
