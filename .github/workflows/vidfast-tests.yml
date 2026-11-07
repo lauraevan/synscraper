@@ -43,7 +43,7 @@ jobs:
         with:
           python-version: "3.12"
       - name: Install API probe dependencies
-        run: python -m pip install requests curl_cffi
+        run: python -m pip install requests curl_cffi httpx
       - name: Resolve with documented API and report stage
         env:
           VIDFAST_BROWSER: "0"
