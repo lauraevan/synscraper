@@ -184,6 +184,7 @@ class VidFastResolver:
                 return None
             return obj.get("result")
 
+        stage = "page"
         try:
             # A trailing slash is used by the documented API sample.
             response = self.session.get(page_url + "/", headers=host_headers, timeout=5)
@@ -195,6 +196,7 @@ class VidFastResolver:
                 return []
             token = match.group(1)
 
+            stage = "encrypt-stage-1"
             parts = result_or_none(self.session.get(
                 endpoint + "/enc-vidfast",
                 params={"text": token, "stage": "1"}, timeout=5,
@@ -202,9 +204,11 @@ class VidFastResolver:
             if not isinstance(parts, dict) or not parts.get("stage1") or not parts.get("token"):
                 return []
             host_headers["X-CSRF-Token"] = parts["token"]
+            stage = "vidfast-probe"
             stage1 = self.session.post(parts["stage1"], headers=host_headers, timeout=5)
             stage1.raise_for_status()
 
+            stage = "encrypt-stage-2"
             stage2 = result_or_none(self.session.get(
                 endpoint + "/enc-vidfast",
                 params={"text": stage1.text, "stage": "2"}, timeout=5,
@@ -212,8 +216,10 @@ class VidFastResolver:
             if not isinstance(stage2, dict) or not all(stage2.get(k) for k in ("servers", "stream", "token")):
                 return []
             host_headers["X-CSRF-Token"] = stage2["token"]
+            stage = "vidfast-servers"
             encrypted_servers = self.session.post(stage2["servers"], headers=host_headers, timeout=5)
             encrypted_servers.raise_for_status()
+            stage = "decrypt-servers"
             servers = result_or_none(self.session.post(
                 endpoint + "/dec-vidfast",
                 json={"text": encrypted_servers.text}, timeout=5,
@@ -223,7 +229,8 @@ class VidFastResolver:
                 return []
         except Exception as exc:
             # curl_cffi raises its own request exception family.
-            self._debug("Direct API request failed: " + type(exc).__name__)
+            code = getattr(getattr(exc, "response", None), "status_code", None)
+            self._debug(f"Direct API {stage} failed: {type(exc).__name__}, HTTP {code}")
             return []
 
         def fetch_stream(server):
