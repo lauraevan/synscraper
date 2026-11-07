@@ -114,7 +114,7 @@ class VidFastResolverTests(unittest.TestCase):
         ]
         worker_session.__enter__.return_value = worker_session
         with patch.dict(os.environ, {"VIDFAST_API": "1"}), patch(
-            "providers.vidfast.requests.Session", return_value=worker_session
+            "providers.vidfast.VidFastResolver._make_session", return_value=worker_session
         ):
             result = json.loads(self.resolver.resolve("550"))
         self.assertEqual(result["status"], "success")
