@@ -39,6 +39,82 @@ class VidFastResolver:
         self.session = session or requests.Session()
         self.origin = (origin or os.getenv("VIDFAST_ORIGIN") or DEFAULT_ORIGIN).rstrip("/")
 
+
+    def _capture_browser_media(self, page_url):
+        """Observe media requests from the normal VidFast player in Chromium.
+
+        Optional: install playwright + its Chromium browser, then set
+        VIDFAST_BROWSER=1. No anti-bot evasion or private API decryption.
+        """
+        if os.getenv("VIDFAST_BROWSER", "0") != "1":
+            return []
+        try:
+            from playwright.sync_api import sync_playwright
+        except ImportError:
+            return []
+        results = []
+        seen = set()
+
+        def record(response):
+            try:
+                url = response.url
+                if response.status not in (200, 206) or url in seen:
+                    return
+                parsed = urlparse(url)
+                media_kind = next((kind for ext, kind in
+                    ((".m3u8", "hls"), (".mp4", "mp4"), (".mpd", "dash"))
+                    if parsed.path.lower().endswith(ext)), None)
+                if not media_kind:
+                    content_type = response.headers.get("content-type", "").lower()
+                    if "mpegurl" in content_type:
+                        media_kind = "hls"
+                    elif "dash+xml" in content_type:
+                        media_kind = "dash"
+                    elif content_type.startswith("video/mp4"):
+                        media_kind = "mp4"
+                if not media_kind or parsed.scheme not in ("http", "https"):
+                    return
+                seen.add(url)
+                request_headers = response.request.headers
+                results.append({
+                    "server": "VidFast",
+                    "url": url,
+                    "type": media_kind,
+                    "quality": "Auto",
+                    "headers": {
+                        "Referer": request_headers.get("referer", page_url),
+                        "Origin": request_headers.get("origin", self.origin),
+                        "User-Agent": USER_AGENT,
+                    },
+                })
+            except Exception:
+                return
+
+        try:
+            with sync_playwright() as playwright:
+                browser = playwright.chromium.launch(headless=True)
+                try:
+                    context = browser.new_context(user_agent=USER_AGENT)
+                    page = context.new_page()
+                    page.on("response", record)
+                    page.goto(page_url, wait_until="domcontentloaded", timeout=12000)
+                    page.wait_for_timeout(1200)
+                    if not results:
+                        for selector in ('video', 'button[aria-label*="Play"]', 'button[title*="Play"]'):
+                            try:
+                                button = page.locator(selector).first
+                                if button.count() and button.is_visible():
+                                    button.click(timeout=1200)
+                                    break
+                            except Exception:
+                                pass
+                        page.wait_for_timeout(2800)
+                finally:
+                    browser.close()
+        except Exception:
+            return []
+        return results
+
     def resolve(self, url_or_id, media_type="movie", season=None, episode=None):
         tmdb_id = str(url_or_id).strip()
         if not re.fullmatch(r"[0-9]+", tmdb_id):
@@ -80,7 +156,6 @@ class VidFastResolver:
 
         playable = []
         seen = set()
-        allowed_host = urlparse(self.origin).hostname
         for candidate in candidates:
             candidate = html.unescape(candidate).replace("\\/", "/").strip()
             url = urljoin(page_url, candidate)
@@ -106,6 +181,8 @@ class VidFastResolver:
                     "User-Agent": USER_AGENT,
                 },
             })
+        if not playable:
+            playable = self._capture_browser_media(page_url)
         if not playable:
             return json.dumps({
                 "status": "error",
