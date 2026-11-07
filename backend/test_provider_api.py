@@ -31,6 +31,49 @@ class ProviderContractTests(unittest.TestCase):
         vidy = next(x for x in payload["providers"] if x["id"] == "vidy")
         self.assertIn("anime", vidy["media_types"])
 
+    def test_every_registered_resolver_is_importable(self):
+        for name, provider_id, spec in scraper.PROVIDERS:
+            with self.subTest(provider=provider_id):
+                self.assertTrue(callable(scraper._resolver_class(spec)))
+
+    def test_public_v1_routes_with_mock_resolver(self):
+        from unittest.mock import AsyncMock
+        from fastapi.testclient import TestClient
+        from server import app
+
+        fake = [{
+            "id": "vidfast-0",
+            "name": "VidFast",
+            "provider": "vidfast",
+            "primary": False,
+            "type": "hls",
+            "quality": "Auto",
+            "url": "https://cdn.example.test/movie.m3u8",
+            "referer": "",
+            "origin": "",
+            "captions": [],
+        }]
+        with TestClient(app) as client:
+            catalog = client.get("/api/v1/providers")
+            self.assertEqual(catalog.status_code, 200)
+            self.assertEqual(catalog.json()["count"], len(scraper.PROVIDERS))
+
+            with patch.object(scraper, "scrape_streams", new=AsyncMock(return_value=fake)):
+                movie = client.get("/api/v1/streams?type=movie&id=550&provider=vidfast")
+                self.assertEqual(movie.status_code, 200, movie.text)
+                self.assertEqual(movie.json()["version"], "1")
+                self.assertTrue(movie.json()["servers"][0]["play_url"].startswith("http://testserver/api/hls?"))
+
+                selected = client.get("/api/v1/providers/vidfast/streams?type=movie&id=550")
+                self.assertEqual(selected.status_code, 200)
+                self.assertEqual(selected.json()["servers"][0]["provider"], "vidfast")
+
+            self.assertEqual(client.get("/api/v1/streams?type=tv&id=1399").status_code, 400)
+            self.assertEqual(
+                client.get("/api/v1/providers/not-a-real-provider/streams?type=movie&id=550").status_code,
+                404,
+            )
+
     def test_media_validation(self):
         provider_api.validate_request("movie", "550")
         provider_api.validate_request("tv", "1399", 1, 2)
