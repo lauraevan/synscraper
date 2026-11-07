@@ -110,7 +110,7 @@ class VidFastResolver:
                 finally:
                     browser.close()
         except Exception:
-            return []
+            pass
         return results
 
 
@@ -173,8 +173,10 @@ class VidFastResolver:
             if len(response.content) > 2_000_000:
                 raise ValueError("Page too large")
             content = response.text
-        except (requests.RequestException, ValueError) as exc:
-            return json.dumps({"status": "error", "message": f"VidFast page unavailable: {type(exc).__name__}"})
+        except (requests.RequestException, ValueError):
+            # JavaScript-based players can still be readable through Chromium
+            # even when a plain HTTP client cannot fetch their landing page.
+            content = ""
 
         parser = _MediaParser()
         parser.feed(content)
