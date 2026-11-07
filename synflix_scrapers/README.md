@@ -31,3 +31,23 @@ would be needed for that case; no obfuscation/DRM/anti-bot bypass is included.
 Run offline tests from the backend directory:
 
     python -m unittest test_vidfast
+
+### Optional dynamic player observation
+
+VidFast commonly loads media after JavaScript starts. The HTML extractor alone
+may return no streams. To enable a browser observation fallback on a server with
+Chromium available (this is **not installed automatically** by the backend):
+
+    pip install playwright
+    python -m playwright install chromium
+    VIDFAST_BROWSER=1 python -m uvicorn server:app --host 0.0.0.0 --port 8000
+
+The browser fallback watches successful network responses for HLS/DASH/MP4
+and normalizes their request headers for the existing proxy. It does **not**
+bypass bot checks, decrypt private payloads, or promise availability. Deployments
+without Chromium keep using the lightweight static extractor. On serverless
+platforms without browser binaries, run a separate supported worker instead.
+
+Provider smoke test: request `/api/streams/movie/550?provider=vidfast` if
+that route is present on your deployment, or exercise `VidFastResolver.resolve`
+locally. Do not treat an embed page as a direct HLS stream.
