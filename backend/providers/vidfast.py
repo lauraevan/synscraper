@@ -37,9 +37,21 @@ class _MediaParser(HTMLParser):
 class VidFastResolver:
     def __init__(self, debug=False, session=None, origin=None):
         self.debug = debug
-        self.session = session or requests.Session()
+        self.session = session or self._make_session()
         self.origin = (origin or os.getenv("VIDFAST_ORIGIN") or DEFAULT_ORIGIN).rstrip("/")
 
+
+    @staticmethod
+    def _make_session():
+        # Prefer browser-compatible TLS for sites serving different HTML to
+        # generic Python HTTP clients. Keep requests as a portable fallback.
+        if os.getenv("VIDFAST_CURL_IMPERSONATE", "1") == "1":
+            try:
+                from curl_cffi import requests as curl_requests
+                return curl_requests.Session(impersonate="chrome")
+            except (ImportError, ValueError):
+                pass
+        return requests.Session()
 
     def _capture_browser_media(self, page_url):
         """Observe media requests from the normal VidFast player in Chromium.
@@ -141,7 +153,7 @@ class VidFastResolver:
                         return True
                     head = next(response.iter_content(32), b"")
                     return b"ftyp" in head[:16]
-        except (requests.RequestException, ValueError, StopIteration):
+        except Exception:
             return False
         return False
 
@@ -203,7 +215,8 @@ class VidFastResolver:
             ))
             if not isinstance(servers, list):
                 return []
-        except (requests.RequestException, ValueError, KeyError, TypeError):
+        except Exception:
+            # curl_cffi raises its own request exception family.
             return []
 
         def fetch_stream(server):
@@ -211,7 +224,7 @@ class VidFastResolver:
                 return None
             # A separate session per worker avoids concurrent session-cookie mutation.
             try:
-                with requests.Session() as session:
+                with self._make_session() as session:
                     encrypted = session.post(
                         stage2["stream"].rstrip("/") + "/" + str(server["data"]),
                         headers=host_headers, timeout=6,
@@ -244,7 +257,7 @@ class VidFastResolver:
                         "User-Agent": USER_AGENT,
                     },
                 }
-            except (requests.RequestException, ValueError, TypeError):
+            except Exception:
                 return None
 
         output = []
@@ -291,7 +304,7 @@ class VidFastResolver:
             if len(response.content) > 2_000_000:
                 raise ValueError("Page too large")
             content = response.text
-        except (requests.RequestException, ValueError):
+        except Exception:
             # JavaScript-based players can still be readable through Chromium
             # even when a plain HTTP client cannot fetch their landing page.
             content = ""
