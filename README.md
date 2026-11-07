@@ -55,3 +55,26 @@ import { SynapsePlayer } from "@/components/SynapsePlayer";
 ```
 
 See the in-app `/docs` page for the full component, API, quality, caption and shortcut documentation.
+
+
+## Reuse the full scraper collection elsewhere
+
+The canonical backend currently includes **11 resolvers**, all registered in
+\`backend/scraper.py\`: Orlando, Vidy, Houston/Castle, Nova/VidLink, Nest/VidNest,
+Zen/VidZee, Rock/VidRock, CineJoy, VidCore, VidFast, and Vix/VixSrc.
+
+For other websites, native apps, or services, use the versioned endpoints:
+
+\`\`\`text
+GET /api/v1/providers
+GET /api/v1/streams?type=movie&id=550
+GET /api/v1/streams?type=movie&id=550&provider=vidfast
+GET /api/v1/providers/vidfast/streams?type=movie&id=550
+\`\`\`
+
+These return absolute \`play_url\` and caption URLs suitable for off-site
+clients. The existing Civy/SynPlayer \`/api/streams\` contract remains unchanged.
+
+To use the providers directly from Python, install the repository:
+\`pip install -e .\` then run \`synscraper-providers list\` or import
+\`scraper.scrape_streams\`. See [full provider and integration documentation](docs/PROVIDER_API.md).

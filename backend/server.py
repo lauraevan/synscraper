@@ -13,6 +13,7 @@ from fastapi.responses import HTMLResponse, StreamingResponse
 from starlette.middleware.cors import CORSMiddleware
 
 import scraper
+import provider_api
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / ".env")
@@ -277,6 +278,55 @@ async def streams(type: str = "movie", id: str = Query(...),
     return {"type": type, "id": id, "season": season, "episode": episode,
             "count": len(out), "servers": out}
 
+
+
+
+
+# ----------------------- Reusable provider API (v1) -----------------------
+@api_router.get("/v1/providers")
+async def reusable_providers():
+    """Discover every registered scraper without invoking external providers."""
+    return provider_api.list_providers()
+
+
+@api_router.get("/v1/streams")
+async def reusable_streams(
+    request: Request,
+    type: str = "movie", id: str = Query(...),
+    season: int | None = None, episode: int | None = None,
+    provider: str | None = None, mirror: str | None = None,
+    exclude: str | None = None, title: str | None = None,
+    year: int | None = None, imdb_id: str | None = None,
+):
+    """Cross-project stream response with absolute, proxy-ready play URLs."""
+    try:
+        provider_api.validate_request(type, id, season, episode, provider)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    legacy_payload = await streams(
+        type=type, id=id, season=season, episode=episode, provider=provider,
+        mirror=mirror, exclude=exclude, title=title, year=year, imdb_id=imdb_id,
+    )
+    return provider_api.public_stream_response(
+        legacy_payload, provider_api.public_origin(request)
+    )
+
+
+@api_router.get("/v1/providers/{provider_id}/streams")
+async def reusable_provider_streams(
+    provider_id: str, request: Request,
+    type: str = "movie", id: str = Query(...),
+    season: int | None = None, episode: int | None = None,
+    mirror: str | None = None, title: str | None = None,
+    year: int | None = None, imdb_id: str | None = None,
+):
+    return await reusable_streams(
+        request=request, type=type, id=id, season=season, episode=episode,
+        provider=provider_id, mirror=mirror, title=title, year=year, imdb_id=imdb_id,
+    )
 
 
 @api_router.get("/player", response_class=HTMLResponse)
