@@ -8,6 +8,7 @@ on:
       - api/**
       - requirements.txt
       - vercel.json
+      - pyproject.toml
       - .github/workflows/backend-check.yml
   workflow_dispatch:
 
@@ -23,7 +24,9 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install -r requirements.txt
-      - run: python -m py_compile backend/server.py backend/server_with_download.py backend/download_worker.py backend/scraper.py backend/providers/*.py api/index.py 'api/[...path].py'
+      - run: python -m py_compile backend/server.py backend/server_with_download.py backend/download_worker.py backend/scraper.py backend/provider_api.py backend/synscraper_cli.py backend/providers/*.py api/index.py 'api/[...path].py'
+      - run: python -m pip install --no-deps -e .
+      - run: cd backend && python -m unittest -v test_provider_api test_vidfast
       - run: |
           python - <<'PY'
           import sys
@@ -35,6 +38,9 @@ jobs:
           assert MAX_DOWNLOAD_HEIGHT == 1080
           assert "/api/download" in paths
           assert "/api/download/options" in paths
+          assert "/api/v1/providers" in paths
+          assert "/api/v1/streams" in paths
+          assert "/api/v1/providers/{provider_id}/streams" in paths
           assert _find_ffmpeg(), "Bundled FFmpeg executable was not found"
           print(app.title)
           print("download cap:", MAX_DOWNLOAD_HEIGHT)
