@@ -24,7 +24,7 @@ jobs:
         with:
           python-version: "3.12"
       - name: Install resolver dependencies
-        run: python -m pip install requests curl_cffi
+        run: python -m pip install requests curl_cffi httpx
       - name: Compile provider and run offline contract tests
         run: |
           python -m py_compile providers/vidfast.py test_vidfast.py
@@ -121,6 +121,24 @@ jobs:
               finally:
                   response.close()
           if not segment_ok:
+              raise SystemExit(1)
+          # Confirm the actual SynScraper httpx proxy transport can fetch HLS.
+          import httpx
+          import scraper
+          first = result["playable_urls"][0]
+          proxy_headers = {
+              "User-Agent": scraper.USER_AGENT, "Accept": "*/*",
+              "Referer": first["headers"].get("Referer", ""),
+              "Origin": first["headers"].get("Origin", ""),
+          }
+          try:
+              response = httpx.get(first["url"], headers=proxy_headers, timeout=10)
+              proxy_valid = response.status_code == 200 and response.content.lstrip().startswith(b"#EXTM3U")
+              print("synscraper_httpx_probe:", response.status_code, "valid_hls:", proxy_valid)
+              if not proxy_valid:
+                  raise SystemExit(1)
+          except httpx.HTTPError as exc:
+              print("synscraper_httpx_probe_error:", type(exc).__name__)
               raise SystemExit(1)
           PY
 
