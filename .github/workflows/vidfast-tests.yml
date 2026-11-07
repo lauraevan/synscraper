@@ -85,6 +85,43 @@ jobs:
           print("verified_playable_count:", playable)
           if playable == 0:
               raise SystemExit(1)
+          # Follow the first playlist through variants, then test one media segment.
+          from urllib.parse import urljoin
+          current = result["playable_urls"][0]["url"]
+          headers = result["playable_urls"][0].get("headers", {})
+          segment_ok = False
+          for depth in range(4):
+              response = curl_requests.get(
+                  current, headers={**headers, "Range": "bytes=0-1023"},
+                  impersonate="chrome", timeout=10, stream=True,
+              )
+              try:
+                  chunks = []
+                  for chunk in response.iter_content(chunk_size=4096):
+                      chunks.append(chunk)
+                      if sum(map(len, chunks)) >= 32768:
+                          break
+                  head = b"".join(chunks)
+                  if response.status_code not in (200, 206):
+                      print("segment_probe_depth:", depth, "http:", response.status_code)
+                      break
+                  if head.lstrip().startswith(b"#EXTM3U"):
+                      lines = head.decode("utf-8", errors="replace").splitlines()
+                      next_path = next((line.strip() for line in lines
+                          if line.strip() and not line.startswith("#")), None)
+                      if not next_path:
+                          break
+                      current = urljoin(current, next_path)
+                      print("playlist_depth:", depth, "http:", response.status_code)
+                  else:
+                      segment_ok = bool(head)
+                      print("media_segment_probe:", "http:", response.status_code,
+                            "bytes_sampled:", len(head), "valid:", segment_ok)
+                      break
+              finally:
+                  response.close()
+          if not segment_ok:
+              raise SystemExit(1)
           PY
 
   live-smoke:
