@@ -10,6 +10,7 @@ import html
 import json
 import os
 import re
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from html.parser import HTMLParser
 from urllib.parse import urljoin, urlparse
 
@@ -144,6 +145,120 @@ class VidFastResolver:
             return False
         return False
 
+
+    def _resolve_via_api(self, page_url):
+        """Resolve streams using the publicly documented EncDec VidFast flow.
+
+        Reference: github.com/smy778/EncDecEndpoints/blob/main/samples/vidfast.py
+        The API is third-party and may change; failures are nonfatal.
+        """
+        if os.getenv("VIDFAST_API", "1") == "0":
+            return []
+        endpoint = os.getenv("VIDFAST_ENCDEC_API", "https://enc-dec.app/api").rstrip("/")
+        host_headers = {
+            "User-Agent": USER_AGENT,
+            "Referer": self.origin + "/",
+            "X-Requested-With": "XMLHttpRequest",
+        }
+
+        def result_or_none(response):
+            response.raise_for_status()
+            obj = response.json()
+            if not isinstance(obj, dict) or obj.get("status") != 200:
+                return None
+            return obj.get("result")
+
+        try:
+            # A trailing slash is used by the documented API sample.
+            response = self.session.get(page_url + "/", headers=host_headers, timeout=5)
+            response.raise_for_status()
+            page = response.text.replace('\\\"', '"')
+            match = re.search(r'"(?:en|token)"\\s*:\\s*"([^"]+)"', page)
+            if not match:
+                return []
+            token = match.group(1)
+
+            parts = result_or_none(self.session.get(
+                endpoint + "/enc-vidfast",
+                params={"text": token, "stage": "1"}, timeout=5,
+            ))
+            if not isinstance(parts, dict) or not parts.get("stage1") or not parts.get("token"):
+                return []
+            host_headers["X-CSRF-Token"] = parts["token"]
+            stage1 = self.session.post(parts["stage1"], headers=host_headers, timeout=5)
+            stage1.raise_for_status()
+
+            stage2 = result_or_none(self.session.get(
+                endpoint + "/enc-vidfast",
+                params={"text": stage1.text, "stage": "2"}, timeout=5,
+            ))
+            if not isinstance(stage2, dict) or not all(stage2.get(k) for k in ("servers", "stream", "token")):
+                return []
+            host_headers["X-CSRF-Token"] = stage2["token"]
+            encrypted_servers = self.session.post(stage2["servers"], headers=host_headers, timeout=5)
+            encrypted_servers.raise_for_status()
+            servers = result_or_none(self.session.post(
+                endpoint + "/dec-vidfast",
+                json={"text": encrypted_servers.text}, timeout=5,
+            ))
+            if not isinstance(servers, list):
+                return []
+        except (requests.RequestException, ValueError, KeyError, TypeError):
+            return []
+
+        def fetch_stream(server):
+            if not isinstance(server, dict) or not server.get("data"):
+                return None
+            # A separate session per worker avoids concurrent session-cookie mutation.
+            try:
+                with requests.Session() as session:
+                    encrypted = session.post(
+                        stage2["stream"].rstrip("/") + "/" + str(server["data"]),
+                        headers=host_headers, timeout=6,
+                    )
+                    encrypted.raise_for_status()
+                    decrypted = result_or_none(session.post(
+                        endpoint + "/dec-vidfast",
+                        json={"text": encrypted.text}, timeout=6,
+                    ))
+                if not isinstance(decrypted, dict):
+                    return None
+                url = decrypted.get("url")
+                if not isinstance(url, str) or not url.startswith(("https://", "http://")):
+                    return None
+                path = urlparse(url).path.lower()
+                kind = "dash" if path.endswith(".mpd") else (
+                    "mp4" if path.endswith(".mp4") else "hls"
+                )
+                # SynPlayer currently supports native MP4 and HLS, not DASH.
+                if kind == "dash":
+                    return None
+                return {
+                    "server": str(server.get("name") or "VidFast")[:80],
+                    "url": url,
+                    "type": kind,
+                    "quality": "Auto",
+                    "headers": {
+                        "Referer": self.origin + "/",
+                        "Origin": self.origin,
+                        "User-Agent": USER_AGENT,
+                    },
+                }
+            except (requests.RequestException, ValueError, TypeError):
+                return None
+
+        output = []
+        seen = set()
+        # Limit workload to avoid hammering provider endpoints on every request.
+        with ThreadPoolExecutor(max_workers=3) as pool:
+            futures = [pool.submit(fetch_stream, s) for s in servers[:8]]
+            for future in as_completed(futures):
+                stream = future.result()
+                if stream and stream["url"] not in seen:
+                    seen.add(stream["url"])
+                    output.append(stream)
+        return output
+
     def resolve(self, url_or_id, media_type="movie", season=None, episode=None):
         tmdb_id = str(url_or_id).strip()
         if not re.fullmatch(r"[0-9]+", tmdb_id):
@@ -162,6 +277,9 @@ class VidFastResolver:
             path = f"/movie/{tmdb_id}"
 
         page_url = self.origin + path
+        api_streams = self._resolve_via_api(page_url)
+        if api_streams:
+            return json.dumps({"status": "success", "tmdb_id": tmdb_id, "playable_urls": api_streams})
         headers = {
             "User-Agent": USER_AGENT,
             "Accept": "text/html,application/xhtml+xml",
