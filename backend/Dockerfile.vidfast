@@ -1,0 +1,18 @@
+# Optional Docker runtime for SynScraper's VidFast Chromium extractor.
+# Deploy this as a backend service if your serverless platform cannot bundle Chromium.
+FROM python:3.12-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    VIDFAST_BROWSER=1 \
+    PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+
+WORKDIR /app
+COPY backend/requirements.txt /app/requirements.txt
+RUN pip install --no-cache-dir -r /app/requirements.txt uvicorn==0.30.6 playwright==1.55.0 \
+    && python -m playwright install --with-deps chromium \
+    && rm -rf /var/lib/apt/lists/*
+COPY backend/ /app/
+
+EXPOSE 8000
+CMD ["sh", "-c", "uvicorn server:app --host 0.0.0.0 --port ${PORT:-8000}"]
