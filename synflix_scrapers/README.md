@@ -57,3 +57,13 @@ CDN links, cookies or tokens:
     cd backend && python scripts/vidfast_probe.py
 
 Shoutout to Byte for permission to implement the VidFast integration.
+
+### Last verified smoke test
+
+On 2026-11-07 UTC, [GitHub Actions run #42322585398](https://github.com/lauraevan/synscraper/actions/runs/42322585398)
+passed with 12 offline tests, three decrypted VidFast HLS sources, three readable
+HLS manifests (HTTP 200), a successfully fetched transport segment (HTTP 206,
+1024 bytes sampled), and a successful SynScraper `httpx` manifest request
+(HTTP 200). This verifies stream extraction, manifest access, and segment
+reachability from the CI network. Actual full-length playback on every
+client/network is not guaranteed, and provider availability can change.
