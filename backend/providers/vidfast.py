@@ -173,7 +173,7 @@ class VidFastResolver:
             response = self.session.get(page_url + "/", headers=host_headers, timeout=5)
             response.raise_for_status()
             page = response.text.replace('\\\"', '"')
-            match = re.search(r'"(?:en|token)"\\s*:\\s*"([^"]+)"', page)
+            match = re.search(r'"(?:en|token)"\s*:\s*"([^"]+)"', page)
             if not match:
                 return []
             token = match.group(1)
