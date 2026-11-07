@@ -1,7 +1,8 @@
 """Offline contract tests for VidFast, no network or browser required."""
 import json
+import os
 import unittest
-from unittest.mock import Mock, patch
+from unittest.mock import MagicMock, Mock, patch
 
 from providers.vidfast import VidFastResolver
 
@@ -27,6 +28,9 @@ class FakeResponse:
 
 class VidFastResolverTests(unittest.TestCase):
     def setUp(self):
+        patcher = patch.dict(os.environ, {"VIDFAST_API": "0", "VIDFAST_BROWSER": "0"})
+        patcher.start()
+        self.addCleanup(patcher.stop)
         self.session = Mock()
         self.html = FakeResponse('<video src="https://cdn.example.test/film.m3u8"></video>')
         self.manifest = FakeResponse("#EXTM3U\n#EXT-X-VERSION:3", "application/vnd.apple.mpegurl")
@@ -80,6 +84,43 @@ class VidFastResolverTests(unittest.TestCase):
         self.session.get.side_effect = lambda url, **kw: FakeResponse('<source src="https://cdn.example.test/film.mpd">')
         result = json.loads(self.resolver.resolve("550"))
         self.assertEqual(result["status"], "error")
+
+    def test_direct_api_full_handshake_and_server_decryption(self):
+        """Simulate the published multi-stage VidFast protocol end-to-end."""
+        def data(payload=None, text=""):
+            response = Mock()
+            response.json.return_value = payload
+            response.text = text
+            return response
+
+        self.session.get.side_effect = [
+            data(text='window.__NEXT_DATA__={\\"token\\":\\"page-token\\"}'),
+            data({"status": 200, "result": {"stage1": "https://vidfast.vc/api/probe", "token": "csrf-1"}}),
+            data({"status": 200, "result": {
+                "servers": "https://vidfast.vc/api/servers",
+                "stream": "https://vidfast.vc/api/stream",
+                "token": "csrf-2",
+            }}),
+        ]
+        self.session.post.side_effect = [
+            data(text="probe-encrypted"),
+            data(text="servers-encrypted"),
+            data({"status": 200, "result": [{"name": "Alpha", "data": "server-token"}]}),
+        ]
+        worker_session = MagicMock()
+        worker_session.post.side_effect = [
+            data(text="stream-encrypted"),
+            data({"status": 200, "result": {"url": "https://media.example.test/master.m3u8"}}),
+        ]
+        worker_session.__enter__.return_value = worker_session
+        with patch.dict(os.environ, {"VIDFAST_API": "1"}), patch(
+            "providers.vidfast.requests.Session", return_value=worker_session
+        ):
+            result = json.loads(self.resolver.resolve("550"))
+        self.assertEqual(result["status"], "success")
+        self.assertEqual(result["playable_urls"][0]["server"], "Alpha")
+        self.assertEqual(result["playable_urls"][0]["type"], "hls")
+        self.assertIn("/api/stream/server-token", worker_session.post.call_args_list[0].args[0])
 
     def test_browser_fallback_result_contract(self):
         self.session.get.side_effect = lambda url, **kw: FakeResponse("<div>dynamic player</div>")
