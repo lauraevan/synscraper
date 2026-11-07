@@ -54,7 +54,7 @@ jobs:
           python - <<'PY'
           import json
           from providers.vidfast import VidFastResolver
-          result = json.loads(VidFastResolver().resolve("550"))
+          result = json.loads(VidFastResolver(debug=True).resolve("550"))
           print("status:", result.get("status"))
           print("source_count:", len(result.get("playable_urls", [])))
           print("types:", sorted({s["type"] for s in result.get("playable_urls", [])}))
